@@ -1,8 +1,32 @@
-const { Pool } = require('pg');
-const config = require('./env');
+// import pkg from "pg";
+// import { env } from "./env.js";
 
-const pool = new Pool({
-  connectionString: config.databaseUrl,
+// const { Pool } = pkg;
+
+// export const pool = new Pool({
+//   connectionString: env.DATABASE_URL,
+//   ssl: env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+// });
+
+// export const query = (text, params) => pool.query(text, params);
+
+import pkg from "pg";
+import { env } from "./env.js";
+
+const { Pool } = pkg;
+
+export const pool = new Pool({
+  connectionString: env.DATABASE_URL,
+  ssl: env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 
-module.exports = pool;
+pool.on("connect", () => {
+  console.log("✅ PostgreSQL connected");
+});
+
+pool.on("error", (err) => {
+  console.error("❌ PostgreSQL error:", err);
+  process.exit(1);
+});
+
+export const query = (text, params) => pool.query(text, params);

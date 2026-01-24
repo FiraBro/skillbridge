@@ -1,11 +1,8 @@
-const express = require('express');
-const app = express();
+import express from "express";
+import routes from "./routes.js";
+import globalErrorHandler from "./modules/middlewares/error.middleware.js";
+export const app = express();
 
 app.use(express.json());
-
-// Routes
-app.get('/', (req, res) => {
-  res.send('Hello World');
-});
-
-module.exports = app;
+app.use(routes);
+app.use(globalErrorHandler);

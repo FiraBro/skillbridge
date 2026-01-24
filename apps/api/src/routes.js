@@ -1,6 +1,8 @@
-const express = require('express');
-const router = express.Router();
+import { Router } from "express";
+import authRoutes from "./modules/auth/auth.routes.js";
 
-// Aggregate all routes
+const router = Router();
 
-module.exports = router;
+router.use("/api/auth", authRoutes);
+
+export default router;

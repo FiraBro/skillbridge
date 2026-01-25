@@ -1,6 +1,7 @@
 import * as authService from "./auth.service.js";
 import { validateRegister, validateLogin } from "./auth.schema.js";
 import { success } from "../utils/apiResponse.js";
+import { exchangeCodeForGithubUser } from "../services/github.external.js";
 export const register = async (req, res, next) => {
   try {
     validateRegister(req.body);
@@ -37,5 +38,33 @@ export const resetPassword = async (req, res, next) => {
     res.json(success(null, "Password reset successful"));
   } catch (err) {
     next(err);
+  }
+};
+
+// apps/api/src/modules/auth/auth.controller.js
+
+export const githubCallback = async (req, res, next) => {
+  try {
+    const { code } = req.query;
+
+    if (!code) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_code`);
+    }
+
+    // 1. Call external API service to get GitHub data
+    const githubUser = await exchangeCodeForGithubUser(code);
+
+    // 2. Call our Business Logic Service
+    const { user, token } = await authService.handleGithubAuth(githubUser);
+
+    // 3. Handle the HTTP Response (Redirect to Frontend)
+    // If onboarding is not done, we could append a flag here
+    const redirectUrl = user.onboarding_completed
+      ? `${process.env.FRONTEND_URL}/dashboard`
+      : `${process.env.FRONTEND_URL}/onboarding`;
+
+    res.redirect(`${redirectUrl}?token=${token}`);
+  } catch (error) {
+    next(error); // Pass to error.middleware.js
   }
 };

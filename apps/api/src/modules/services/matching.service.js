@@ -3,5 +3,5 @@
 module.exports = {
   matchSkills: (userSkills, jobSkills) => {
     // matching logic
-  }
+  },
 };

@@ -1,4 +1,4 @@
-const config = require('./env');
+const config = require("./env");
 
 module.exports = {
   clientId: config.githubClientId,

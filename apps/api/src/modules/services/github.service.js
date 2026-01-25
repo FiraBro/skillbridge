@@ -52,7 +52,11 @@ class GitHubService {
         status: err.status,
         message: err.message,
       });
-
+      console.error("DEBUG GITHUB ERROR:", {
+        status: err.status,
+        message: err.message,
+        name: err.name,
+      });
       if (err.status === 404) {
         throw new ApiError("GitHub user not found", 404);
       }

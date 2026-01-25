@@ -1,5 +1,5 @@
 import * as repo from "./repository.profile.js";
-import * as github from "../services/github.service.js";
+import github from "../services/github.service.js"; // No asterisk, no curly braces
 import { calculateReputation } from "../services/reputation.engine.js";
 export async function createProfile(payload) {
   return repo.createProfile(payload);
@@ -14,7 +14,7 @@ export async function getPublicProfile(username) {
 export async function syncGithub(profile) {
   if (!profile.github_username) return;
 
-  const stats = await github.fetchGithubSummary(profile.github_username);
+  const stats = await github.fetchDeveloperStats(profile.github_username);
 
   await repo.upsertGithubStats(profile.id, stats);
 

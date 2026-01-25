@@ -1,7 +1,7 @@
 // Test file
 
-describe('Auth', () => {
-  test('should authenticate user', () => {
+describe("Auth", () => {
+  test("should authenticate user", () => {
     // test logic
   });
 });

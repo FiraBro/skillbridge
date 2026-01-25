@@ -14,4 +14,5 @@ export const env = {
   JWT_RESET_EXPIRES_IN: process.env.JWT_RESET_EXPIRES_IN || "15m",
 
   BCRYPT_SALT_ROUNDS: Number(process.env.BCRYPT_SALT_ROUNDS || 12),
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN,
 };

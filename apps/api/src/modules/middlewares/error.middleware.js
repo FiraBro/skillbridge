@@ -1,42 +1,48 @@
 import ApiError from "../utils/apiError.js";
+
+// ----------------- DB Error Handlers -----------------
 const handleCastErrorDB = (err) => {
   const message = `Invalid ${err.path}: ${err.value}.`;
   return new ApiError(message, 400);
 };
 
-// Handle duplicate key error (MongoDB)
 const handleDuplicateFieldsDB = (err) => {
   const value = Object.values(err.keyValue)[0];
   const message = `Duplicate field value: "${value}". Please use another value.`;
   return new ApiError(message, 400);
 };
 
-// Handle Mongoose validation errors
 const handleValidationErrorDB = (err) => {
   const errors = Object.values(err.errors).map((el) => el.message);
   const message = `Invalid input data. ${errors.join(". ")}`;
   return new ApiError(message, 400);
 };
 
-// Handle JWT errors
+// ----------------- JWT Error Handlers -----------------
 const handleJWTError = () =>
   new ApiError("Invalid token. Please log in again.", 401);
+
 const handleJWTExpiredError = () =>
   new ApiError("Your token has expired. Please log in again.", 401);
 
-// ===== Send error response =====
+// ----------------- Send Error (DEV) -----------------
 const sendErrorDev = (err, res) => {
-  res.status(err.statusCode).json({
-    status: err.status,
+  const statusCode = Number(err.statusCode) || 500;
+
+  res.status(statusCode).json({
+    status: err.status || "error",
     error: err,
     message: err.message,
     stack: err.stack,
   });
 };
 
+// ----------------- Send Error (PROD) -----------------
 const sendErrorProd = (err, res) => {
+  const statusCode = Number(err.statusCode) || 500;
+
   if (err.isOperational) {
-    res.status(err.statusCode).json({
+    res.status(statusCode).json({
       status: err.status,
       message: err.message,
     });
@@ -49,14 +55,14 @@ const sendErrorProd = (err, res) => {
   }
 };
 
-// ===== Global Error Handler Middleware =====
+// ----------------- Global Error Middleware -----------------
 const globalErrorHandler = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
+  err.statusCode = Number(err.statusCode) || 500;
   err.status = err.status || "error";
 
   if (process.env.NODE_ENV === "development") {
     sendErrorDev(err, res);
-  } else if (process.env.NODE_ENV === "production") {
+  } else {
     let error = { ...err };
     error.message = err.message;
 

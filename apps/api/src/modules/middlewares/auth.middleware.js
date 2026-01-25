@@ -1,12 +1,12 @@
 import jwt from "jsonwebtoken";
-import { env } from "../config/env.js";
-import { ApiError } from "../utils/apiError.js";
+import { env } from "../../config/env.js";
+import ApiError from "../utils/apiError.js";
 
 export const requireAuth = (req, res, next) => {
   const header = req.headers.authorization;
 
   if (!header?.startsWith("Bearer ")) {
-    throw new ApiError(401, "Unauthorized");
+    throw new ApiError("Unauthorized", 401); // ✅ message first, statusCode second
   }
 
   const token = header.split(" ")[1];
@@ -15,7 +15,7 @@ export const requireAuth = (req, res, next) => {
     const payload = jwt.verify(token, env.JWT_ACCESS_SECRET);
     req.user = payload;
     next();
-  } catch {
-    throw new ApiError(401, "Invalid token");
+  } catch (err) {
+    throw new ApiError("Invalid token", 401); // ✅ correct order
   }
 };

@@ -5,8 +5,8 @@ import { env } from "../../config/env.js";
 import ApiError from "../utils/apiError.js";
 import { emailQueue } from "../../queues/email.queue.js"; // You'll create this next
 import { githubQueue } from "../../queues/github.queue.js";
-import generateAccessToken from "../utils/token.js";
 import generateResetToken from "../utils/token.js";
+import generateAccessToken from "../utils/accessToken.js";
 export const register = async ({ email, password, name }) => {
   const existing = await query("SELECT id FROM users WHERE email=$1", [email]);
 

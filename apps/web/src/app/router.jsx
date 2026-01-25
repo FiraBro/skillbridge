@@ -1,54 +1,60 @@
 // apps/web/src/app/router.jsx
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import AuthLayout from "@/components/layout/auth-layout";
-// Lazy load pages for performance
+import { ErrorBoundary } from "react-error-boundary";
+
+// Consider a separate layout for the actual App/Profile later
+// import AppLayout from "@/components/layout/app-layout";
+
 const Login = lazy(() => import("./auth/login"));
 const Register = lazy(() => import("./auth/register"));
 const ForgotPassword = lazy(() => import("./auth/forgot-password"));
 const ResetPassword = lazy(() => import("./auth/reset-password"));
+// Change from relative to absolute-style alias
+const Profile = lazy(() => import("@/app/profile/[id]/page.jsx"));
+// Loading spinner component for a professional feel
+const PageLoader = () => (
+  <div className="h-screen w-full flex items-center justify-center bg-background">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+);
 
 export const router = createBrowserRouter([
   {
     path: "/auth",
-    element: <AuthLayout />,
+    element: (
+      // Centralized Suspense: One wrapper for all Auth routes
+      <Suspense fallback={<PageLoader />}>
+        <AuthLayout />
+      </Suspense>
+    ),
     children: [
-      {
-        path: "login",
-        element: (
-          <Suspense fallback={null}>
-            <Login />
-          </Suspense>
-        ),
-      },
-      {
-        path: "register",
-        element: (
-          <Suspense fallback={null}>
-            <Register />
-          </Suspense>
-        ),
-      },
-      {
-        path: "forgot-password",
-        element: (
-          <Suspense fallback={null}>
-            <ForgotPassword />
-          </Suspense>
-        ),
-      },
-      {
-        path: "reset-password/:token",
-        element: (
-          <Suspense fallback={null}>
-            <ResetPassword />
-          </Suspense>
-        ),
-      },
+      { path: "login", element: <Login /> },
+      { path: "register", element: <Register /> },
+      { path: "forgot-password", element: <ForgotPassword /> },
+      { path: "reset-password/:token", element: <ResetPassword /> },
     ],
+  },
+  {
+    // Profile should be OUTSIDE AuthLayout so it can use the full screen
+    path: "/profile/:id",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <ErrorBoundary fallback={<div>A critical error occurred.</div>}>
+          <Profile />
+        </ErrorBoundary>
+      </Suspense>
+    ),
   },
   {
     path: "/",
     element: <Navigate to="/auth/login" replace />,
   },
+  {
+    path: "*",
+    element: <div className="p-20 text-center">404 - Skill Not Found</div>,
+  },
 ]);
+
+// apps/web/src/app/router.jsx

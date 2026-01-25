@@ -3,18 +3,10 @@ import jwt from "jsonwebtoken";
 import { query } from "../../config/db.js";
 import { env } from "../../config/env.js";
 import ApiError from "../utils/apiError.js";
-const generateAccessToken = (user) => {
-  return jwt.sign({ sub: user.id, role: user.role }, env.JWT_ACCESS_SECRET, {
-    expiresIn: env.JWT_ACCESS_EXPIRES_IN,
-  });
-};
-
-const generateResetToken = (userId) => {
-  return jwt.sign({ sub: userId }, env.JWT_RESET_SECRET, {
-    expiresIn: env.JWT_RESET_EXPIRES_IN,
-  });
-};
-
+import { emailQueue } from "../../queues/email.queue.js"; // You'll create this next
+import { githubQueue } from "../../queues/github.queue.js";
+import generateAccessToken from "../utils/token.js";
+import generateResetToken from "../utils/token.js";
 export const register = async ({ email, password, name }) => {
   const existing = await query("SELECT id FROM users WHERE email=$1", [email]);
 
@@ -62,65 +54,150 @@ export const login = async ({ email, password }) => {
   return { user, token };
 };
 
-export const forgotPassword = async (email) => {
-  const result = await query("SELECT id FROM users WHERE email=$1", [email]);
+// apps/api/src/modules/auth/auth.service.js
 
+export const forgotPassword = async (email) => {
+  // 1. Check if user exists
+  const result = await query("SELECT id, name FROM users WHERE email=$1", [
+    email,
+  ]);
   const user = result.rows[0];
+
+  // Real-world security: Always return success to prevent "Email Enumeration" attacks
   if (!user) {
-    return; // silent success
+    return {
+      success: true,
+      message: "If an account exists, a reset link has been sent.",
+    };
   }
 
   const resetToken = generateResetToken(user.id);
-  const expires = new Date(Date.now() + 15 * 60 * 1000);
+  const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 Minutes
 
-  await query(
-    `
-    UPDATE users
-    SET password_reset_token=$1,
-        password_reset_expires=$2
-    WHERE id=$3
-    `,
-    [resetToken, expires, user.id],
-  );
+  // 2. Use a Transaction to update the DB
+  try {
+    await query("BEGIN"); // Start transaction
 
-  // TODO: send email here
-  console.log("Reset Token:", resetToken);
+    await query(
+      `
+      UPDATE users
+      SET password_reset_token=$1,
+          password_reset_expires=$2
+      WHERE id=$3
+      `,
+      [resetToken, expires, user.id],
+    );
+
+    // 3. Push the email task to the Background Queue
+    // We pass the name and email so the worker has everything it needs
+    await emailQueue.add(
+      "send-reset-email",
+      {
+        email: email,
+        name: user.name,
+        token: resetToken,
+        resetLink: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`,
+      },
+      {
+        attempts: 3, // Retry 3 times if email service fails
+        backoff: 1000, // Wait 1 second before retrying
+      },
+    );
+
+    await query("COMMIT"); // Save changes
+
+    return { success: true };
+  } catch (error) {
+    await query("ROLLBACK"); // Cancel changes if something fails
+    throw error;
+  }
 };
 
 export const resetPassword = async (token, newPassword) => {
   let payload;
 
+  // 1. Verify the JWT Token first (Before opening a DB connection)
   try {
     payload = jwt.verify(token, env.JWT_RESET_SECRET);
-  } catch {
+  } catch (error) {
     throw new ApiError(400, "Invalid or expired token");
   }
 
+  // 2. Start the Transaction block
+  try {
+    await query("BEGIN");
+
+    // 3. Find user and lock the row (FOR UPDATE)
+    // This prevents "Race Conditions" if the user clicks twice
+    const result = await query(
+      `
+      SELECT id, password_reset_expires 
+      FROM users 
+      WHERE id = $1 AND password_reset_token = $2
+      FOR UPDATE
+      `,
+      [payload.sub, token],
+    );
+
+    const user = result.rows[0];
+
+    // 4. Validate user existence and token expiration
+    if (!user || new Date(user.password_reset_expires) < new Date()) {
+      // If invalid, we must rollback before throwing the error
+      await query("ROLLBACK");
+      throw new ApiError(400, "Invalid or expired token");
+    }
+
+    // 5. Hash the new password (CPU intensive task)
+    const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_SALT_ROUNDS);
+
+    // 6. Update user security credentials and clear reset fields
+    await query(
+      `
+      UPDATE users 
+      SET password_hash = $1, 
+          password_reset_token = NULL, 
+          password_reset_expires = NULL 
+      WHERE id = $2
+      `,
+      [passwordHash, user.id],
+    );
+
+    // 7. Success: Commit changes to permanent storage
+    await query("COMMIT");
+  } catch (error) {
+    // 8. Failure: Rollback ensures no "partial updates" occur
+    // If the DB crashes or code fails, the reset token remains unchanged
+    await query("ROLLBACK");
+
+    // Re-throw the error so the controller can handle the response
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, "Internal server error during password reset");
+  }
+};
+
+export const handleGithubAuth = async (githubUser) => {
+  // 1. Save or Update user in DB
   const result = await query(
-    `
-    SELECT id, password_reset_expires
-    FROM users
-    WHERE id=$1 AND password_reset_token=$2
-    `,
-    [payload.sub, token],
+    `INSERT INTO users (github_id, github_username, email, avatar_url)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (github_id) DO UPDATE 
+     SET github_username = EXCLUDED.github_username, avatar_url = EXCLUDED.avatar_url
+     RETURNING id, role, onboarding_completed`,
+    [githubUser.id, githubUser.login, githubUser.email, githubUser.avatar_url],
   );
 
   const user = result.rows[0];
 
-  if (!user || new Date(user.password_reset_expires) < new Date()) {
-    throw new ApiError(400, "Invalid or expired token");
-  }
+  // 2. Trigger background sync for credibility anchor
+  await githubQueue.add("sync-developer-stats", {
+    userId: user.id,
+    githubUsername: githubUser.login,
+    accessToken: githubUser.token,
+  });
 
-  const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_SALT_ROUNDS);
+  // 3. Generate the session token
+  const token = generateAccessToken(user);
 
-  await query(
-    `
-    UPDATE users
-    SET password_hash=$1,
-        password_reset_token=NULL,
-        password_reset_expires=NULL
-    WHERE id=$2
-    `,
-    [passwordHash, user.id],
-  );
+  return { user, token };
 };

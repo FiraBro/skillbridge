@@ -7,8 +7,7 @@ import GitHubStats from "../component/github-stats";
 import ReputationBar from "../component/reputation-bar";
 import LoadingSkeleton from "./loading";
 import { useParams } from "react-router-dom";
-import ErrorBoundary from "../component/error-boundary";
-// import
+import { ErrorBoundary } from "react-error-boundary";
 export default function ProfilePage({ params }) {
   const { id } = useParams();
 

@@ -1,8 +1,9 @@
 import { pool } from "../../config/db.js";
-import { sanitizeMarkdown } from "../utils/sanitize.js";
+import { sanitizeMarkdown, sanitizeHtml } from "../utils/sanitize.js";
 import { generateUniqueSlug } from "../utils/slug.js";
+import ApiError from "../utils/apiError.js";
 
-// CREATE POST
+// ---------------------- POSTS ----------------------
 export async function createPost(data, userId) {
   const client = await pool.connect();
   try {
@@ -11,13 +12,11 @@ export async function createPost(data, userId) {
     const slug = await generateUniqueSlug(data.title);
     const sanitizedHtml = sanitizeMarkdown(data.markdown);
 
-    // Insert post
     const { rows } = await client.query(
       `INSERT INTO posts(author_id, title, slug, markdown, sanitized_html)
-       VALUES($1, $2, $3, $4, $5) RETURNING *`,
+       VALUES($1,$2,$3,$4,$5) RETURNING *`,
       [userId, data.title, slug, data.markdown, sanitizedHtml],
     );
-
     const post = rows[0];
 
     // Insert tags
@@ -31,7 +30,7 @@ export async function createPost(data, userId) {
 
       await client.query(
         `INSERT INTO post_tags(post_id, tag_id)
-         VALUES($1, $2) ON CONFLICT DO NOTHING`,
+         VALUES($1,$2) ON CONFLICT DO NOTHING`,
         [post.id, tagRes.rows[0].id],
       );
     }
@@ -46,7 +45,6 @@ export async function createPost(data, userId) {
   }
 }
 
-// LIST POSTS with pagination and optional tag filter
 export async function listPosts({ page = 1, limit = 10, tag }) {
   const offset = (page - 1) * limit;
 
@@ -54,46 +52,85 @@ export async function listPosts({ page = 1, limit = 10, tag }) {
     SELECT 
       p.id, p.author_id, u.name AS author_name, p.title, p.slug,
       p.markdown, p.sanitized_html, p.views, p.created_at, p.updated_at,
+      p.deleted_at,
       COALESCE(json_agg(t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags
     FROM posts p
-    LEFT JOIN users u ON p.author_id = u.id
-    LEFT JOIN post_tags pt ON pt.post_id = p.id
-    LEFT JOIN tags t ON pt.tag_id = t.id
-    ${tag ? "WHERE t.name = $3" : ""}
-    GROUP BY p.id, u.name
+    LEFT JOIN users u ON p.author_id=u.id
+    LEFT JOIN post_tags pt ON pt.post_id=p.id
+    LEFT JOIN tags t ON pt.tag_id=t.id
+    ${tag ? "WHERE t.name=$3 AND p.deleted_at IS NULL" : "WHERE p.deleted_at IS NULL"}
+    GROUP BY p.id,u.name
     ORDER BY p.created_at DESC
     LIMIT $1 OFFSET $2
   `;
-
   const values = tag ? [limit, offset, tag] : [limit, offset];
-
   const { rows } = await pool.query(query, values);
   return rows;
 }
 
-// GET SINGLE POST BY SLUG
 export async function getPost(slug) {
-  const { rows } = await pool.query(
-    `
-    SELECT 
-      p.id, p.author_id, u.name AS author_name, p.title, p.slug,
-      p.markdown, p.sanitized_html, p.views, p.created_at, p.updated_at,
-      COALESCE(json_agg(t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags
-    FROM posts p
-    LEFT JOIN users u ON p.author_id = u.id
-    LEFT JOIN post_tags pt ON pt.post_id = p.id
-    LEFT JOIN tags t ON pt.tag_id = t.id
-    WHERE p.slug=$1
-    GROUP BY p.id, u.name
-    `,
-    [slug],
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  return rows[0];
+    const { rows } = await client.query(
+      `
+      SELECT 
+        p.id, p.author_id, u.name AS author_name, p.title, p.slug,
+        p.markdown, p.sanitized_html, p.views, p.created_at, p.updated_at,
+        p.deleted_at,
+        COALESCE(json_agg(t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags
+      FROM posts p
+      LEFT JOIN users u ON p.author_id=u.id
+      LEFT JOIN post_tags pt ON pt.post_id=p.id
+      LEFT JOIN tags t ON pt.tag_id=t.id
+      WHERE p.slug=$1 AND p.deleted_at IS NULL
+      GROUP BY p.id,u.name
+      `,
+      [slug],
+    );
+
+    const post = rows[0];
+    if (!post) throw new ApiError("Post not found", 404);
+
+    // Increment views
+    await client.query(`UPDATE posts SET views=views+1 WHERE id=$1`, [post.id]);
+
+    await client.query("COMMIT");
+    return post;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
-// UPDATE POST
-export async function updatePost(id, data) {
+export async function updatePost(
+  postId,
+  data,
+  userId,
+  userRole,
+  clientProvidedUpdatedAt,
+) {
+  const { rows } = await pool.query(`SELECT * FROM posts WHERE id=$1`, [
+    postId,
+  ]);
+  if (!rows[0]) throw new ApiError("Post not found", 404);
+
+  const post = rows[0];
+  const isAuthor = String(post.author_id) === String(userId);
+  if (!isAuthor && userRole !== "admin")
+    throw new ApiError("Unauthorized", 403);
+
+  // Optimistic locking check
+  if (
+    clientProvidedUpdatedAt &&
+    post.updated_at.toISOString() !== clientProvidedUpdatedAt
+  ) {
+    throw new ApiError("Post has been updated by another user", 409);
+  }
+
   if (!Object.keys(data).length) return;
 
   const fields = [];
@@ -107,18 +144,15 @@ export async function updatePost(id, data) {
     values.push(data.markdown, sanitizeMarkdown(data.markdown));
   }
 
-  if (!fields.length) return;
+  if (fields.length) {
+    await pool.query(
+      `UPDATE posts SET ${fields.join(",")}, updated_at=NOW() WHERE id=$${i}`,
+      [...values, postId],
+    );
+  }
 
-  await pool.query(
-    `UPDATE posts SET ${fields.join(",")}, updated_at=now()
-     WHERE id=$${i}`,
-    [...values, id],
-  );
-
-  // Optional: update tags
   if (data.tags) {
-    await pool.query(`DELETE FROM post_tags WHERE post_id=$1`, [id]);
-
+    await pool.query(`DELETE FROM post_tags WHERE post_id=$1`, [postId]);
     for (const tag of data.tags) {
       const tagRes = await pool.query(
         `INSERT INTO tags(name) VALUES($1)
@@ -126,80 +160,148 @@ export async function updatePost(id, data) {
          RETURNING id`,
         [tag],
       );
-
       await pool.query(
         `INSERT INTO post_tags(post_id, tag_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
-        [id, tagRes.rows[0].id],
+        [postId, tagRes.rows[0].id],
       );
     }
   }
 }
-// ------------------ LIKES ------------------
+
+export async function deletePost(postId, userId, userRole) {
+  const { rows } = await pool.query(`SELECT author_id FROM posts WHERE id=$1`, [
+    postId,
+  ]);
+  if (!rows[0]) throw new ApiError("Post not found", 404);
+
+  const isAuthor = String(rows[0].author_id) === String(userId);
+  if (!isAuthor && userRole !== "admin")
+    throw new ApiError("Unauthorized", 403);
+
+  await pool.query(`UPDATE posts SET deleted_at=NOW() WHERE id=$1`, [postId]);
+}
+
+// ---------------------- LIKES ----------------------
 export async function likePost(postId, userId) {
-  await pool.query(
-    `INSERT INTO post_likes(post_id, user_id)
-     VALUES($1, $2)
-     ON CONFLICT (post_id, user_id) DO NOTHING`,
-    [postId, userId],
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  const { rows } = await pool.query(
-    `SELECT COUNT(*) AS likes_count FROM post_likes WHERE post_id=$1`,
-    [postId],
-  );
+    await client.query(
+      `INSERT INTO post_likes(post_id, user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+      [postId, userId],
+    );
 
-  return { likesCount: parseInt(rows[0].likes_count) };
+    const { rows } = await client.query(
+      `SELECT COUNT(*) AS likes_count FROM post_likes WHERE post_id=$1`,
+      [postId],
+    );
+
+    await client.query("COMMIT");
+    return { likesCount: parseInt(rows[0].likes_count) };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function unlikePost(postId, userId) {
-  await pool.query(`DELETE FROM post_likes WHERE post_id=$1 AND user_id=$2`, [
-    postId,
-    userId,
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
+      `DELETE FROM post_likes WHERE post_id=$1 AND user_id=$2`,
+      [postId, userId],
+    );
+    const { rows } = await client.query(
+      `SELECT COUNT(*) AS likes_count FROM post_likes WHERE post_id=$1`,
+      [postId],
+    );
+
+    await client.query("COMMIT");
+    return { likesCount: parseInt(rows[0].likes_count) };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// ---------------------- COMMENTS ----------------------
+export async function addComment(postId, userId, text) {
+  const sanitizedText = sanitizeHtml(text);
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows } = await client.query(
+      `INSERT INTO post_comments(post_id,user_id,text,created_at,updated_at)
+       VALUES($1,$2,$3,NOW(),NOW()) RETURNING *`,
+      [postId, userId, sanitizedText],
+    );
+
+    await client.query("COMMIT");
+    return rows[0];
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteComment(commentId, userId, userRole) {
+  const { rows } = await pool.query(`SELECT * FROM post_comments WHERE id=$1`, [
+    commentId,
+  ]);
+  if (!rows[0]) throw new ApiError("Comment not found", 404);
+
+  const comment = rows[0];
+  const post = await pool.query(`SELECT author_id FROM posts WHERE id=$1`, [
+    comment.post_id,
   ]);
 
-  const { rows } = await pool.query(
-    `SELECT COUNT(*) AS likes_count FROM post_likes WHERE post_id=$1`,
-    [postId],
+  const isCommentOwner = String(comment.user_id) === String(userId);
+  const isPostOwner =
+    post.rows[0] && String(post.rows[0].author_id) === String(userId);
+
+  if (!isCommentOwner && !isPostOwner && userRole !== "admin") {
+    throw new ApiError("You are not authorized to delete this comment", 403);
+  }
+
+  const { rows: deleted } = await pool.query(
+    `UPDATE post_comments SET deleted_at=NOW() WHERE id=$1 RETURNING *`,
+    [commentId],
   );
 
-  return { likesCount: parseInt(rows[0].likes_count) };
+  return deleted[0];
 }
 
-// ------------------ COMMENTS ------------------
-export async function addComment(postId, userId, text) {
+export async function getComments(postId, { page = 1, limit = 20 } = {}) {
+  const offset = (page - 1) * limit;
+
   const { rows } = await pool.query(
-    `INSERT INTO post_comments(post_id, user_id, text)
-     VALUES($1, $2, $3) RETURNING *`,
-    [postId, userId, text],
+    `
+    SELECT 
+      c.id,
+      c.text,
+      c.created_at,
+      c.updated_at,
+      c.user_id,
+      COALESCE(u.name,'Deleted User') AS username
+    FROM post_comments c
+    LEFT JOIN users u ON u.id=c.user_id
+    WHERE c.post_id=$1 AND c.deleted_at IS NULL
+    ORDER BY c.created_at ASC
+    LIMIT $2 OFFSET $3
+    `,
+    [postId, limit, offset],
   );
 
-  return rows[0];
-}
-
-export async function deleteComment(commentId, userId) {
-  const { rows } = await pool.query(
-    `DELETE FROM post_comments WHERE id=$1 AND user_id=$2 RETURNING *`,
-    [commentId, userId],
-  );
-
-  if (rows.length === 0) throw new Error("Comment not found or not authorized");
-
-  return rows[0];
-}
-
-export async function getComments(postId) {
-  const { rows } = await pool.query(
-    `SELECT c.id, c.text, c.created_at, u.name AS username
-     FROM post_comments c
-     JOIN users u ON u.id=c.user_id
-     WHERE c.post_id=$1
-     ORDER BY c.created_at ASC`,
-    [postId],
-  );
   return rows;
-}
-
-// DELETE POST
-export async function deletePost(id) {
-  await pool.query(`DELETE FROM posts WHERE id=$1`, [id]);
 }

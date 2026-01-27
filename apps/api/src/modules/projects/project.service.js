@@ -1,6 +1,7 @@
 import { ProjectModel } from "./project.schema.js";
 import { redis } from "../../config/redis.js";
 import { fetchRepoStars } from "../utils/github.js";
+import { sanitizeMarkdown } from "../utils/sanitize.js";
 
 export const ProjectService = {
   async createProject(data, userId) {
@@ -17,8 +18,15 @@ export const ProjectService = {
       })
       .catch(() => {}); // never crash project creation
 
+    // Sanitize markdown description
+    const descriptionHtml = sanitizeMarkdown(data.description);
+
     // Always create project immediately
-    return ProjectModel.create({ ...data, userId });
+    return ProjectModel.create({
+      ...data,
+      userId,
+      descriptionHtml,
+    });
   },
 
   async listProjects(query) {
@@ -39,7 +47,8 @@ export const ProjectService = {
     return ProjectModel.findById(id);
   },
   async updateProject(id, userId, data) {
-    return ProjectModel.update(id, userId, data);
+    const descriptionHtml = sanitizeMarkdown(data.description);
+    return ProjectModel.update(id, userId, { ...data, descriptionHtml });
   },
   async deleteProject(id, userId) {
     return ProjectModel.delete(id, userId);

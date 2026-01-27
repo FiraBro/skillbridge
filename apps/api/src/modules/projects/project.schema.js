@@ -13,8 +13,8 @@ export const ProjectModel = {
   create(project) {
     return pool.query(
       `INSERT INTO projects
-      (user_id, title, github_repo, live_demo, tech_stack, description, thumbnail)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      (user_id, title, github_repo, live_demo, tech_stack, description, description_html, thumbnail)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       RETURNING *`,
       [
         project.userId,
@@ -23,6 +23,7 @@ export const ProjectModel = {
         project.liveDemo,
         project.techStack,
         project.description,
+        project.descriptionHtml,
         project.thumbnail,
       ],
     );
@@ -62,14 +63,15 @@ export const ProjectModel = {
     return pool.query(
       `UPDATE projects SET
        title=$1, live_demo=$2, tech_stack=$3, description=$4,
-       thumbnail=$5, updated_at=NOW()
-       WHERE id=$6 AND user_id=$7
+       description_html=$5, thumbnail=$6, updated_at=NOW()
+       WHERE id=$7 AND user_id=$8
        RETURNING *`,
       [
         data.title,
         data.liveDemo,
         data.techStack,
         data.description,
+        data.descriptionHtml,
         data.thumbnail,
         id,
         userId,

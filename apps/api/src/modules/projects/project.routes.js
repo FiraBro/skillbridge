@@ -5,6 +5,8 @@ import {
   createProject,
   listProjects,
   getProject,
+  updateProject,
+  deleteProject,
 } from "./project.controller.js";
 
 const router = express.Router();
@@ -17,5 +19,7 @@ const writeLimiter = rateLimit({
 router.get("/", listProjects);
 router.get("/:id", getProject);
 router.post("/", requireAuth, writeLimiter, createProject);
+router.patch("/:id", requireAuth, writeLimiter, updateProject);
+router.delete("/:id", requireAuth, writeLimiter, deleteProject);
 
 export default router;

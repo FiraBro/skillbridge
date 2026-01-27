@@ -30,9 +30,10 @@ export const ProjectModel = {
 
   findPublic({ tech, limit, offset }) {
     let query = `
-      SELECT p.*, u.name, u.github
+      SELECT p.*, u.name, pr.github_username
       FROM projects p
       JOIN users u ON u.id = p.user_id
+      LEFT JOIN profiles pr ON pr.user_id = u.id
       WHERE p.visibility='public'
     `;
     const params = [];
@@ -50,9 +51,10 @@ export const ProjectModel = {
 
   findById(id) {
     return pool.query(
-      `SELECT p.*, u.name, u.github
+      `SELECT p.*, u.name, pr.github_username
        FROM projects p
        JOIN users u ON u.id = p.user_id
+       LEFT JOIN profiles pr ON pr.user_id = u.id
        WHERE p.id=$1`,
       [id],
     );

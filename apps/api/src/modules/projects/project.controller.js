@@ -16,6 +16,34 @@ export const createProject = async (req, res, next) => {
   }
 };
 
+export const updateProject = async (req, res, next) => {
+  try {
+    const data = createProjectSchema.parse(req.body);
+    const result = await ProjectService.updateProject(
+      req.params.id,
+      req.user.id,
+      data,
+    );
+    logger.info("Project updated", { userId: req.user.id });
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteProject = async (req, res, next) => {
+  try {
+    const result = await ProjectService.deleteProject(
+      req.params.id,
+      req.user.id,
+    );
+    logger.info("Project deleted", { userId: req.user.id });
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const listProjects = async (req, res, next) => {
   try {
     const result = await ProjectService.listProjects(req.query);

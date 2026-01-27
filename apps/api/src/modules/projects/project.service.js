@@ -38,4 +38,10 @@ export const ProjectService = {
     redis.incr(redisKey); // async, non-blocking
     return ProjectModel.findById(id);
   },
+  async updateProject(id, userId, data) {
+    return ProjectModel.update(id, userId, data);
+  },
+  async deleteProject(id, userId) {
+    return ProjectModel.delete(id, userId);
+  },
 };

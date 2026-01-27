@@ -1,6 +1,6 @@
 CREATE TABLE projects (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   title VARCHAR(100) NOT NULL,
   github_repo TEXT NOT NULL,
   live_demo TEXT,
@@ -14,6 +14,8 @@ CREATE TABLE projects (
   UNIQUE (user_id, github_repo)
 );
 
+
+CREATE INDEX idx_projects_created_at ON projects(created_at DESC);
 CREATE INDEX idx_projects_user_id ON projects(user_id);
 CREATE INDEX idx_projects_tech_stack ON projects USING GIN(tech_stack);
-CREATE INDEX idx_projects_created_at ON projects(created_at DESC);
+CREATE INDEX idx_projects_views ON projects(views DESC);

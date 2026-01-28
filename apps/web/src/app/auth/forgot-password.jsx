@@ -1,34 +1,44 @@
 // apps/web/src/app/auth/forgot-password.jsx
 import { useState } from "react";
-import { AuthCard } from "@/components/ui/auth-card";
-import { VerificationAlert } from "@/components/ui/verification-alert";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   return (
-    <AuthCard
-      title="Recover Password"
-      description="We'll send a link to your email."
-      footer={<a href="/auth/login">Return to Login</a>}
-    >
+    <div className="auth-card">
+      <div className="auth-header">
+        <a href="/" className="brand-logo">
+          SKILL<span>BRIDGE</span>
+        </a>
+        <h1>Recover Password</h1>
+        <p>We'll send a link to your email.</p>
+      </div>
+
       {sent ? (
-        <VerificationAlert
-          title="Check your inbox"
-          message="Reset instructions sent."
-        />
+        <div className="message success">
+          Check your inbox. Reset instructions sent.
+        </div>
       ) : (
-        <div className="space-y-4">
-          <Input
-            placeholder="name@dev.com"
-            className="bg-slate-800 border-slate-700"
-          />
-          <Button onClick={() => setSent(true)} className="w-full bg-blue-600">
+        <div className="space-y-6">
+          <div className="form-group">
+            <label htmlFor="email">Email Address</label>
+            <div className="input-wrapper">
+              <input
+                id="email"
+                type="email"
+                placeholder="name@dev.com"
+                required
+              />
+            </div>
+          </div>
+          <button onClick={() => setSent(true)} className="btn-primary">
             Send Reset Link
-          </Button>
+          </button>
         </div>
       )}
-    </AuthCard>
+
+      <div className="auth-footer">
+        Remembered your password? <a href="/auth/login">Sign In</a>
+      </div>
+    </div>
   );
 }

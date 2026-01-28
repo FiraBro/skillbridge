@@ -1,5 +1,5 @@
 // apps/web/src/hooks/useAuth.js
-import { create } from "zustand"; // Using Zustand for simple, reactive state
+import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export const useAuth = create(
@@ -12,16 +12,36 @@ export const useAuth = create(
 
       setAuth: (user, token) =>
         set({ user, token, isAuthenticated: true, isLoading: false }),
+
       logout: () => {
         set({ user: null, token: null, isAuthenticated: false });
+        localStorage.removeItem("sb_token");
+        localStorage.removeItem("sb_user");
         localStorage.removeItem("auth-storage");
         window.location.href = "/auth/login";
       },
-      checkAuth: () => {
-        // Logic to verify token expiration or fetch current profile
-        set({ isLoading: false });
+
+      hydrate: () => {
+        const token = localStorage.getItem("sb_token");
+        const userJson = localStorage.getItem("sb_user");
+
+        if (token && userJson) {
+          try {
+            const user = JSON.parse(userJson);
+            set({ user, token, isAuthenticated: true, isLoading: false });
+          } catch (e) {
+            set({ isLoading: false });
+          }
+        } else {
+          set({ isLoading: false });
+        }
       },
     }),
     { name: "auth-storage" },
   ),
 );
+
+// Auto-hydrate on load
+if (typeof window !== "undefined") {
+  useAuth.getState().hydrate();
+}

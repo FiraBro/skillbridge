@@ -7,7 +7,15 @@ import { emailQueue } from "../../queues/email.queue.js"; // You'll create this 
 import { githubQueue } from "../../queues/github.queue.js";
 import generateResetToken from "../utils/token.js";
 import generateAccessToken from "../utils/accessToken.js";
-export const register = async ({ email, password, name }) => {
+import { generateUniqueUsername } from "../utils/slug.js";
+import * as profileService from "../profile/profile.service.js";
+
+export const register = async ({
+  email,
+  password,
+  name,
+  role = "developer",
+}) => {
   const existing = await query("SELECT id FROM users WHERE email=$1", [email]);
 
   if (existing.rowCount > 0) {
@@ -18,21 +26,36 @@ export const register = async ({ email, password, name }) => {
 
   const result = await query(
     `
-    INSERT INTO users(email, password_hash, name)
-    VALUES ($1,$2,$3)
+    INSERT INTO users(email, password_hash, name, role)
+    VALUES ($1,$2,$3,$4)
     RETURNING id, email, name, role, created_at
     `,
-    [email, passwordHash, name],
+    [email, passwordHash, name, role],
   );
 
   const user = result.rows[0];
+
+  // ⚡ Auto-create Profile
+  const username = await generateUniqueUsername(name);
+  await profileService.createProfile({
+    userId: user.id,
+    username,
+    fullName: name,
+  });
+
   const token = generateAccessToken(user);
 
-  return { user, token };
+  return { user: { ...user, username }, token };
 };
 
 export const login = async ({ email, password }) => {
-  const result = await query("SELECT * FROM users WHERE email=$1", [email]);
+  const result = await query(
+    `SELECT u.*, p.username 
+     FROM users u 
+     LEFT JOIN profiles p ON p.user_id = u.id 
+     WHERE u.email=$1`,
+    [email],
+  );
 
   const user = result.rows[0];
 
@@ -188,6 +211,22 @@ export const handleGithubAuth = async (githubUser) => {
   );
 
   const user = result.rows[0];
+
+  // ⚡ Ensure Profile exists for GitHub users
+  const { rowCount: profileExists } = await query(
+    "SELECT 1 FROM profiles WHERE user_id = $1",
+    [user.id],
+  );
+
+  if (profileExists === 0) {
+    const username = await generateUniqueUsername(githubUser.login);
+    await profileService.createProfile({
+      userId: user.id,
+      username,
+      fullName: githubUser.name || githubUser.login,
+      githubUsername: githubUser.login,
+    });
+  }
 
   // 2. Trigger background sync for credibility anchor
   await githubQueue.add("sync-developer-stats", {

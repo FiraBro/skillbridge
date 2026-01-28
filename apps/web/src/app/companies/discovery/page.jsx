@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import DeveloperCard from "./components/developer-card";
+import DeveloperCard from "../components/developer-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FaSearch, FaFilter, FaUsers } from "react-icons/fa";

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, Clock, ArrowRight, Heart, Eye } from "lucide-react";
 
-import { usePosts, useLikePost, useUnlikePost } from "@/hooks/usePosts";
+import { usePosts, useToggleLikePost } from "@/hooks/usePosts";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,7 @@ import { cn } from "@/lib/utils";
 
 export default function ActivityFeed() {
   const { data: posts, isLoading } = usePosts({ limit: 5 });
-  const likePost = useLikePost();
-  const unlikePost = useUnlikePost();
+  const toggleLike = useToggleLikePost();
 
   if (isLoading) {
     return (
@@ -100,28 +99,33 @@ export default function ActivityFeed() {
                       <Eye className="h-3.5 w-3.5" />
                       {post.views || 0}
                     </span>
-
                     {/* LIKE (working) */}
                     <button
-                      onClick={() =>
+                      disabled={toggleLike.isPending}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        toggleLike.mutate({
+                          id: post.id,
+                          isLiked: post.is_liked,
+                        });
+                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs font-bold transition-all active:scale-95",
                         post.is_liked
-                          ? unlikePost.mutate(post.id)
-                          : likePost.mutate(post.id)
-                      }
-                      disabled={likePost.isPending || unlikePost.isPending}
-                      className="flex items-center gap-1.5 text-xs font-bold transition-colors"
+                          ? "text-red-500"
+                          : "text-muted-foreground hover:text-primary",
+                      )}
                     >
                       <Heart
                         className={cn(
                           "h-3.5 w-3.5 transition-colors",
-                          post.is_liked
-                            ? "fill-red-500 text-red-500"
-                            : "text-muted-foreground hover:text-primary",
+                          post.is_liked ? "fill-current" : "fill-none",
                         )}
                       />
                       {post.likes_count || 0}
                     </button>
-
                     {/* COMMENTS */}
                     <Link
                       to={`/posts/${post.slug}#comments`}

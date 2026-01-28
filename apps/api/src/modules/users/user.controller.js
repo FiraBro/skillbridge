@@ -1,6 +1,6 @@
-import githubService from "../../services/github.service.js";
+import githubService from "../services/github.service.js";
 import { calculateReputation } from "../reputation/reputation.service.js";
-import apiResponse from "../../utils/apiResponse.js";
+import apiResponse from "../utils/apiResponse.js";
 
 export const getProfile = async (req, res, next) => {
   try {

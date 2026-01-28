@@ -1,6 +1,15 @@
-const express = require("express");
-const router = express.Router();
+import { Router } from "express";
+import * as reputationController from "./reputation.controller.js";
 
-// Reputation routes
+const router = Router();
 
-module.exports = router;
+// Get reputation breakdown
+router.get("/:userId/breakdown", reputationController.getBreakdown);
+
+// Get reputation history
+router.get("/:userId/history", reputationController.getHistory);
+
+// Recalculate reputation
+router.post("/:userId/recalculate", reputationController.recalculate);
+
+export default router;

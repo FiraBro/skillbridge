@@ -1,6 +1,15 @@
-const express = require("express");
-const router = express.Router();
+import { Router } from "express";
+import * as endorsementController from "./endorsement.controller.js";
 
-// Endorsement routes
+const router = Router();
 
-module.exports = router;
+// Create endorsement
+router.post("/", endorsementController.create);
+
+// Get endorsements for a user
+router.get("/:userId", endorsementController.getByUser);
+
+// Delete endorsement
+router.delete("/:id", endorsementController.remove);
+
+export default router;

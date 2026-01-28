@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
+import MarkdownRenderer from "@/components/markdown-renderer";
 
 export default function PostDetailPage() {
   const { slug } = useParams();
@@ -154,10 +155,9 @@ export default function PostDetailPage() {
           </div>
         </header>
 
-        <section
-          className="prose prose-invert max-w-none text-lg leading-relaxed font-medium text-foreground/90 markdown-content"
-          dangerouslySetInnerHTML={{ __html: post.sanitized_html }}
-        />
+        <div className="w-full">
+          <MarkdownRenderer content={post.markdown || ""} />
+        </div>
       </article>
 
       <section className="space-y-8 pt-10 border-t">

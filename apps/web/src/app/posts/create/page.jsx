@@ -17,6 +17,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+import MarkdownRenderer from "@/components/markdown-renderer";
+
 export default function CreatePostPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -24,6 +26,7 @@ export default function CreatePostPage() {
   const [markdown, setMarkdown] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState([]);
+  const [isPreview, setIsPreview] = useState(false);
 
   const mutation = useMutation({
     mutationFn: (data) => postService.create(data),
@@ -122,16 +125,43 @@ export default function CreatePostPage() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   Detailed Payload
                 </label>
-                <span className="text-[10px] font-bold text-muted-foreground/40 italic uppercase tracking-widest flex items-center gap-1">
-                  <Terminal className="h-3 w-3" /> Markdown Supported
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="text-[10px] font-bold text-muted-foreground/40 italic uppercase tracking-widest flex items-center gap-1">
+                    <Terminal className="h-3 w-3" /> Markdown Supported
+                  </span>
+                  <div className="flex bg-muted/30 p-1 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setIsPreview(false)}
+                      className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${!isPreview ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Editor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsPreview(true)}
+                      className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${isPreview ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Preview
+                    </button>
+                  </div>
+                </div>
               </div>
-              <textarea
-                placeholder="Document your evidence, methodology, and results... Use # for headers, ** for bold."
-                value={markdown}
-                onChange={(e) => setMarkdown(e.target.value)}
-                className="w-full min-h-[400px] bg-transparent border-none focus:outline-none text-lg leading-relaxed font-medium placeholder:italic placeholder:opacity-20 resize-y pt-4"
-              />
+
+              {isPreview ? (
+                <div className="w-full min-h-[400px] bg-muted/10 rounded-2xl p-6 border border-border/50 overflow-auto resize-y">
+                  <MarkdownRenderer
+                    content={markdown || "*No content to preview*"}
+                  />
+                </div>
+              ) : (
+                <textarea
+                  placeholder="Document your evidence, methodology, and results... Use # for headers, ** for bold."
+                  value={markdown}
+                  onChange={(e) => setMarkdown(e.target.value)}
+                  className="w-full min-h-[400px] bg-transparent border-none focus:outline-none text-lg leading-relaxed font-medium placeholder:italic placeholder:opacity-20 resize-y pt-4"
+                />
+              )}
             </div>
           </Card>
         </div>
@@ -184,7 +214,7 @@ export default function CreatePostPage() {
                 type="submit"
                 className="w-full h-14 rounded-2xl gap-3 font-black uppercase italic shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all group"
                 disabled={
-                  mutation.isLoading || !title.trim() || !markdown.trim()
+                  mutation.isPending || !title.trim() || !markdown.trim()
                 }
               >
                 {mutation.isLoading ? (

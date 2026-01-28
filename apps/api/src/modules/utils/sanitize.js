@@ -6,10 +6,16 @@ export function sanitizeMarkdown(markdown) {
   const rawHtml = marked.parse(markdown);
 
   return sanitizeHtmlLib(rawHtml, {
-    allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat(["img"]),
+    allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat([
+      "img",
+      "h1",
+      "h2",
+      "span",
+      "u",
+    ]),
     allowedAttributes: {
-      a: ["href", "target"],
-      img: ["src", "alt"],
+      a: ["href", "target", "rel"],
+      img: ["src", "alt", "title", "width", "height"],
     },
     allowedSchemes: ["http", "https", "mailto"], // optional safety
   });

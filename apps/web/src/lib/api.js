@@ -7,7 +7,12 @@ const api = axios.create({
 });
 
 export const authApi = {
-  login: (data) => api.post("/auth/login", data),
+  login: async (data) => {
+    console.log("authApi.login called with:", data);
+    const res = await api.post("/auth/login", data);
+    console.log("authApi.login response:", res.data);
+    return res;
+  },
   register: (data) => api.post("/auth/register", data),
   forgotPassword: (data) => api.post("/auth/forgot-password", data),
   resetPassword: (token, data) =>

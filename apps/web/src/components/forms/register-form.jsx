@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { authApi } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 
 const regSchema = z
@@ -20,6 +21,7 @@ const regSchema = z
   });
 
 export const RegisterForm = () => {
+  const { setAuth } = useAuth();
   const [role, setRole] = useState("developer");
 
   const {
@@ -33,8 +35,10 @@ export const RegisterForm = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: authApi.register,
-    onSuccess: () => {
+    mutationFn: (data) => authApi.register(data),
+    onSuccess: (response) => {
+      const { user, token } = response.data;
+      setAuth(user, token);
       window.location.href = "/dashboard";
     },
   });

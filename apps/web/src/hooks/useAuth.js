@@ -10,8 +10,13 @@ export const useAuth = create(
       isAuthenticated: false,
       isLoading: true,
 
-      setAuth: (user, token) =>
-        set({ user, token, isAuthenticated: true, isLoading: false }),
+      setAuth: (user, token) => {
+        console.log(user, token);
+
+        if (token) localStorage.setItem("sb_token", token);
+        if (user) localStorage.setItem("sb_user", JSON.stringify(user));
+        set({ user, token, isAuthenticated: true, isLoading: false });
+      },
 
       logout: () => {
         set({ user: null, token: null, isAuthenticated: false });

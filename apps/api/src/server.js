@@ -1,6 +1,26 @@
 import { app } from "./app.js";
 import { env } from "./config/env.js";
 
-app.listen(env.PORT, () => {
-  console.log(`🚀 API running on port ${env.PORT}`);
-});
+const PORT = env.PORT || 6000;
+
+// Use global variable to prevent multiple listen() on hot reload
+if (!global.__server__) {
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 API running on port ${PORT}`);
+  });
+
+  global.__server__ = server;
+
+  // Graceful shutdown for nodemon, ctrl+c, docker
+  const shutdown = (signal) => {
+    console.log(`🛑 ${signal} received. Closing server...`);
+    server.close(() => {
+      console.log("✅ Server closed cleanly");
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGUSR2", () => shutdown("SIGUSR2")); // nodemon restart
+  process.on("SIGINT", () => shutdown("SIGINT")); // ctrl+c
+  process.on("SIGTERM", () => shutdown("SIGTERM")); // docker / kill
+}

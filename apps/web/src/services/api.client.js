@@ -7,6 +7,15 @@ const apiClient = axios.create({
   },
 });
 
+// Request interceptor to add auth token
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("sb_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Response interceptor for unified error handling
 apiClient.interceptors.response.use(
   (response) => response.data,

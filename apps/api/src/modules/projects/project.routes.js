@@ -17,6 +17,7 @@ const writeLimiter = rateLimit({
 });
 
 router.get("/", listProjects);
+
 router.get("/:id", getProject);
 router.post("/", requireAuth, writeLimiter, createProject);
 router.patch("/:id", requireAuth, writeLimiter, updateProject);

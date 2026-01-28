@@ -106,14 +106,22 @@ export async function applyToJob(jobId, developerId, message) {
 }
 
 /**
- * Create a new job post
+ * Create a new job post with enhanced fields
  */
 export async function createJob(clientId, jobData) {
-  const { title, description, budgetRange, requiredSkills } = jobData;
+  const {
+    title,
+    description,
+    budgetRange,
+    requiredSkills,
+    expectedOutcome,
+    trialFriendly,
+  } = jobData;
+
   const { rows } = await query(
     `
-    INSERT INTO jobs (client_id, title, description, budget_range, required_skills)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO jobs (client_id, title, description, budget_range, required_skills, expected_outcome, trial_friendly)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING *
     `,
     [
@@ -122,9 +130,56 @@ export async function createJob(clientId, jobData) {
       description,
       budgetRange,
       JSON.stringify(requiredSkills || []),
+      expectedOutcome,
+      trialFriendly || false,
     ],
   );
   return rows[0];
+}
+
+/**
+ * Toggle job publishing status
+ */
+export async function toggleJobPublish(jobId, clientId, isPublished) {
+  const { rows } = await query(
+    `UPDATE jobs SET is_published = $1, updated_at = NOW() WHERE id = $2 AND client_id = $3 RETURNING *`,
+    [isPublished, jobId, clientId],
+  );
+  return rows[0];
+}
+
+/**
+ * Update hiring status and private notes for an application
+ */
+export async function updateApplicationFeedback(applicationId, clientId, data) {
+  const { status, notes } = data;
+
+  // Verify ownership (job must belong to the client)
+  const { rows } = await query(
+    `
+    UPDATE job_applications ja
+    SET hiring_status = COALESCE($1, hiring_status), 
+        private_notes = COALESCE($2, private_notes), 
+        updated_at = NOW()
+    FROM jobs j
+    WHERE ja.id = $3 AND ja.job_id = j.id AND j.client_id = $4
+    RETURNING ja.*
+    `,
+    [status, notes, applicationId, clientId],
+  );
+
+  return rows[0];
+}
+
+/**
+ * Get all jobs posted by a specific company
+ */
+export async function getCompanyJobs(clientId) {
+  const { rows } = await query(
+    `SELECT * FROM jobs WHERE client_id = $1 ORDER BY created_at DESC`,
+    [clientId],
+  );
+  return rows;
 }
 
 /**

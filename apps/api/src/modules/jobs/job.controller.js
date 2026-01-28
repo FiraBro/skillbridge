@@ -40,7 +40,24 @@ export async function getRecommended(req, res, next) {
 export async function create(req, res, next) {
   try {
     const clientId = req.user.id;
-    const job = await jobService.createJob(clientId, req.body);
+    const {
+      title,
+      description,
+      budgetRange,
+      requiredSkills,
+      expectedOutcome,
+      trialFriendly,
+    } = req.body;
+
+    const job = await jobService.createJob(clientId, {
+      title,
+      description,
+      budgetRange,
+      requiredSkills,
+      expectedOutcome,
+      trialFriendly,
+    });
+
     return res.status(201).json(apiResponse.success(job));
   } catch (error) {
     next(error);

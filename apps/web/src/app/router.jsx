@@ -13,6 +13,12 @@ const ForgotPassword = lazy(() => import("./auth/forgot-password"));
 const ResetPassword = lazy(() => import("./auth/reset-password"));
 // Change from relative to absolute-style alias
 const Profile = lazy(() => import("@/app/profile/[id]/page.jsx"));
+const Dashboard = lazy(() => import("./dashboard/page.jsx"));
+const CompanyDashboard = lazy(() => import("./companies/dashboard/page.jsx"));
+const TalentDiscovery = lazy(() => import("./companies/discovery/page.jsx"));
+const CompanyProfile = lazy(() => import("./companies/profile/page.jsx"));
+const CreateJob = lazy(() => import("./jobs/create/page.jsx"));
+const ApplicantReview = lazy(() => import("./companies/applicants/page.jsx"));
 const Jobs = lazy(() => import("./jobs/page.jsx"));
 // Loading spinner component for a professional feel
 const PageLoader = () => (
@@ -61,6 +67,46 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<PageLoader />}>
         <Jobs />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/jobs/create",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <CreateJob />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/applicants/:jobId",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <ApplicantReview />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/company-dashboard",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <CompanyDashboard />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/discovery",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <TalentDiscovery />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/company/settings",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <CompanyProfile />
       </Suspense>
     ),
   },

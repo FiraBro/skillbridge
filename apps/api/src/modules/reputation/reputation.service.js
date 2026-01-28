@@ -3,6 +3,7 @@ import {
   calculateReputation,
   getReputationBreakdown,
 } from "../services/reputation.engine.js";
+import { getSettings } from "../admin/admin.service.js";
 
 /**
  * Get detailed reputation breakdown for a user
@@ -48,23 +49,27 @@ export async function getUserReputationBreakdown(userId) {
   }
 
   const data = rows[0];
+  const weights = await getSettings("reputation_weights");
 
-  return getReputationBreakdown({
-    skillsCount: parseInt(data.skills_count) || 0,
-    githubStats: {
-      publicRepos: data.public_repos,
-      followers: data.followers,
-      totalStars: data.total_stars,
-      totalCommits: data.total_commits,
-      commits_30d: data.commits_30d,
-      is_active: data.is_active,
+  return getReputationBreakdown(
+    {
+      skillsCount: parseInt(data.skills_count) || 0,
+      githubStats: {
+        publicRepos: data.public_repos,
+        followers: data.followers,
+        totalStars: data.total_stars,
+        totalCommits: data.total_commits,
+        commits_30d: data.commits_30d,
+        is_active: data.is_active,
+      },
+      joinedAt: data.joined_at,
+      postsCount: parseInt(data.posts_count) || 0,
+      totalLikes: parseInt(data.total_likes) || 0,
+      projectsCount: parseInt(data.projects_count) || 0,
+      endorsementsCount: parseInt(data.endorsements_count) || 0,
     },
-    joinedAt: data.joined_at,
-    postsCount: parseInt(data.posts_count) || 0,
-    totalLikes: parseInt(data.total_likes) || 0,
-    projectsCount: parseInt(data.projects_count) || 0,
-    endorsementsCount: parseInt(data.endorsements_count) || 0,
-  });
+    weights,
+  );
 }
 
 /**

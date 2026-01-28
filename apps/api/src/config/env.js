@@ -4,7 +4,7 @@ dotenv.config();
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV,
-  PORT: process.env.PORT || 4000,
+  PORT: process.env.PORT || 6000,
   DATABASE_URL: process.env.DATABASE_URL,
 
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,

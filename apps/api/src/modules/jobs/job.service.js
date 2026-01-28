@@ -1,4 +1,5 @@
 import { query } from "../../config/db.js";
+import ApiError from "../utils/apiError.js";
 
 /**
  * Browse all open jobs with optional filters
@@ -52,7 +53,6 @@ export async function getRecommendedJobs(userId) {
   }
 
   // 2. Fetch jobs and calculate match score
-  // Note: For large scale, this should be done in SQL with pg_trgm or similar
   const { rows: jobs } = await query(
     `
     SELECT j.*, u.name as client_name
@@ -80,7 +80,6 @@ export async function getRecommendedJobs(userId) {
     };
   });
 
-  // Sort by match percentage
   return recommendedJobs.sort((a, b) => b.matchPercentage - a.matchPercentage);
 }
 
@@ -99,7 +98,7 @@ export async function applyToJob(jobId, developerId, message) {
   );
 
   if (rows.length === 0) {
-    throw new Error("Already applied to this job");
+    throw new ApiError(400, "Already applied to this job");
   }
 
   return rows[0];
@@ -145,6 +144,8 @@ export async function toggleJobPublish(jobId, clientId, isPublished) {
     `UPDATE jobs SET is_published = $1, updated_at = NOW() WHERE id = $2 AND client_id = $3 RETURNING *`,
     [isPublished, jobId, clientId],
   );
+  if (rows.length === 0)
+    throw new ApiError(404, "Job not found or unauthorized");
   return rows[0];
 }
 
@@ -154,7 +155,6 @@ export async function toggleJobPublish(jobId, clientId, isPublished) {
 export async function updateApplicationFeedback(applicationId, clientId, data) {
   const { status, notes } = data;
 
-  // Verify ownership (job must belong to the client)
   const { rows } = await query(
     `
     UPDATE job_applications ja
@@ -168,6 +168,8 @@ export async function updateApplicationFeedback(applicationId, clientId, data) {
     [status, notes, applicationId, clientId],
   );
 
+  if (rows.length === 0)
+    throw new ApiError(404, "Application not found or unauthorized");
   return rows[0];
 }
 

@@ -8,6 +8,8 @@ import endorsementRoutes from "./modules/endorsements/endorsement.routes.js";
 import jobRoutes from "./modules/jobs/job.routes.js";
 import notificationRoutes from "./modules/notifications/notification.routes.js";
 import companyRoutes from "./modules/companies/company.routes.js";
+import searchRoutes from "./modules/search/search.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
 const router = Router();
 
 router.use("/api/auth", authRoutes);
@@ -19,4 +21,7 @@ router.use("/api/endorsements", endorsementRoutes);
 router.use("/api/jobs", jobRoutes);
 router.use("/api/notifications", notificationRoutes);
 router.use("/api/companies", companyRoutes);
+router.use("/api/search", searchRoutes);
+router.use("/api/admin", adminRoutes);
+router.use("/api/moderation", adminRoutes); // Reuse for /report access
 export default router;

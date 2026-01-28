@@ -1,113 +1,88 @@
 import * as jobService from "./job.service.js";
 import apiResponse from "../utils/apiResponse.js";
+import catchAsync from "../utils/catchAsync.js";
+import ApiError from "../utils/apiError.js";
 
 /**
  * GET /api/jobs
  * Browse or search jobs
  */
-export async function browse(req, res, next) {
-  try {
-    const filters = {
-      search: req.query.search,
-      skills: req.query.skills ? req.query.skills.split(",") : [],
-    };
+export const browse = catchAsync(async (req, res, next) => {
+  const filters = {
+    search: req.query.search,
+    skills: req.query.skills ? req.query.skills.split(",") : [],
+  };
 
-    const jobs = await jobService.browseJobs(filters);
-    return res.status(200).json(apiResponse.success(jobs));
-  } catch (error) {
-    next(error);
-  }
-}
+  const jobs = await jobService.browseJobs(filters);
+  return res.status(200).json(apiResponse.success(jobs));
+});
 
 /**
  * GET /api/jobs/recommended
  * Get jobs recommended for the authenticated user
  */
-export async function getRecommended(req, res, next) {
-  try {
-    const userId = req.user.id;
-    const jobs = await jobService.getRecommendedJobs(userId);
-    return res.status(200).json(apiResponse.success(jobs));
-  } catch (error) {
-    next(error);
-  }
-}
+export const getRecommended = catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
+  const jobs = await jobService.getRecommendedJobs(userId);
+  return res.status(200).json(apiResponse.success(jobs));
+});
 
 /**
  * POST /api/jobs
  * Create a new job post
  */
-export async function create(req, res, next) {
-  try {
-    const clientId = req.user.id;
-    const {
-      title,
-      description,
-      budgetRange,
-      requiredSkills,
-      expectedOutcome,
-      trialFriendly,
-    } = req.body;
+export const create = catchAsync(async (req, res, next) => {
+  const clientId = req.user.id;
+  const {
+    title,
+    description,
+    budgetRange,
+    requiredSkills,
+    expectedOutcome,
+    trialFriendly,
+  } = req.body;
 
-    const job = await jobService.createJob(clientId, {
-      title,
-      description,
-      budgetRange,
-      requiredSkills,
-      expectedOutcome,
-      trialFriendly,
-    });
+  const job = await jobService.createJob(clientId, {
+    title,
+    description,
+    budgetRange,
+    requiredSkills,
+    expectedOutcome,
+    trialFriendly,
+  });
 
-    return res.status(201).json(apiResponse.success(job));
-  } catch (error) {
-    next(error);
-  }
-}
+  return res.status(201).json(apiResponse.success(job));
+});
 
 /**
  * GET /api/jobs/:id
  * Get job details
  */
-export async function getById(req, res, next) {
-  try {
-    const jobId = req.params.id;
-    const userId = req.user?.id;
-    const job = await jobService.getJobDetails(jobId, userId);
+export const getById = catchAsync(async (req, res, next) => {
+  const jobId = req.params.id;
+  const userId = req.user?.id;
+  const job = await jobService.getJobDetails(jobId, userId);
 
-    if (!job) {
-      return res.status(404).json(apiResponse.error("Job not found", 404));
-    }
-
-    return res.status(200).json(apiResponse.success(job));
-  } catch (error) {
-    next(error);
+  if (!job) {
+    throw new ApiError(404, "Job not found");
   }
-}
+
+  return res.status(200).json(apiResponse.success(job));
+});
 
 /**
  * POST /api/jobs/:id/apply
  * Apply to a job
  */
-export async function apply(req, res, next) {
-  try {
-    const jobId = req.params.id;
-    const developerId = req.user.id;
-    const { message } = req.body;
+export const apply = catchAsync(async (req, res, next) => {
+  const jobId = req.params.id;
+  const developerId = req.user.id;
+  const { message } = req.body;
 
-    const application = await jobService.applyToJob(
-      jobId,
-      developerId,
-      message,
+  const application = await jobService.applyToJob(jobId, developerId, message);
+  return res
+    .status(201)
+    .json(
+      apiResponse.success(application, "Application submitted successfully"),
     );
-    return res
-      .status(201)
-      .json(
-        apiResponse.success(application, "Application submitted successfully"),
-      );
-  } catch (error) {
-    if (error.message === "Already applied to this job") {
-      return res.status(400).json(apiResponse.error(error.message, 400));
-    }
-    next(error);
-  }
-}
+});

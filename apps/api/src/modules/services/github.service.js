@@ -124,10 +124,10 @@ class GitHubService {
         name: err.name,
       });
       if (err.status === 404) {
-        throw new ApiError("GitHub user not found", 404);
+        throw new ApiError(404, "GitHub user not found");
       }
 
-      throw new ApiError("GitHub service unavailable", 500);
+      throw new ApiError(500, "GitHub service unavailable");
     }
   }
 }

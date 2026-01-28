@@ -1,13 +1,15 @@
 import * as repo from "./repository.profile.js";
-import github from "../services/github.service.js"; // No asterisk, no curly braces
+import github from "../services/github.service.js";
 import { calculateReputation } from "../services/reputation.engine.js";
+import ApiError from "../utils/apiError.js";
+
 export async function createProfile(payload) {
   return repo.createProfile(payload);
 }
 
 export async function getPublicProfile(username) {
   const profile = await repo.getProfileByUsername(username);
-  if (!profile) throw new Error("Profile not found");
+  if (!profile) throw new ApiError(404, "Profile not found");
   return profile;
 }
 

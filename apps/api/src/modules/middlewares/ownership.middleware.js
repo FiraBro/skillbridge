@@ -17,7 +17,7 @@ export const ownershipMiddleware = () => {
     console.log("DEBUG db row:", rows[0]);
 
     if (!rows.length) {
-      throw new ApiError("Post not found", 404);
+      throw new ApiError(404, "Post not found");
     }
 
     const ownerId = rows[0].author_id;
@@ -25,7 +25,7 @@ export const ownershipMiddleware = () => {
     console.log("DEBUG ownerId:", ownerId, " userId:", userId);
 
     if (String(ownerId) !== String(userId)) {
-      throw new ApiError("Forbidden", 403);
+      throw new ApiError(403, "Forbidden");
     }
 
     next();

@@ -1,98 +1,67 @@
-// apps/web/src/app/profile/component/reputation-history.jsx
-import { Card } from "@/components/ui/card";
+import { CheckCircle2, Info, Star, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  FaArrowUp,
-  FaArrowDown,
-  FaFileAlt,
-  FaHeart,
-  FaRocket,
-  FaStar,
-  FaGithub,
-  FaSync,
-} from "react-icons/fa";
-import { formatDistanceToNow } from "date-fns";
 
-export default function ReputationHistory({ history }) {
-  if (!history || history.length === 0) {
+export default function ReputationHistory({ events = [] }) {
+  if (!events || events.length === 0) {
     return (
-      <Card className="p-6 bg-card/50 backdrop-blur-sm">
-        <div className="text-center text-muted-foreground">
-          <p className="text-sm">No reputation history yet</p>
+      <div className="py-20 text-center space-y-4">
+        <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+          <Info className="text-muted-foreground h-6 w-6" />
         </div>
-      </Card>
+        <p className="text-sm font-medium text-muted-foreground italic">
+          No reputation events recorded yet.
+        </p>
+      </div>
     );
   }
 
-  const getReasonIcon = (reason) => {
-    const icons = {
-      post_created: <FaFileAlt className="text-green-500" />,
-      post_liked: <FaHeart className="text-pink-500" />,
-      project_added: <FaRocket className="text-cyan-500" />,
-      endorsement_received: <FaStar className="text-yellow-500" />,
-      github_sync: <FaGithub className="text-purple-500" />,
-      recalculation: <FaSync className="text-slate-500" />,
-    };
-    return icons[reason] || <FaSync className="text-slate-500" />;
-  };
-
-  const getReasonLabel = (reason) => {
-    const labels = {
-      post_created: "Post Created",
-      post_liked: "Post Liked",
-      project_added: "Project Added",
-      endorsement_received: "Endorsement Received",
-      github_sync: "GitHub Sync",
-      recalculation: "Recalculation",
-    };
-    return labels[reason] || reason;
-  };
-
   return (
-    <Card className="p-6 bg-card/50 backdrop-blur-sm">
-      <h3 className="text-lg font-bold mb-4">Reputation History</h3>
+    <div className="space-y-8">
+      <div className="flex items-center justify-between sticky top-0 bg-card py-2 z-10 border-b">
+        <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">
+          Audit Timeline
+        </h3>
+        <Badge variant="secondary" className="text-[10px] font-bold uppercase">
+          {events.length} Events
+        </Badge>
+      </div>
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
-        {history.map((entry) => (
-          <div
-            key={entry.id}
-            className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50"
-          >
-            <div className="mt-0.5">{getReasonIcon(entry.reason)}</div>
+      <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-primary/50 before:via-primary/20 before:to-transparent">
+        {events.map((event, index) => (
+          <div key={index} className="relative flex items-start gap-6 group">
+            <div className="absolute left-0 mt-1 flex h-10 w-10 items-center justify-center rounded-full bg-background border-2 border-primary/20 shadow-sm group-hover:border-primary/50 transition-colors z-10">
+              {event.change_type === "bonus" ? (
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+              ) : event.points > 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+              ) : (
+                <ShieldAlert className="h-5 w-5 text-red-500" />
+              )}
+            </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium">
-                  {getReasonLabel(entry.reason)}
+            <div className="ml-14 flex-1 pt-1">
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-bold text-foreground">{event.reason}</p>
+                <span className="text-[10px] font-black uppercase text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+                  {new Date(event.created_at).toLocaleDateString()}
                 </span>
-                <Badge
-                  variant={entry.change_amount > 0 ? "default" : "secondary"}
-                  className="text-xs"
-                >
-                  {entry.change_amount > 0 ? (
-                    <FaArrowUp className="w-3 h-3 mr-1 inline" />
-                  ) : (
-                    <FaArrowDown className="w-3 h-3 mr-1 inline" />
-                  )}
-                  {Math.abs(entry.change_amount)}
-                </Badge>
               </div>
-
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>
-                  {entry.previous_score} → {entry.new_score}
+              <div className="flex items-center gap-3">
+                <span
+                  className={`text-xs font-bold ${event.points >= 0 ? "text-primary" : "text-red-500"}`}
+                >
+                  {event.points >= 0 ? "+" : ""}
+                  {event.points} pts
                 </span>
-                <span>•</span>
-                <span>
-                  {formatDistanceToNow(new Date(entry.created_at), {
-                    addSuffix: true,
-                  })}
-                </span>
+                <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Verified by System Protocol
+                </p>
               </div>
             </div>
           </div>
         ))}
       </div>
-    </Card>
+    </div>
   );
 }

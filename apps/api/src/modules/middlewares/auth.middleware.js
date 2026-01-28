@@ -6,7 +6,7 @@ export const requireAuth = (req, res, next) => {
   const header = req.headers.authorization;
 
   if (!header?.startsWith("Bearer ")) {
-    throw new ApiError("Unauthorized", 401);
+    throw new ApiError(401, "Unauthorized");
   }
 
   const token = header.split(" ")[1];
@@ -18,6 +18,6 @@ export const requireAuth = (req, res, next) => {
     req.user = { id: payload.sub, role: payload.role };
     next();
   } catch (err) {
-    throw new ApiError("Invalid token", 401);
+    throw new ApiError(401, "Invalid token");
   }
 };

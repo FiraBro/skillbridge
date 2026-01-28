@@ -19,6 +19,8 @@ const TalentDiscovery = lazy(() => import("./companies/discovery/page.jsx"));
 const CompanyProfile = lazy(() => import("./companies/profile/page.jsx"));
 const CreateJob = lazy(() => import("./jobs/create/page.jsx"));
 const ApplicantReview = lazy(() => import("./companies/applicants/page.jsx"));
+const Search = lazy(() => import("./search/page.jsx"));
+const Admin = lazy(() => import("./admin/page.jsx"));
 const Jobs = lazy(() => import("./jobs/page.jsx"));
 // Loading spinner component for a professional feel
 const PageLoader = () => (
@@ -107,6 +109,22 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<PageLoader />}>
         <CompanyProfile />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/search",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <Search />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/admin",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <Admin />
       </Suspense>
     ),
   },

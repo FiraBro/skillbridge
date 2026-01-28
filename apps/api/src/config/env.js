@@ -15,5 +15,5 @@ export const env = {
 
   BCRYPT_SALT_ROUNDS: Number(process.env.BCRYPT_SALT_ROUNDS || 12),
   GITHUB_TOKEN:
-    process.env.GITHUB_TOKEN || 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,
+    process.env.GITHUB_TOKEN || "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",
 };

@@ -13,6 +13,7 @@ const ForgotPassword = lazy(() => import("./auth/forgot-password"));
 const ResetPassword = lazy(() => import("./auth/reset-password"));
 // Change from relative to absolute-style alias
 const Profile = lazy(() => import("@/app/profile/[id]/page.jsx"));
+const Jobs = lazy(() => import("./jobs/page.jsx"));
 // Loading spinner component for a professional feel
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-background">
@@ -37,6 +38,14 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    path: "/dashboard",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <Dashboard />
+      </Suspense>
+    ),
+  },
+  {
     // Profile should be OUTSIDE AuthLayout so it can use the full screen
     path: "/profile/:id",
     element: (
@@ -48,8 +57,16 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: "/jobs",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <Jobs />
+      </Suspense>
+    ),
+  },
+  {
     path: "/",
-    element: <Navigate to="/auth/login" replace />,
+    element: <Navigate to="/dashboard" replace />,
   },
   {
     path: "*",

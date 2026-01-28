@@ -1,6 +1,21 @@
-const express = require("express");
-const router = express.Router();
+import { Router } from "express";
+import * as jobController from "./job.controller.js";
 
-// Job routes
+const router = Router();
 
-module.exports = router;
+// Browse jobs
+router.get("/", jobController.browse);
+
+// Get recommended jobs (Authentication required)
+router.get("/recommended", jobController.getRecommended);
+
+// Create job (Authentication required - usually for clients)
+router.post("/", jobController.create);
+
+// Get job details
+router.get("/:id", jobController.getById);
+
+// Apply to job (Authentication required)
+router.post("/:id/apply", jobController.apply);
+
+export default router;

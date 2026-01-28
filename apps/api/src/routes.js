@@ -5,6 +5,8 @@ import profileRoutes from "./modules/profile/profile.route.js";
 import projectRoutes from "./modules/projects/project.routes.js";
 import reputationRoutes from "./modules/reputation/reputation.routes.js";
 import endorsementRoutes from "./modules/endorsements/endorsement.routes.js";
+import jobRoutes from "./modules/jobs/job.routes.js";
+import notificationRoutes from "./modules/notifications/notification.routes.js";
 const router = Router();
 
 router.use("/api/auth", authRoutes);
@@ -13,4 +15,6 @@ router.use("/api/posts", postsRoutes);
 router.use("/api/projects", projectRoutes);
 router.use("/api/reputation", reputationRoutes);
 router.use("/api/endorsements", endorsementRoutes);
+router.use("/api/jobs", jobRoutes);
+router.use("/api/notifications", notificationRoutes);
 export default router;

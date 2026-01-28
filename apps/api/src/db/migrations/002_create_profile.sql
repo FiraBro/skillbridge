@@ -46,5 +46,10 @@ CREATE TABLE IF NOT EXISTS github_stats (
     followers INT,
     total_stars INT,
     total_commits INT,
+    commits_30d INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT false,
+    last_activity TIMESTAMP,
+    account_created TIMESTAMP,
     last_synced_at TIMESTAMP
 );
+

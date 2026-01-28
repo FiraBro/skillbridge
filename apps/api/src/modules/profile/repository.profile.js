@@ -33,6 +33,10 @@ export async function getProfileByUsername(username) {
            gs.followers, 
            gs.total_stars, 
            gs.total_commits,
+           gs.commits_30d,
+           gs.is_active,
+           gs.last_activity,
+           gs.account_created,
            gs.last_synced_at
     FROM profiles p
     LEFT JOIN profile_skills ps ON ps.profile_id = p.id
@@ -50,14 +54,18 @@ export async function upsertGithubStats(profileId, stats) {
   await query(
     `
     INSERT INTO github_stats 
-      (profile_id, public_repos, followers, total_stars, total_commits, last_synced_at)
-    VALUES ($1, $2, $3, $4, $5, NOW())
+      (profile_id, public_repos, followers, total_stars, total_commits, commits_30d, is_active, last_activity, account_created, last_synced_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
     ON CONFLICT (profile_id)
     DO UPDATE SET
       public_repos = EXCLUDED.public_repos,
       followers = EXCLUDED.followers,
       total_stars = EXCLUDED.total_stars,
       total_commits = EXCLUDED.total_commits,
+      commits_30d = EXCLUDED.commits_30d,
+      is_active = EXCLUDED.is_active,
+      last_activity = EXCLUDED.last_activity,
+      account_created = EXCLUDED.account_created,
       last_synced_at = NOW()
     `,
     [
@@ -66,6 +74,10 @@ export async function upsertGithubStats(profileId, stats) {
       stats.followers,
       stats.totalStars || stats.total_stars,
       stats.totalCommits || stats.total_commits,
+      stats.commits30d || stats.commits_30d || 0,
+      stats.isActive || stats.is_active || false,
+      stats.lastActivity || stats.last_activity || null,
+      stats.accountCreated || stats.account_created || null,
     ],
   );
 }

@@ -8,11 +8,16 @@ export function calculateReputation({
   const repos = githubStats.publicRepos || 0;
   const followers = githubStats.followers || 0;
   const stars = githubStats.totalStars || 0;
-  const commits = githubStats.totalCommits || 0; // Will be 0 since it's missing in service
+  const commits = githubStats.totalCommits || 0;
+  const commits30d = githubStats.commits30d || githubStats.commits_30d || 0;
+  const isActive = githubStats.isActive || githubStats.is_active || false;
 
   const skillScore = skills * 10;
 
   const githubScore = repos * 5 + followers * 3 + stars * 2 + commits * 0.1;
+
+  // Activity bonus (reward recent activity)
+  const activityBonus = isActive ? commits30d * 2 : 0;
 
   // Handle case where joinedAt might be invalid/missing
   const joinDate = new Date(joinedAt).getTime();
@@ -22,7 +27,9 @@ export function calculateReputation({
 
   const longevityScore = Math.min(accountAgeDays / 30, 50);
 
-  const finalScore = Math.round(skillScore + githubScore + longevityScore);
+  const finalScore = Math.round(
+    skillScore + githubScore + activityBonus + longevityScore,
+  );
 
   // Final safety check: if everything fails, return 0 instead of crashing the DB
   return isNaN(finalScore) ? 0 : finalScore;

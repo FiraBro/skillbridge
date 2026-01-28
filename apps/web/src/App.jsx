@@ -6,6 +6,8 @@ import { router } from "@/app/router";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 
+import { Toaster } from "@/components/ui/toaster";
+
 function App() {
   const { checkAuth } = useAuth();
 
@@ -17,6 +19,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
+      <Toaster />
     </QueryClientProvider>
   );
 }

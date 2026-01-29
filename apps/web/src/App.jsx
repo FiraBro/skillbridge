@@ -6,7 +6,8 @@ import { router } from "@/app/router";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 
-import { Toaster } from "@/components/ui/toaster";
+import { ToastContainer, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   const { checkAuth } = useAuth();
@@ -19,7 +20,19 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
-      <Toaster />
+      <ToastContainer
+        position="bottom-left"
+        autoClose={4000}
+        hideProgressBar
+        newestOnTop={false}
+        closeOnClick
+        draggable={false}
+        pauseOnHover
+        theme="light" // Set theme to light
+        transition={Slide}
+        toastClassName="!bg-[#f0f4f9] !rounded-full !shadow-md !border-none !min-h-[48px] !mb-6 !ml-4"
+        bodyClassName="!p-0 !m-0"
+      />
     </QueryClientProvider>
   );
 }

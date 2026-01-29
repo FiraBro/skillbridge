@@ -98,3 +98,34 @@
 ::view-transition-old(root) {
   z-index: 1;
 }
+/* Container tweak for positioning */
+.Toastify__toast-container--bottom-left {
+  bottom: 20px !important;
+  left: 20px !important;
+}
+
+/* The Gemini Pill */
+.Toastify__toast {
+  background-color: #f0f4f9 !important; /* Gemini Light Grey */
+  color: #1f1f1f !important; /* Deep Charcoal text */
+  padding: 0 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  font-family: "Google Sans", Inter, sans-serif !important;
+  box-shadow:
+    0 1px 3px 0 rgba(60, 64, 67, 0.3),
+    0 4px 8px 3px rgba(60, 64, 67, 0.15) !important;
+}
+
+/* Hide defaults */
+.Toastify__close-button,
+.Toastify__toast-icon {
+  display: none !important;
+}
+
+/* Text styling */
+.Toastify__toast-body {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.1px !important;
+}

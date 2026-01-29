@@ -24,6 +24,7 @@ export const postService = {
   unlike: (id) => apiClient.delete(`/posts/${id}/like`),
   addComment: (id, text) => apiClient.post(`/posts/${id}/comments`, { text }),
   getComments: (id) => apiClient.get(`/posts/${id}/comments`),
+  deleteComment: (id) => apiClient.delete(`/posts/${id}/comments`),
 };
 
 export const authService = {

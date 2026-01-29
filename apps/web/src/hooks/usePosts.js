@@ -164,3 +164,15 @@ export const useAddComment = () => {
     },
   });
 };
+
+export const useDeleteComment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id) => postService.deleteComment(id),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["posts", id] });
+      queryClient.invalidateQueries({ queryKey: ["posts", id, "comments"] });
+    },
+  });
+};

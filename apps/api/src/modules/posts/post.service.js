@@ -55,7 +55,8 @@ export async function listPosts({ page = 1, limit = 10, tag, userId }) {
       p.deleted_at,
       COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags,
       (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
-      (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comments_count
+      (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comments_count,
+      p.shares_count
       ${userId ? `, EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = $4) AS is_liked` : ""}
     FROM posts p
     LEFT JOIN users u ON p.author_id=u.id
@@ -94,7 +95,8 @@ export async function getPost(slug, userId) {
         p.deleted_at,
         COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags,
         (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
-        (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comments_count
+        (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comments_count,
+        p.shares_count
         ${userId ? `, EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = $2) AS is_liked` : ""}
       FROM posts p
       LEFT JOIN users u ON p.author_id=u.id
@@ -335,4 +337,14 @@ export async function getComments(postId, { page = 1, limit = 20 } = {}) {
   );
 
   return rows;
+}
+
+// ---------------------- SHARES ----------------------
+export async function sharePost(postId) {
+  const { rows } = await pool.query(
+    "UPDATE posts SET shares_count = COALESCE(shares_count, 0) + 1 WHERE id = $1 RETURNING shares_count",
+    [postId],
+  );
+  if (!rows[0]) throw new ApiError(404, "Post not found");
+  return rows[0];
 }

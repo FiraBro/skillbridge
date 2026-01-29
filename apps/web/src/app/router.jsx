@@ -21,6 +21,7 @@ const Admin = lazy(() => import("./admin/page.jsx"));
 const Jobs = lazy(() => import("./jobs/page.jsx"));
 const PostDetail = lazy(() => import("./posts/[slug]/page.jsx"));
 const PostCreate = lazy(() => import("./posts/create/page.jsx"));
+const PostEdit = lazy(() => import("./posts/[slug]/edit/page.jsx"));
 
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-background">
@@ -84,6 +85,14 @@ const routes = [
             element: (
               <Suspense fallback={<PageLoader />}>
                 <PostDetail />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/posts/:slug/edit",
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <PostEdit />
               </Suspense>
             ),
           },

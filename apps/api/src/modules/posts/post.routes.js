@@ -14,6 +14,9 @@ router.get("/", postController.list);
 // Get single post by slug
 router.get("/:slug", postController.get);
 
+// Share a post
+router.post("/:id/share", postController.share);
+
 // ----------------------
 // AUTHENTICATED ENDPOINTS
 // ----------------------

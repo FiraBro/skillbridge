@@ -47,6 +47,11 @@ export const remove = catchAsync(async (req, res) => {
   res.json({ status: "success", message: "Post deleted" });
 });
 
+export const share = catchAsync(async (req, res) => {
+  const data = await postService.sharePost(req.params.id);
+  res.json(data);
+});
+
 // ---------------------- LIKES ----------------------
 export const like = catchAsync(async (req, res) => {
   const data = await postService.likePost(req.params.id, req.user.id);

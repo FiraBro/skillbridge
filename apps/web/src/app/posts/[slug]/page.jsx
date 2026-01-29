@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Send,
   Trash2,
+  Edit2,
 } from "lucide-react";
 
 import {
@@ -18,6 +19,7 @@ import {
   useUnlikePost,
   useAddComment,
   useDeleteComment,
+  useSharePost,
 } from "@/hooks/usePosts";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -38,6 +40,7 @@ export default function PostDetailPage() {
   const unlikeMutation = useUnlikePost();
   const commentMutation = useAddComment();
   const deleteCommentMutation = useDeleteComment();
+  const shareMutation = useSharePost();
 
   const [commentText, setCommentText] = useState("");
 
@@ -58,6 +61,9 @@ export default function PostDetailPage() {
   const handleShare = useCallback(async () => {
     const url = window.location.href;
 
+    // Track share in backend
+    shareMutation.mutate(post.id);
+
     try {
       if (navigator.share) {
         await navigator.share({
@@ -71,7 +77,7 @@ export default function PostDetailPage() {
     } catch {
       toast.error("Unable to share this post");
     }
-  }, [post]);
+  }, [post, shareMutation]);
 
   const handleCommentSubmit = useCallback(
     (e) => {
@@ -152,6 +158,15 @@ export default function PostDetailPage() {
           Back to Feed
         </Button>
       </Link>
+
+      {user?.id === post.author_id && (
+        <Link to={`/posts/${post.slug}/edit`}>
+          <Button variant="outline" className="gap-2">
+            <Edit2 className="h-4 w-4" />
+            Edit Insight
+          </Button>
+        </Link>
+      )}
 
       <article className="space-y-8">
         {/* Header */}

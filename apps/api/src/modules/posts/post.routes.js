@@ -1,6 +1,6 @@
 import express from "express";
 import * as postController from "./post.controller.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
 import { ownershipMiddleware } from "../middlewares/ownership.middleware.js";
 const router = express.Router();
 
@@ -12,7 +12,7 @@ const router = express.Router();
 router.get("/", postController.list);
 
 // Get single post by slug
-router.get("/:slug", postController.get);
+router.get("/:slug", optionalAuth, postController.get);
 
 // Share a post
 router.post("/:id/share", postController.share);

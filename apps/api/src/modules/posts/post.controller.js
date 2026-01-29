@@ -2,6 +2,7 @@ import * as postService from "./post.service.js";
 import { createPostSchema, updatePostSchema } from "./post.schema.js";
 import ApiError from "../utils/apiError.js";
 import catchAsync from "../utils/catchAsync.js";
+import { trackView } from "./post.view.js";
 
 // ---------------------- POSTS ----------------------
 export const create = catchAsync(async (req, res) => {
@@ -25,10 +26,23 @@ export const list = catchAsync(async (req, res) => {
 });
 
 export const get = catchAsync(async (req, res) => {
+  // 1. Fetch the post data from the service
   const post = await postService.getPost(req.params.slug, req.user?.id);
+
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  // 2. Track the view (Real-world "Background" execution)
+  // We don't 'await' this so the user gets their data instantly.
+  // The trackView logic handles the Author check and Redis uniqueness.
+  trackView(req, post.id, post.author_id).catch((err) => {
+    console.error("View Tracking Error:", err);
+  });
+
+  // 3. Return the post to the React frontend
   res.json(post);
 });
-
 export const update = catchAsync(async (req, res) => {
   const data = updatePostSchema.parse(req.body);
   const clientUpdatedAt = req.body.updated_at; // Optional: for optimistic locking

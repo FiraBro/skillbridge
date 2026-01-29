@@ -127,7 +127,8 @@ export async function getPost(slug, userId) {
     post.comments = commentsRes.rows;
 
     // Increment views
-    await client.query(`UPDATE posts SET views=views+1 WHERE id=$1`, [post.id]);
+    // Increment views logic moved to controller/view tracker
+    // await client.query(`UPDATE posts SET views=views+1 WHERE id=$1`, [post.id]);
 
     await client.query("COMMIT");
     return post;

@@ -19,6 +19,7 @@ const ApplicantReview = lazy(() => import("./companies/applicants/page.jsx"));
 const Search = lazy(() => import("./search/page.jsx"));
 const Admin = lazy(() => import("./admin/page.jsx"));
 const Jobs = lazy(() => import("./jobs/page.jsx"));
+const JobDetail = lazy(() => import("./jobs/[id]/page.jsx"));
 const PostDetail = lazy(() => import("./posts/[slug]/page.jsx"));
 const PostCreate = lazy(() => import("./posts/create/page.jsx"));
 const PostEdit = lazy(() => import("./posts/[slug]/edit/page.jsx"));
@@ -109,6 +110,14 @@ const routes = [
             element: (
               <Suspense fallback={<PageLoader />}>
                 <CreateJob />
+              </Suspense>
+            ),
+          },
+          {
+            path: "/jobs/:id",
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <JobDetail />
               </Suspense>
             ),
           },

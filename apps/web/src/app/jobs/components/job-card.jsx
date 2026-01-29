@@ -71,7 +71,11 @@ export default function JobCard({ job, onApply }) {
               Posted {new Date(job.created_at).toLocaleDateString()}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`/jobs/${job.id}`, "_self")}
+              >
                 View Details
               </Button>
               <Button

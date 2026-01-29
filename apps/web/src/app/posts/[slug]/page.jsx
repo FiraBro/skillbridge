@@ -28,7 +28,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import MarkdownRenderer from "@/components/markdown-renderer";
-import { toast } from "react-toastify";
+import { showToast } from "@/lib/toast";
 
 export default function PostDetailPage() {
   const { slug } = useParams();
@@ -53,7 +53,7 @@ export default function PostDetailPage() {
 
     mutation.mutate(post.id, {
       onError: () => {
-        toast.error("Failed to update reaction");
+        showToast("Failed to update reaction");
       },
     });
   }, [post, likeMutation, unlikeMutation]);
@@ -72,10 +72,10 @@ export default function PostDetailPage() {
         });
       } else {
         await navigator.clipboard.writeText(url);
-        toast.success("Link copied to clipboard");
+        showToast("Link copied to clipboard");
       }
     } catch {
-      toast.error("Unable to share this post");
+      showToast("Unable to share this post");
     }
   }, [post, shareMutation]);
 
@@ -89,10 +89,10 @@ export default function PostDetailPage() {
         {
           onSuccess: () => {
             setCommentText("");
-            toast.success("Comment posted");
+            showToast("Comment posted");
           },
           onError: () => {
-            toast.error("Failed to post comment");
+            showToast("Failed to post comment");
           },
         },
       );
@@ -102,13 +102,27 @@ export default function PostDetailPage() {
 
   const handleDeleteComment = useCallback(
     (commentId) => {
-      if (!confirm("Delete this comment?")) return;
+      if (!post) return;
 
-      deleteCommentMutation.mutate(commentId, {
-        onError: () => toast.error("Failed to delete comment"),
-      });
+      deleteCommentMutation.mutate(
+        { postId: post.id, commentId }, // pass object
+        {
+          onSuccess: (_, variables) => {
+            // variables = { postId, commentId }
+            showToast("Comment deleted", "Undo", () => {
+              console.log(
+                "User clicked undo for comment:",
+                variables.commentId,
+              );
+            });
+          },
+          onError: () => {
+            showToast("Failed to delete comment");
+          },
+        },
+      );
     },
-    [deleteCommentMutation],
+    [deleteCommentMutation, post],
   );
 
   /* ----------------------- derived data ----------------------- */

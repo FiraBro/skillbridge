@@ -24,11 +24,9 @@ export const postService = {
   unlike: (id) => apiClient.delete(`/posts/${id}/like`),
   addComment: (id, text) => apiClient.post(`/posts/${id}/comments`, { text }),
   getComments: (id) => apiClient.get(`/posts/${id}/comments`),
-  deleteComment: (commentId) =>
-    apiClient.delete(`/posts/comments/${commentId}`), // FIXED: Assuming route allows direct comment deletion or I need postID.
-  // Actually, backend requires /:id/comments/:commentId.
-  // Let's stick to what I need: update and share. I won't fix deleteComment unless user asked.
-  // Wait, if I change the line count, I should be careful.
+  deleteComment: (postId, commentId) =>
+    apiClient.delete(`/posts/${postId}/comments/${commentId}`),
+
   update: (id, data) => apiClient.patch(`/posts/${id}`, data),
   share: (id) => apiClient.post(`/posts/${id}/share`),
 };

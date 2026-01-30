@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   useProfile,
   useReputation,
@@ -20,60 +21,37 @@ import { ShieldCheck, Award, Zap, History } from "lucide-react";
 
 export default function ProfilePage() {
   const { username } = useParams();
+  const { user: viewer } = useAuth();
 
-  /* -------------------- HOOKS (ALWAYS RUN) -------------------- */
+  /* -------------------- DATA -------------------- */
 
   const {
     data: profile,
     isLoading: loadingProfile,
-    isError: profileError,
+    isError,
   } = useProfile(username);
 
-  console.log("profile", profile);
+  const userId = profile?.user_id;
 
-  // Normalize user shape (safe even when profile is undefined)
-  const user = profile
-    ? {
-        id: profile.user_id,
-        name: profile.full_name,
-        username: profile.username,
-      }
-    : null;
+  const { data: reputation } = useReputation(userId);
+  const { data: history } = useReputationHistory(userId);
 
-  const userId = user?.id;
+  /* -------------------- ROLE LOGIC -------------------- */
+  console.log("profile role:", viewer);
 
-  const { data: reputationResponse, isLoading: loadingReputation } =
-    useReputation(userId);
+  const viewerRole = viewer?.role; // developer | company | admin
 
-  const { data: historyResponse, isLoading: loadingHistory } =
-    useReputationHistory(userId);
+  const isOwnProfile = viewer?.id === userId;
+  const isAdmin = viewerRole === "admin";
+  const isDeveloperProfile = viewerRole === "developer";
 
-  const repBreakdown = reputationResponse?.data;
-  const history = historyResponse?.data;
+  /* -------------------- LOADING / ERROR -------------------- */
 
-  /* -------------------- LOADING STATE -------------------- */
-
-  if (loadingProfile || loadingReputation || loadingHistory) {
-    return (
-      <div className="space-y-8 animate-pulse">
-        <Skeleton className="h-64 rounded-3xl w-full" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <Skeleton className="h-40 rounded-3xl w-full" />
-            <Skeleton className="h-96 rounded-3xl w-full" />
-          </div>
-          <div className="space-y-6">
-            <Skeleton className="h-64 rounded-3xl w-full" />
-            <Skeleton className="h-64 rounded-3xl w-full" />
-          </div>
-        </div>
-      </div>
-    );
+  if (loadingProfile) {
+    return <Skeleton className="h-96 rounded-3xl w-full" />;
   }
 
-  /* -------------------- NOT FOUND / ERROR -------------------- */
-
-  if (profileError || !profile) {
+  if (isError || !profile) {
     return (
       <div className="p-20 text-center font-bold italic text-muted-foreground">
         User not found
@@ -81,113 +59,117 @@ export default function ProfilePage() {
     );
   }
 
-  /* -------------------- MAIN UI -------------------- */
+  /* -------------------- UI -------------------- */
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Hero */}
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
       <ProfileHero
-        user={user}
-        reputation={repBreakdown?.total ?? profile.reputation_score}
+        user={{
+          id: profile.user_id,
+          name: profile.full_name,
+          username: profile.username,
+        }}
+        reputation={reputation?.data?.total ?? profile.reputation_score}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Main content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* MAIN */}
         <div className="lg:col-span-2 space-y-8">
           <Tabs defaultValue="overview">
             <TabsList className="bg-muted/50 p-1 h-12 rounded-xl mb-6">
-              <TabsTrigger value="overview" className="flex gap-2 font-bold">
-                <Zap className="h-4 w-4" /> Overview
+              <TabsTrigger value="overview">
+                <Zap className="h-4 w-4 mr-1" /> Overview
               </TabsTrigger>
-              <TabsTrigger value="history" className="flex gap-2 font-bold">
-                <History className="h-4 w-4" /> History
-              </TabsTrigger>
-              <TabsTrigger
-                value="endorsements"
-                className="flex gap-2 font-bold"
-              >
-                <Award className="h-4 w-4" /> Validations
-              </TabsTrigger>
+
+              {isDeveloperProfile && (
+                <TabsTrigger value="history">
+                  <History className="h-4 w-4 mr-1" /> History
+                </TabsTrigger>
+              )}
+
+              {isDeveloperProfile && !isOwnProfile && (
+                <TabsTrigger value="endorsements">
+                  <Award className="h-4 w-4 mr-1" /> Validations
+                </TabsTrigger>
+              )}
+
+              {isAdmin && <TabsTrigger value="admin">🛡 Admin</TabsTrigger>}
             </TabsList>
 
+            {/* OVERVIEW */}
             <TabsContent value="overview" className="space-y-8">
-              <div className="bg-card rounded-3xl border p-8 space-y-6">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  Reputation Core
-                </h3>
+              {isDeveloperProfile && (
+                <>
+                  <ReputationBreakdown
+                    total={reputation?.data?.total}
+                    breakdown={reputation?.data?.breakdown}
+                  />
 
-                <ReputationBreakdown
-                  total={repBreakdown?.total}
-                  breakdown={repBreakdown?.breakdown}
+                  <SkillsCloud skills={profile.skills || []} />
+
+                  <GitHubStats
+                    stats={{
+                      stars: profile.total_stars ?? 0,
+                      prs: profile.pull_requests ?? 0,
+                      commits30d: profile.commits_30d ?? 0,
+                      username: profile.github_username,
+                    }}
+                  />
+                </>
+              )}
+            </TabsContent>
+
+            {/* HISTORY */}
+            {isDeveloperProfile && (
+              <TabsContent value="history">
+                <ReputationHistory events={history?.data || []} />
+              </TabsContent>
+            )}
+
+            {/* ENDORSEMENTS */}
+            {isDeveloperProfile && !isOwnProfile && (
+              <TabsContent value="endorsements">
+                <EndorsementSection
+                  skills={profile.skills || []}
+                  userId={userId}
                 />
-              </div>
+              </TabsContent>
+            )}
 
-              <SkillsCloud skills={profile.skills || []} />
-              <GitHubStats
-                stats={{
-                  stars: profile.total_stars ?? 0,
-                  prs: profile.pull_requests ?? 0,
-                  commits30d: profile.commits_30d ?? 0,
-                  username: profile.github_username,
-                }}
-              />
-            </TabsContent>
-
-            <TabsContent value="history">
-              <div className="bg-card rounded-3xl border p-8">
-                <ReputationHistory events={history || []} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="endorsements">
-              <EndorsementSection
-                skills={profile.skills || []}
-                userId={userId}
-              />
-            </TabsContent>
+            {/* ADMIN */}
+            {isAdmin && (
+              <TabsContent value="admin">
+                <div className="bg-card rounded-3xl border p-8 space-y-4">
+                  <h3 className="font-bold">Admin Actions</h3>
+                  <button className="btn-danger">Suspend User</button>
+                  <button className="btn-warning">Reset Reputation</button>
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
 
-        {/* Sidebar */}
+        {/* SIDEBAR */}
         <div className="space-y-6">
           <ContactPanel
-            userId={user.id}
-            userName={user.name}
-            isOwnProfile={false}
+            userId={profile.user_id}
+            userName={profile.full_name}
+            isOwnProfile={isOwnProfile}
           />
 
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-3xl border border-primary/20 p-8 space-y-4">
-            <h3 className="font-bold flex items-center gap-2 text-primary">
-              <ShieldCheck className="h-5 w-5" />
+          <div className="bg-card rounded-3xl border p-6 space-y-4">
+            <h3 className="font-bold flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" />
               Verification Status
             </h3>
 
-            <div className="space-y-3 text-xs font-bold uppercase text-muted-foreground">
-              <div className="flex justify-between">
-                <span>Identity</span>
-                <Badge variant="outline" className="text-green-500">
-                  Verified
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span>GitHub</span>
-                <Badge variant="outline" className="text-green-500">
-                  Connected
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span>Projects</span>
-                <Badge variant="outline" className="text-primary">
-                  Active
-                </Badge>
-              </div>
+            <div className="flex justify-between">
+              <span>Identity</span>
+              <Badge variant="outline" className="text-green-500">
+                Verified
+              </Badge>
             </div>
           </div>
-
-          <p className="text-center text-[10px] font-black tracking-widest text-muted-foreground">
-            SkillBridge Trust-Link v1.0
-          </p>
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import notificationRoutes from "./modules/notifications/notification.routes.js";
 import companyRoutes from "./modules/companies/company.routes.js";
 import searchRoutes from "./modules/search/search.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
+import githubRoutes from "./modules/github/github.routes.js";
 const router = Router();
 
 router.use("/api/auth", authRoutes);
@@ -24,4 +25,5 @@ router.use("/api/companies", companyRoutes);
 router.use("/api/search", searchRoutes);
 router.use("/api/admin", adminRoutes);
 router.use("/api/moderation", adminRoutes); // Reuse for /report access
+router.use("/api/github", githubRoutes);
 export default router;

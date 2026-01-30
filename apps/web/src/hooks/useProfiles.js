@@ -4,7 +4,10 @@ import { profileService } from "@/services";
 export const useProfile = (username) => {
   return useQuery({
     queryKey: ["profile", username],
-    queryFn: () => profileService.getByUsername(username),
+    queryFn: async () => {
+      const res = await profileService.getByUsername(username);
+      return res; // res is already data
+    },
     enabled: !!username,
   });
 };
@@ -12,7 +15,10 @@ export const useProfile = (username) => {
 export const useReputation = (userId) => {
   return useQuery({
     queryKey: ["reputation", userId],
-    queryFn: () => profileService.getReputation(userId),
+    queryFn: async () => {
+      const res = await profileService.getReputation(userId);
+      return res;
+    },
     enabled: !!userId,
   });
 };
@@ -20,14 +26,10 @@ export const useReputation = (userId) => {
 export const useReputationHistory = (userId) => {
   return useQuery({
     queryKey: ["reputation-history", userId],
-    queryFn: () => profileService.getHistory(userId),
+    queryFn: async () => {
+      const res = await profileService.getHistory(userId);
+      return res;
+    },
     enabled: !!userId,
-  });
-};
-
-export const useDeveloperDiscovery = (params) => {
-  return useQuery({
-    queryKey: ["developers", "discovery", params],
-    queryFn: () => profileService.discover(params),
   });
 };

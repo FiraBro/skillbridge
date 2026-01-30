@@ -30,6 +30,14 @@ export const useJobDetail = (id) => {
   });
 };
 
+export const useCompanyJobs = () => {
+  return useQuery({
+    queryKey: ["jobs", "company"],
+    queryFn: jobService.getCompanyJobs,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
 /* =========================
    Mutations
 ========================= */

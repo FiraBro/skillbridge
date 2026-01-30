@@ -27,12 +27,10 @@ export default function ApplicantReview() {
 
   const fetchApplicants = async () => {
     try {
-      // In a real app, this would be a specific endpoint for job applicants
-      const res = await fetch(`/api/jobs/${jobId}`);
+      const res = await fetch(`/api/jobs/${jobId}/applicants`);
       const data = await res.json();
-      // For MVP, we'll assume applications are nested or fetched separately
-      // Mocking for now as the specialized applicant fetcher isn't in job service yet
-      setApplicants([]);
+      console.log("data", data);
+      setApplicants(data?.data || []);
     } catch (error) {
       console.error("Failed to fetch applicants:", error);
     } finally {
@@ -102,13 +100,15 @@ export default function ApplicantReview() {
               >
                 <div className="flex items-center gap-3">
                   <Avatar>
-                    <AvatarImage src={app.avatar_url} />
-                    <AvatarFallback>{app.name[0]}</AvatarFallback>
+                    <AvatarImage src={app.developer.avatar_url} />
+                    <AvatarFallback>
+                      {(app.developer.name || "?")[0]}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold truncate">{app.name}</h4>
+                    <h4 className="font-bold truncate">{app.developer.name}</h4>
                     <p className="text-xs text-muted-foreground">
-                      {app.reputation} Rep • {app.status}
+                      {app.developer.reputation || 0} Rep • {app.hiring_status}
                     </p>
                   </div>
                 </div>
@@ -124,17 +124,21 @@ export default function ApplicantReview() {
               <div className="flex justify-between items-start">
                 <div className="flex gap-6">
                   <Avatar className="h-20 w-20 ring-4 ring-primary/10">
-                    <AvatarImage src={selectedApp.avatar_url} />
-                    <AvatarFallback>{selectedApp.name[0]}</AvatarFallback>
+                    <AvatarImage src={selectedApp.developer.avatar_url} />
+                    <AvatarFallback>
+                      {(selectedApp.developer.name || "?")[0]}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h2 className="text-3xl font-black">{selectedApp.name}</h2>
+                    <h2 className="text-3xl font-black">
+                      {selectedApp.developer.name}
+                    </h2>
                     <div className="flex items-center gap-4 mt-1">
                       <div className="flex items-center gap-1 text-sm font-bold">
                         <FaStar className="text-yellow-500" />{" "}
-                        {selectedApp.reputation} Reputation
+                        {selectedApp.developer.reputation || 0} Reputation
                       </div>
-                      <Link to={`/profile/${selectedApp.profile_id}`}>
+                      <Link to={`/profile/${selectedApp.developer.profile_id}`}>
                         <Button
                           variant="link"
                           className="h-auto p-0 text-primary gap-1"

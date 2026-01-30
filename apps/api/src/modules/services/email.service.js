@@ -54,3 +54,48 @@ export const sendContactRequestEmail = async (
     `,
   });
 };
+
+export const sendJobApplicationEmail = async (
+  to,
+  clientName,
+  applicantName,
+  jobTitle,
+) => {
+  return await resend.emails.send({
+    from: FROM_EMAIL,
+    to: [to],
+    subject: `New applicant for ${jobTitle}`,
+    html: `
+      <div style="font-family: sans-serif; line-height: 1.5;">
+        <h2>Hi ${clientName || "Team"},</h2>
+        <p><strong>${applicantName}</strong> has applied to your job: <em>${jobTitle}</em>.</p>
+        <p>Log in to SkillBridge to review the applicant and update their application status.</p>
+        <hr />
+        <p style="font-size: 12px; color: #666;">Manage applicants in your company dashboard.</p>
+      </div>
+    `,
+  });
+};
+
+export const sendApplicationStatusEmail = async (
+  to,
+  applicantName,
+  status,
+  jobTitle,
+  companyName,
+) => {
+  return await resend.emails.send({
+    from: FROM_EMAIL,
+    to: [to],
+    subject: `Update on your application for ${jobTitle}`,
+    html: `
+      <div style="font-family: sans-serif; line-height: 1.5;">
+        <h2>Hi ${applicantName},</h2>
+        <p>Your application for <strong>${jobTitle}</strong> at <strong>${companyName}</strong> has been updated to: <strong>${status}</strong>.</p>
+        <p>Please log in to SkillBridge to see more details and next steps.</p>
+        <hr />
+        <p style="font-size: 12px; color: #666;">If you have any questions, reach out to the company via the platform.</p>
+      </div>
+    `,
+  });
+};

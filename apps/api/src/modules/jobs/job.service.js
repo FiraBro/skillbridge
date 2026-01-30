@@ -1,5 +1,6 @@
 import { query } from "../../config/db.js";
 import ApiError from "../utils/apiError.js";
+import { emailQueue } from "../../queues/email.queue.js";
 
 /**
  * Browse all open jobs with optional filters
@@ -101,7 +102,35 @@ export async function applyToJob(jobId, developerId, message) {
     throw new ApiError(400, "Already applied to this job");
   }
 
-  return rows[0];
+  const application = rows[0];
+
+  // Notify the job owner (client/company) via email queue
+  try {
+    const { rows: clientRows } = await query(
+      `SELECT u.email as client_email, u.name as client_name, j.title as job_title
+       FROM jobs j JOIN users u ON u.id = j.client_id WHERE j.id = $1`,
+      [jobId],
+    );
+
+    if (clientRows && clientRows[0] && clientRows[0].client_email) {
+      // Get applicant name
+      const { rows: devRows } = await query(
+        `SELECT name as dev_name FROM users WHERE id = $1`,
+        [developerId],
+      );
+
+      await emailQueue.add("send-job-application-notification", {
+        to: clientRows[0].client_email,
+        clientName: clientRows[0].client_name,
+        applicantName: devRows[0]?.dev_name || "A developer",
+        jobTitle: clientRows[0].job_title,
+      });
+    }
+  } catch (e) {
+    console.error("Failed to queue job application notification:", e.message);
+  }
+
+  return application;
 }
 
 /**
@@ -170,7 +199,83 @@ export async function updateApplicationFeedback(applicationId, clientId, data) {
 
   if (rows.length === 0)
     throw new ApiError(404, "Application not found or unauthorized");
-  return rows[0];
+  const updated = rows[0];
+
+  // If status changed, notify the applicant about status update
+  if (status) {
+    try {
+      const { rows: info } = await query(
+        `SELECT u.email as dev_email, u.name as dev_name, j.title as job_title, c.name as company_name
+         FROM job_applications ja
+         JOIN users u ON u.id = ja.developer_id
+         JOIN jobs j ON j.id = ja.job_id
+         JOIN users c ON c.id = j.client_id
+         WHERE ja.id = $1`,
+        [applicationId],
+      );
+
+      if (info && info[0] && info[0].dev_email) {
+        await emailQueue.add("send-application-status-notification", {
+          to: info[0].dev_email,
+          applicantName: info[0].dev_name,
+          status,
+          jobTitle: info[0].job_title,
+          companyName: info[0].company_name,
+        });
+      }
+    } catch (e) {
+      console.error(
+        "Failed to queue application status notification:",
+        e.message,
+      );
+    }
+  }
+
+  return updated;
+}
+
+/**
+ * Get applicants for a specific job — only visible to the job owner (client)
+ */
+export async function getJobApplicants(jobId, clientId) {
+  // Verify ownership
+  const { rows: owner } = await query(
+    `SELECT 1 FROM jobs WHERE id = $1 AND client_id = $2`,
+    [jobId, clientId],
+  );
+
+  if (!owner || owner.length === 0)
+    throw new ApiError(404, "Job not found or unauthorized");
+
+  const { rows } = await query(
+    `
+    SELECT ja.*, u.id as developer_id, u.name as developer_name, u.email as developer_email,
+           pr.id as profile_id, pr.username, pr.reputation_score, u.avatar_url
+    FROM job_applications ja
+    JOIN users u ON u.id = ja.developer_id
+    LEFT JOIN profiles pr ON pr.user_id = u.id
+    WHERE ja.job_id = $1
+    ORDER BY ja.applied_at DESC
+    `,
+    [jobId],
+  );
+
+  return rows.map((r) => ({
+    id: r.id,
+    message: r.message,
+    hiring_status: r.hiring_status || r.status,
+    private_notes: r.private_notes,
+    applied_at: r.applied_at,
+    developer: {
+      id: r.developer_id,
+      name: r.developer_name,
+      email: r.developer_email,
+      profile_id: r.profile_id,
+      username: r.username,
+      reputation: r.reputation_score,
+      avatar_url: r.avatar_url,
+    },
+  }));
 }
 
 /**
@@ -178,7 +283,14 @@ export async function updateApplicationFeedback(applicationId, clientId, data) {
  */
 export async function getCompanyJobs(clientId) {
   const { rows } = await query(
-    `SELECT * FROM jobs WHERE client_id = $1 ORDER BY created_at DESC`,
+    `
+    SELECT j.*,
+      (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id) as applicant_count,
+      (SELECT COUNT(*) FROM job_applications WHERE job_id = j.id AND hiring_status = 'hired') as hired_count
+    FROM jobs j
+    WHERE j.client_id = $1
+    ORDER BY j.created_at DESC
+    `,
     [clientId],
   );
   return rows;

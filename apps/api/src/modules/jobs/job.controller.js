@@ -86,3 +86,25 @@ export const apply = catchAsync(async (req, res, next) => {
       apiResponse.success(application, "Application submitted successfully"),
     );
 });
+
+/**
+ * GET /api/jobs/:id/applicants
+ * Get list of applicants for a job (company only)
+ */
+export const getApplicants = catchAsync(async (req, res, next) => {
+  const jobId = req.params.id;
+  const clientId = req.user.id;
+
+  const applicants = await jobService.getJobApplicants(jobId, clientId);
+  return res.status(200).json(apiResponse.success(applicants));
+});
+
+/**
+ * GET /api/jobs/company
+ * Get jobs for authenticated company including applicant counts
+ */
+export const getCompanyJobs = catchAsync(async (req, res, next) => {
+  const clientId = req.user.id;
+  const jobs = await jobService.getCompanyJobs(clientId);
+  return res.status(200).json(apiResponse.success(jobs));
+});

@@ -10,7 +10,7 @@ router.get("/", jobController.browse);
 router.get("/recommended", requireAuth, jobController.getRecommended);
 
 // Create job (Authentication required - usually for clients)
-router.post("/", requireAuth, jobController.create);
+router.post("/", requireAuth, authorize("company"), jobController.create);
 
 // Get jobs posted by authenticated company
 router.get("/company", requireAuth, jobController.getCompanyJobs);

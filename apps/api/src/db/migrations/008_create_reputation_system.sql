@@ -1,39 +1,29 @@
--- Create endorsements table
+-- 1. Endorsements (The "Vouch" System)
 CREATE TABLE IF NOT EXISTS endorsements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     endorser_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     endorsed_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     skill_id INT REFERENCES skills(id) ON DELETE CASCADE,
     message TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    -- Prevent self-endorsements and duplicate endorsements
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    
     CONSTRAINT no_self_endorsement CHECK (endorser_id != endorsed_id),
-    CONSTRAINT unique_endorsement UNIQUE (endorser_id, endorsed_id, skill_id)
+    CONSTRAINT unique_skill_endorsement UNIQUE (endorser_id, endorsed_id, skill_id)
 );
 
--- Create reputation history table
+-- 2. Reputation History (The Audit Log)
 CREATE TABLE IF NOT EXISTS reputation_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     previous_score INT NOT NULL,
     new_score INT NOT NULL,
     change_amount INT NOT NULL,
-    reason VARCHAR(50) NOT NULL, -- 'post_created', 'post_liked', 'project_added', 'endorsement_received', 'github_sync'
-    metadata JSONB, -- Additional context (e.g., post_id, project_id, endorser_id)
-    created_at TIMESTAMP DEFAULT NOW()
+    reason VARCHAR(50) NOT NULL, 
+    metadata JSONB, 
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_endorsements_endorsed ON endorsements(endorsed_id);
-CREATE INDEX IF NOT EXISTS idx_endorsements_endorser ON endorsements(endorser_id);
-CREATE INDEX IF NOT EXISTS idx_endorsements_skill ON endorsements(skill_id);
-CREATE INDEX IF NOT EXISTS idx_reputation_history_user ON reputation_history(user_id);
-CREATE INDEX IF NOT EXISTS idx_reputation_history_created ON reputation_history(created_at DESC);
-
--- Add like_count to posts for caching (denormalized for performance)
-ALTER TABLE posts ADD COLUMN IF NOT EXISTS like_count INT DEFAULT 0;
-
--- Create function to update post like count
+-- 3. The Performance Trigger for Likes
 CREATE OR REPLACE FUNCTION update_post_like_count()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -46,7 +36,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger for post likes
 DROP TRIGGER IF EXISTS trigger_update_post_like_count ON post_likes;
 CREATE TRIGGER trigger_update_post_like_count
 AFTER INSERT OR DELETE ON post_likes

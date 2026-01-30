@@ -5,6 +5,7 @@ import * as z from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { authApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -12,6 +13,7 @@ const schema = z.object({
 });
 
 export const LoginForm = () => {
+  const navigate = useNavigate();
   const { setAuth } = useAuth();
 
   const {
@@ -30,18 +32,11 @@ export const LoginForm = () => {
       return res.data; // Only return the data for onSuccess
     },
     onSuccess: (data) => {
-      console.log("Login success data:", data);
-
-      // Correct destructuring
       const { user, token } = data.data || {};
-      if (!user || !token) {
-        console.error("User or token missing!");
-        return;
-      }
+      if (!user || !token) return;
 
       setAuth(user, token);
-      console.log("Auth state updated, redirecting...");
-      window.location.href = "/dashboard";
+      navigate("/", { replace: true });
     },
 
     onError: (err) => {

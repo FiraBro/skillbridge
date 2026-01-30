@@ -1,10 +1,18 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
-export const ProtectedRoute = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+/**
+ * ProtectedRoute checks:
+ * 1. If the user is logged in
+ * 2. If the user has the required role(s)
+ *
+ * Usage:
+ * <ProtectedRoute allowedRoles={['company', 'admin']} />
+ */
+export const ProtectedRoute = ({ allowedRoles }) => {
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  // IMPORTANT: Do nothing until the store has finished reading from LocalStorage
+  // Wait until auth state loads
   if (isLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center">
@@ -13,9 +21,16 @@ export const ProtectedRoute = () => {
     );
   }
 
+  // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />;
   }
 
+  // If roles are specified, check if user has one of them
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />; // or an Unauthorized page
+  }
+
+  // Authorized
   return <Outlet />;
 };

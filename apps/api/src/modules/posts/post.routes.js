@@ -1,6 +1,10 @@
 import express from "express";
 import * as postController from "./post.controller.js";
-import { requireAuth, optionalAuth } from "../middlewares/auth.middleware.js";
+import {
+  requireAuth,
+  optionalAuth,
+  authorize,
+} from "../middlewares/auth.middleware.js";
 import { ownershipMiddleware } from "../middlewares/ownership.middleware.js";
 const router = express.Router();
 
@@ -22,10 +26,16 @@ router.post("/:id/share", postController.share);
 // ----------------------
 
 // Create a new post
-router.post("/", requireAuth, postController.create);
+router.post("/", requireAuth, authorize("developer"), postController.create);
 
 // Update a post (ownership check)
-router.patch("/:id", requireAuth, ownershipMiddleware(), postController.update);
+router.patch(
+  "/:id",
+  requireAuth,
+  authorize("developer"),
+  ownershipMiddleware(),
+  postController.update,
+);
 // LIKES
 router.post("/:id/like", requireAuth, postController.like);
 router.delete("/:id/like", requireAuth, postController.unlike);

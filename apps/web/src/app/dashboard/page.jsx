@@ -1,4 +1,10 @@
 import { Suspense } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfiles";
+import useGithubVisibility from "@/hooks/useGithubVisibility";
+import GitHubStats from "@/app/profile/component/github-stats";
+import GitHubVerificationBadge from "@/app/profile/component/github-verification-badge";
+import GitHubActivityBadge from "@/app/profile/component/github-activity-badge";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +24,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ActivityFeed from "./components/activity-feed";
 
 export default function DashboardPage() {
+  const { user: viewer } = useAuth();
+  // Assume dashboard is for the logged-in user
+  const { data: profile } = useProfile(viewer?.username);
+  const { canShowGithub, isGithubConnected } = useGithubVisibility(
+    profile,
+    viewer,
+  );
   const { data: recResponse, isLoading: loadingRecs } = useRecommendedJobs();
   const recommendedJob = recResponse?.data?.[0];
 
@@ -124,6 +137,25 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-6">
+              {/* Example: Show GitHub stats if connected and allowed */}
+              {canShowGithub && isGithubConnected && (
+                <>
+                  <GitHubStats
+                    stats={{
+                      stars: profile?.total_stars ?? 0,
+                      prs: profile?.pull_requests ?? 0,
+                      commits30d: profile?.commits_30d ?? 0,
+                      username: profile?.github_username,
+                      ...profile?.github,
+                    }}
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <GitHubVerificationBadge stats={profile?.github} />
+                    <GitHubActivityBadge stats={profile?.github} />
+                  </div>
+                </>
+              )}
+              {/* Other dashboard stats */}
               {[
                 { label: "Search Appearances", val: "124", trend: "+12%" },
                 { label: "Profile Conversions", val: "18", trend: "+5%" },

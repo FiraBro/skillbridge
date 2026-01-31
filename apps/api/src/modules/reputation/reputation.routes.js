@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as reputationController from "./reputation.controller.js";
-
+import { requireAuth } from "../middlewares/auth.middleware.js";
 const router = Router();
 
 // Get reputation breakdown

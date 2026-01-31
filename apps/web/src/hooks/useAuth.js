@@ -2,6 +2,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// Helper function to set a cookie
+const setCookie = (name, value, days = 7) => {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Strict`;
+};
+
+// Helper function to delete a cookie
+const deleteCookie = (name) => {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
+};
+
 export const useAuth = create(
   persist(
     (set) => ({
@@ -13,7 +24,11 @@ export const useAuth = create(
       setAuth: (user, token) => {
         console.log(user, token);
 
-        if (token) localStorage.setItem("sb_token", token);
+        if (token) {
+          localStorage.setItem("sb_token", token);
+          // Also set the token in a cookie for API requests that need it
+          setCookie("token", token);
+        }
         if (user) localStorage.setItem("sb_user", JSON.stringify(user));
         set({ user, token, isAuthenticated: true, isLoading: false });
       },
@@ -23,6 +38,8 @@ export const useAuth = create(
         localStorage.removeItem("sb_token");
         localStorage.removeItem("sb_user");
         localStorage.removeItem("auth-storage");
+        // Also remove the cookie
+        deleteCookie("token");
         window.location.href = "/auth/login";
       },
 
@@ -33,6 +50,8 @@ export const useAuth = create(
         if (token && userJson) {
           try {
             const user = JSON.parse(userJson);
+            // Also set the token in a cookie for API requests that need it
+            setCookie("token", token);
             set({ user, token, isAuthenticated: true, isLoading: false });
           } catch (e) {
             set({ isLoading: false });

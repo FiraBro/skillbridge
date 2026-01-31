@@ -5,6 +5,7 @@ import {
   useReputation,
   useReputationHistory,
 } from "@/hooks/useProfiles";
+import { initiateGithubAuth } from "@/lib/api";
 
 import ProfileHero from "../component/profile-hero";
 import SkillsCloud from "../component/skill-cloud";
@@ -13,6 +14,10 @@ import ReputationBreakdown from "../component/reputation-breakdown";
 import ReputationHistory from "../component/reputation-history";
 import ContactPanel from "../component/contact-panel";
 import EndorsementSection from "../component/endorsement-section";
+import GitHubVerificationBadge from "../component/github-verification-badge";
+import GitHubActivityBadge from "../component/github-activity-badge";
+
+import useGithubVisibility from "@/hooks/useGithubVisibility";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,14 +41,17 @@ export default function ProfilePage() {
   const { data: reputation } = useReputation(userId);
   const { data: history } = useReputationHistory(userId);
 
-  /* -------------------- ROLE LOGIC -------------------- */
-  console.log("profile role:", viewer);
-
-  const viewerRole = viewer?.role; // developer | company | admin
+  /* -------------------- ROLE / VISIBILITY -------------------- */
 
   const isOwnProfile = viewer?.id === userId;
-  const isAdmin = viewerRole === "admin";
-  const isDeveloperProfile = viewerRole === "developer";
+  const isAdmin = viewer?.role === "admin";
+
+  const { canShowGithub, canConnectGithub, isGithubConnected } =
+    useGithubVisibility(profile, viewer);
+
+  /* -------------------- ENV (VITE) -------------------- */
+
+  const apiUrl = import.meta.env.VITE_API_URL || "/api";
 
   /* -------------------- LOADING / ERROR -------------------- */
 
@@ -81,13 +89,13 @@ export default function ProfilePage() {
                 <Zap className="h-4 w-4 mr-1" /> Overview
               </TabsTrigger>
 
-              {isDeveloperProfile && (
+              {canShowGithub && (
                 <TabsTrigger value="history">
                   <History className="h-4 w-4 mr-1" /> History
                 </TabsTrigger>
               )}
 
-              {isDeveloperProfile && !isOwnProfile && (
+              {canShowGithub && !isOwnProfile && (
                 <TabsTrigger value="endorsements">
                   <Award className="h-4 w-4 mr-1" /> Validations
                 </TabsTrigger>
@@ -98,7 +106,7 @@ export default function ProfilePage() {
 
             {/* OVERVIEW */}
             <TabsContent value="overview" className="space-y-8">
-              {isDeveloperProfile && (
+              {canShowGithub && (
                 <>
                   <ReputationBreakdown
                     total={reputation?.data?.total}
@@ -107,27 +115,50 @@ export default function ProfilePage() {
 
                   <SkillsCloud skills={profile.skills || []} />
 
-                  <GitHubStats
-                    stats={{
-                      stars: profile.total_stars ?? 0,
-                      prs: profile.pull_requests ?? 0,
-                      commits30d: profile.commits_30d ?? 0,
-                      username: profile.github_username,
-                    }}
-                  />
+                  {/* CONNECT GITHUB */}
+                  {canConnectGithub && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        initiateGithubAuth();
+                      }}
+                      className="btn btn-github"
+                    >
+                      🐙 Connect GitHub
+                    </button>
+                  )}
+
+                  {/* GITHUB STATS */}
+                  {isGithubConnected && (
+                    <>
+                      <GitHubStats
+                        stats={{
+                          stars: profile.total_stars ?? 0,
+                          prs: profile.pull_requests ?? 0,
+                          commits30d: profile.commits_30d ?? 0,
+                          username: profile.github_username,
+                        }}
+                      />
+
+                      <div className="flex gap-2 mt-2">
+                        <GitHubVerificationBadge stats={profile.github} />
+                        <GitHubActivityBadge stats={profile.github} />
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </TabsContent>
 
             {/* HISTORY */}
-            {isDeveloperProfile && (
+            {canShowGithub && (
               <TabsContent value="history">
                 <ReputationHistory events={history?.data || []} />
               </TabsContent>
             )}
 
             {/* ENDORSEMENTS */}
-            {isDeveloperProfile && !isOwnProfile && (
+            {canShowGithub && !isOwnProfile && (
               <TabsContent value="endorsements">
                 <EndorsementSection
                   skills={profile.skills || []}
@@ -159,7 +190,7 @@ export default function ProfilePage() {
 
           <div className="bg-card rounded-3xl border p-6 space-y-4">
             <h3 className="font-bold flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-primary" />
+              <ShieldCheck className="h-5 w-4 text-primary" />
               Verification Status
             </h3>
 

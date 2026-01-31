@@ -5,15 +5,24 @@ import ApiError from "../utils/apiError.js";
 /**
  * Core authentication middleware:
  * Validates the token and attaches the user payload to req.user
+ * Checks both Authorization header and cookies for JWT token
  */
 export const requireAuth = (req, res, next) => {
-  const header = req.headers.authorization;
+  let token = null;
 
-  if (!header?.startsWith("Bearer ")) {
-    return next(new ApiError(401, "Unauthorized: No token provided"));
+  // Check Authorization header first
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) {
+    token = header.split(" ")[1];
+  }
+  // If not in header, check cookies
+  else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
   }
 
-  const token = header.split(" ")[1];
+  if (!token) {
+    return next(new ApiError(401, "Unauthorized: No token provided"));
+  }
 
   try {
     const payload = jwt.verify(token, env.JWT_ACCESS_SECRET);
@@ -52,10 +61,20 @@ export const authorize = (...allowedRoles) => {
  * Decodes token if present, but doesn't block the request if missing/invalid
  */
 export const optionalAuth = (req, res, next) => {
-  const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) return next();
+  let token = null;
 
-  const token = header.split(" ")[1];
+  // Check Authorization header first
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) {
+    token = header.split(" ")[1];
+  }
+  // If not in header, check cookies
+  else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  if (!token) return next();
+
   try {
     const payload = jwt.verify(token, env.JWT_ACCESS_SECRET);
     req.user = { id: payload.sub, role: payload.role };

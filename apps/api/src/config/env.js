@@ -14,6 +14,13 @@ export const env = {
   JWT_RESET_EXPIRES_IN: process.env.JWT_RESET_EXPIRES_IN || "15m",
 
   BCRYPT_SALT_ROUNDS: Number(process.env.BCRYPT_SALT_ROUNDS || 12),
+
+  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:5173",
+
+  GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+  GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
+  GITHUB_CALLBACK_URL: process.env.GITHUB_CALLBACK_URL || "http://localhost:6000/api/github/auth/github/callback",
+
   GITHUB_TOKEN:
     process.env.GITHUB_TOKEN || "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",
 };

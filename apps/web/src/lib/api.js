@@ -2,8 +2,17 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "/api",
-  withCredentials: true,
+  baseURL: import.meta.env.VITE_API_URLs || "/api",
+  withCredentials: true, // This ensures cookies are sent with requests
+});
+
+// Request interceptor to add auth token to headers as well
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("sb_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export const authApi = {
@@ -17,6 +26,14 @@ export const authApi = {
   forgotPassword: (data) => api.post("/auth/forgot-password", data),
   resetPassword: (token, data) =>
     api.post(`/auth/reset-password/${token}`, data),
-  getGithubAuth: () =>
-    (window.location.href = `${api.defaults.baseURL}/auth/github`),
+  // For GitHub auth, we'll handle it differently to ensure redirect works properly
+};
+
+// Function to initiate GitHub OAuth flow with proper authentication
+// Now that we store the token in cookies too, the backend can authenticate via cookies
+export const initiateGithubAuth = () => {
+  // Since we store the token in cookies (via useAuth hook),
+  // and the axios instance has withCredentials=true,
+  // the cookie will be sent automatically with the redirect
+  window.location.href = `${import.meta.env.VITE_API_URL || "/api"}/github/auth/github`;
 };

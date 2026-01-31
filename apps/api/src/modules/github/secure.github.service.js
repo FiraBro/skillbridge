@@ -1,8 +1,8 @@
-import axios from "axios";
 import crypto from 'crypto';
-import { env } from "../../config/env.js";
-import githubRepo from "./github.repository.js";
-import externalGitHubService from "../services/github.service.js";
+import axios from 'axios';
+import { env } from '../../config/env.js';
+import githubRepo from './github.repository.js';
+import externalGitHubService from '../services/github.service.js';
 
 class GitHubOAuthService {
   constructor() {
@@ -36,9 +36,7 @@ class GitHubOAuthService {
   }
 
   async connectGitHubAccount(code, userId) {
-    console.log('=== CONNECT GITHUB ACCOUNT START ===');
     console.log('Starting GitHub account connection for user:', userId);
-    console.log('Received code:', code ? '***HIDDEN***' : 'MISSING');
 
     try {
       // 1. Exchange code for token
@@ -50,28 +48,21 @@ class GitHubOAuthService {
           client_secret: env.GITHUB_CLIENT_SECRET,
           code,
         },
-        {
-          headers: {
+        { 
+          headers: { 
             Accept: "application/json",
             'User-Agent': 'SkillBridge/1.0' // Follow GitHub API guidelines
           },
         }
       );
 
-      console.log('Token exchange response status:', tokenRes.status);
-      console.log('Token exchange response data keys:', Object.keys(tokenRes.data));
-
       const accessToken = tokenRes.data.access_token;
-      if (!accessToken) {
-        console.error('Access token missing in response:', tokenRes.data);
-        throw new Error("GitHub token missing");
-      }
-
-      console.log('Access token received successfully');
+      if (!accessToken) throw new Error("GitHub token missing");
 
       // Validate token before proceeding
       await this.validateToken(accessToken);
-      console.log('Token validated successfully');
+
+      console.log('Successfully obtained and validated access token');
 
       // 2. Fetch GitHub identity
       console.log('Fetching GitHub user data...');
@@ -86,7 +77,7 @@ class GitHubOAuthService {
       );
 
       const { id, login, avatar_url, bio, followers, following, created_at } = githubUser;
-      console.log('GitHub user data fetched:', { id, login, avatar_url });
+      console.log('GitHub user data fetched:', { id, login });
 
       // 3. Persist identity (ownership proof)
       console.log('Attaching GitHub account to user:', userId);
@@ -96,15 +87,13 @@ class GitHubOAuthService {
         username: login,
         avatar: avatar_url,
       });
-      console.log('GitHub account attached to user successfully');
 
       // 4. Fetch & cache enhanced stats and repositories
       console.log('Fetching enhanced GitHub data for:', login);
-
+      
       // Get detailed stats
       const stats = await externalGitHubService.fetchDeveloperStats(login);
-      console.log('Basic stats fetched');
-
+      
       // Enhance stats with additional data
       const enhancedStats = {
         ...stats,
@@ -117,11 +106,9 @@ class GitHubOAuthService {
         mostActiveDays: await this.getMostActiveDays(accessToken, login),
         verificationStatus: 'verified'
       };
-      console.log('Enhanced stats calculated');
 
       // Get repositories
       const repositories = await this.fetchRepositories(accessToken, login);
-      console.log('Repositories fetched:', repositories.length);
 
       console.log('Saving GitHub stats for user:', userId);
       await githubRepo.saveGitHubStats({
@@ -129,27 +116,14 @@ class GitHubOAuthService {
         stats: enhancedStats,
         avatar: avatar_url,
       });
-      console.log('GitHub stats saved successfully');
 
       console.log('Saving GitHub repositories for user:', userId);
       await githubRepo.saveGitHubRepositories(userId, repositories);
-      console.log('GitHub repositories saved successfully');
 
       console.log('GitHub account connection completed successfully');
-      console.log('=== CONNECT GITHUB ACCOUNT END ===');
     } catch (error) {
-      console.error('=== ERROR IN GITHUB ACCOUNT CONNECTION ===');
       console.error('Error in GitHub account connection:', error.message);
       console.error('Stack trace:', error.stack);
-      if (error.response) {
-        console.error('GitHub API error details:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: Object.keys(error.response.headers)
-        });
-      }
-      console.error('=== END ERROR DETAILS ===');
       throw error;
     }
   }
@@ -165,12 +139,12 @@ class GitHubOAuthService {
           'User-Agent': 'SkillBridge/1.0'
         }
       });
-
+      
       // Basic validation - check if we can access user data
       if (!response.data || !response.data.id) {
         throw new Error('Invalid GitHub token');
       }
-
+      
       return true;
     } catch (error) {
       console.error('Token validation failed:', error.message);
@@ -194,10 +168,10 @@ class GitHubOAuthService {
       }
 
       console.log('Syncing GitHub data for:', githubUsername);
-
+      
       // Get detailed stats
       const stats = await externalGitHubService.fetchDeveloperStats(githubUsername);
-
+      
       // Enhance stats with additional data
       const enhancedStats = {
         ...stats,
@@ -237,7 +211,7 @@ class GitHubOAuthService {
       const profileResult = await githubRepo.getGitHubData(userId);
       if (profileResult) {
         const profileId = profileResult.stats?.profile_id;
-
+        
         if (profileId) {
           await githubRepo.deleteGitHubStats(profileId);
           await githubRepo.deleteGitHubRepositories(profileId);
@@ -288,16 +262,16 @@ class GitHubOAuthService {
     // Calculate a consistency score based on various factors
     // This is a simplified algorithm - could be enhanced with more sophisticated metrics
     const { commits30d, publicRepos, followers, totalStars } = stats;
-
+    
     // Normalize values to 0-1 scale
     const commitScore = Math.min(commits30d / 30, 1); // Assuming 30 commits in 30 days is excellent
     const repoScore = Math.min(publicRepos / 20, 1); // Assuming 20 repos is excellent
     const followerScore = Math.min(followers / 100, 1); // Assuming 100 followers is excellent
     const starScore = Math.min(totalStars / 100, 1); // Assuming 100 stars is excellent
-
+    
     // Weighted average
     const consistencyScore = (commitScore * 0.4) + (repoScore * 0.2) + (followerScore * 0.2) + (starScore * 0.2);
-
+    
     return parseFloat(consistencyScore.toFixed(2));
   }
 
@@ -317,7 +291,7 @@ class GitHubOAuthService {
       // Group events by day of the week
       const weeklyActivity = {};
       const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
+      
       days.forEach(day => {
         weeklyActivity[day] = 0;
       });
@@ -338,12 +312,12 @@ class GitHubOAuthService {
   async getMostActiveDays(token, username) {
     try {
       const weeklyActivity = await this.getWeeklyActivity(token, username);
-
+      
       // Sort days by activity count
       const sortedDays = Object.entries(weeklyActivity)
         .sort(([,a], [,b]) => b - a)
         .map(([day]) => ({ day, activity: weeklyActivity[day] }));
-
+      
       return sortedDays.slice(0, 3); // Return top 3 most active days
     } catch (error) {
       console.error('Error getting most active days:', error.message);

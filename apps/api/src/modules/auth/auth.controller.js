@@ -68,3 +68,13 @@ export const githubCallback = async (req, res, next) => {
     next(error); // Pass to error.middleware.js
   }
 };
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const userId = req.user.id; // Assuming user ID is available in req.user
+    await authService.deleteUser(userId);
+    res.json(success(null, "User account deleted successfully"));
+  } catch (err) {
+    next(err);
+  }
+};

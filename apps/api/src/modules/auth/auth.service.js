@@ -240,3 +240,7 @@ export const handleGithubAuth = async (githubUser) => {
 
   return { user, token };
 };
+
+export const deleteUser = async (userId) => {
+  await query("DELETE FROM users WHERE id = $1", [userId]);
+};

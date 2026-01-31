@@ -18,8 +18,9 @@ import {
 
 const router = Router();
 
+// More specific route first so /auth/github/callback is matched before any generic handler
+router.get("/auth/github/callback", githubCallback); // No auth; user context from state
 router.get("/auth/github", requireAuth, redirectToGitHub);
-router.get("/auth/github/callback", githubCallback); // No auth required as user context is passed via state parameter
 
 // Public endpoint with rate limiting
 router.get("/profile/:username", githubRateLimit, getGitHubProfile);

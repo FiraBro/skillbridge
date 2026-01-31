@@ -28,61 +28,62 @@ export const redirectToGitHub = (req, res) => {
   res.redirect(url);
 };
 
+/**
+ * Decode base64 state (supports standard and URL-safe base64).
+ * GitHub may pass state with URL-safe chars; Buffer.from accepts standard base64.
+ */
+function decodeState(stateStr) {
+  const normalized = stateStr.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(normalized.length + (4 - (normalized.length % 4)) % 4, "=");
+  return Buffer.from(padded, "base64").toString("utf8");
+}
+
+/**
+ * GitHub OAuth callback. No auth middleware; user context comes from state.
+ * Validates code/state, decodes state, exchanges code for token, then redirects to frontend.
+ */
 export const githubCallback = async (req, res, next) => {
+  const frontendBase = env.FRONTEND_URL || "http://localhost:5173";
+
+  const failRedirect = (error, details = "") => {
+    const params = new URLSearchParams({ error });
+    if (details) params.set("details", details);
+    return res.redirect(`${frontendBase}/profile?${params.toString()}`);
+  };
+
   try {
-    console.log("=== GITHUB CALLBACK DEBUG START ===");
-
     const { code, state } = req.query;
-    console.log("Code parameter:", code ? "PRESENT" : "MISSING");
-    console.log("State parameter:", state ? "PRESENT" : "MISSING");
 
-    if (!state) {
-      console.log("Missing state parameter");
-      return res.redirect(
-        `${env.FRONTEND_URL || "http://localhost:5173"}/profile?error=missing_state`,
-      );
+    if (!state || typeof state !== "string" || !state.trim()) {
+      return failRedirect("missing_state");
     }
 
-    if (!code) {
-      console.log("Missing code parameter");
-      return res.redirect(
-        `${env.FRONTEND_URL || "http://localhost:5173"}/profile?error=no_code`,
-      );
+    if (!code || typeof code !== "string" || !code.trim()) {
+      return failRedirect("no_code");
     }
 
-    // Decode state to get user info
     let userInfo;
     try {
-      const decodedState = Buffer.from(state, "base64").toString();
-      console.log("Decoded state parameter:", decodedState);
+      const decodedState = decodeState(state.trim());
       userInfo = JSON.parse(decodedState);
-      console.log("Decoded user info:", userInfo);
     } catch (err) {
-      console.error("Error decoding state:", err);
-      return res.redirect(
-        `${env.FRONTEND_URL || "http://localhost:5173"}/profile?error=invalid_state`,
-      );
+      return failRedirect("invalid_state", "state_decode_failed");
     }
 
-    // Now safe to use userInfo
-    console.log("Connecting GitHub account for user:", userInfo.userId);
-    console.log("=== CALLING GITHUB SERVICE ===");
+    if (!userInfo || typeof userInfo.userId === "undefined") {
+      return failRedirect("invalid_state", "missing_user_id");
+    }
 
-    await githubService.connectGitHubAccount(code, userInfo.userId);
+    const userId = userInfo.userId;
+    await githubService.connectGitHubAccount(code, userId);
 
-    console.log("=== GITHUB SERVICE COMPLETED SUCCESSFULLY ===");
-
-    // Redirect to frontend profile page
-    const redirectUrl = `${env.FRONTEND_URL || "http://localhost:5173"}/profile/${userInfo.username || userInfo.userId}?success=github_connected`;
-    console.log("Redirecting to URL:", redirectUrl);
-    res.redirect(redirectUrl);
-
-    console.log("=== GITHUB CALLBACK DEBUG END ===");
+    const profileSegment = userInfo.username ? `/profile/${encodeURIComponent(userInfo.username)}` : "/profile";
+    const redirectUrl = `${frontendBase}${profileSegment}?success=github_connected`;
+    return res.redirect(redirectUrl);
   } catch (err) {
-    console.error("=== GITHUB CALLBACK ERROR ===", err);
-    res.redirect(
-      `${env.FRONTEND_URL || "http://localhost:5173"}/profile?error=callback_error&details=${encodeURIComponent(err.message)}`,
-    );
+    const message = err.message || "callback_error";
+    const safeDetails = encodeURIComponent(String(message).slice(0, 200));
+    return failRedirect("callback_error", safeDetails);
   }
 };
 

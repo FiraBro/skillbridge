@@ -5,8 +5,11 @@ const PORT = env.PORT || 6000;
 
 // Use global variable to prevent multiple listen() on hot reload
 if (!global.__server__) {
-  const server = app.listen(PORT, () => {
-    console.log(`🚀 API running on port ${PORT}`);
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 API running on http://0.0.0.0:${PORT}`);
+    if (env.GITHUB_CALLBACK_URL) {
+      console.log(`   GitHub callback URL (must match OAuth App): ${env.GITHUB_CALLBACK_URL}`);
+    }
   });
 
   global.__server__ = server;

@@ -33,11 +33,48 @@ GITHUB_CALLBACK_URL=http://localhost:6000/api/github/auth/github/callback
 FRONTEND_URL=http://localhost:5173
 ```
 
-### 4. Test the Setup
-1. Start your backend server: `cd apps/api && npm run dev`
-2. Start your frontend server: `cd apps/web && npm run dev`
-3. Navigate to your frontend application
-4. Try connecting GitHub account
+### 4. Test the Full OAuth Flow Locally
+
+**Step 1 – Confirm GitHub OAuth App callback URL**
+
+- In GitHub: **Settings → Developer settings → OAuth Apps** → your app.
+- Set **Authorization callback URL** to exactly:
+  - `http://localhost:6000/api/github/auth/github/callback`
+- Do **not** use the frontend URL (e.g. `http://localhost:5173/...`) here. GitHub must redirect to the **backend** so the callback route is hit.
+
+**Step 2 – Start backend and frontend**
+
+```bash
+# Terminal 1 – backend (port 6000)
+cd apps/api && npm run dev
+
+# Terminal 2 – frontend (port 5173)
+cd apps/web && npm run dev
+```
+
+On startup, the API logs the callback URL it expects. It must match the one in GitHub.
+
+**Step 3 – Initiate OAuth from the app**
+
+1. Open **http://localhost:5173** in the browser.
+2. Log in so you have a valid JWT (cookie or `Authorization` header).
+3. Go to the page that has “Connect GitHub” (e.g. profile/settings).
+4. Click **Connect GitHub**. The frontend should call:
+   - `GET http://localhost:6000/api/github/auth/github` (with auth).
+5. You are redirected to GitHub to authorize.
+6. After authorizing, GitHub redirects the browser to:
+   - `http://localhost:6000/api/github/auth/github/callback?code=...&state=...`
+7. The **backend** handles that URL, exchanges the code, then redirects you to the frontend (e.g. `http://localhost:5173/profile?success=github_connected` or `/profile/<username>?success=github_connected`).
+
+**Step 4 – Verify the callback is hit**
+
+- When GitHub redirects to the callback, the backend must log an **INCOMING REQUEST** for `GET /api/github/auth/github/callback`. If you never see that line, the request is not reaching the backend (see debugging below).
+
+**Manual check that the callback route is reachable**
+
+- With the backend running, open in the browser or run:
+  - `curl -v "http://localhost:6000/api/github/auth/github/callback?code=test&state=eyJ1c2VySWQiOiJ0ZXN0In0="`
+- You should see the backend log: `INCOMING REQUEST: GET /api/github/auth/github/callback`. You will then get a redirect to the frontend with an error (e.g. `no_code` or token exchange failure) because `code=test` is invalid. That is expected; the important part is that the **callback route ran**.
 
 ### 5. Troubleshooting Common Issues
 
@@ -52,6 +89,21 @@ FRONTEND_URL=http://localhost:5173
 #### Issue: Callback redirects to an invalid page
 **Cause**: FRONTEND_URL environment variable is not set correctly
 **Solution**: Set FRONTEND_URL to your actual frontend URL (e.g., http://localhost:5173)
+
+#### Issue: Callback never appears in server logs (backend not hit after GitHub redirect)
+**Cause**: The browser is sent to a URL that does not reach your backend.
+
+- **Check GitHub OAuth App “Authorization callback URL”**  
+  It must be exactly: `http://localhost:6000/api/github/auth/github/callback` (no trailing slash, port 6000, backend path). If it is set to the frontend (e.g. `http://localhost:5173/...`), GitHub will redirect there and the backend will never see the request.
+
+- **Check port**  
+  When testing manually (browser or curl), use **port 6000** (backend), not 5173 (frontend). Example: `http://localhost:6000/api/github/auth/github/callback?...`
+
+- **Check backend is running**  
+  Ensure the API is running and listening on 6000. On startup you should see: `API running on http://0.0.0.0:6000` and the logged GitHub callback URL.
+
+- **Confirm the request reaches Express**  
+  Every request that hits the app is logged as: `INCOMING REQUEST: <method> <path>`. If you do not see `GET /api/github/auth/github/callback` when GitHub redirects (or when you open the callback URL manually), the request is not reaching the Node server (wrong host/port or something else handling the URL).
 
 ### 6. Production Configuration
 For production deployments, update the URLs accordingly:

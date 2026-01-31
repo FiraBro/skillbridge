@@ -19,7 +19,8 @@ export const env = {
 
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
-  GITHUB_CALLBACK_URL: process.env.GITHUB_CALLBACK_URL || "http://localhost:6000/api/github/auth/github/callback",
+  // No trailing slash; must match GitHub OAuth App "Authorization callback URL" exactly
+  GITHUB_CALLBACK_URL: (process.env.GITHUB_CALLBACK_URL || "http://localhost:6000/api/github/auth/github/callback").replace(/\/+$/, ""),
 
   GITHUB_TOKEN:
     process.env.GITHUB_TOKEN || "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",

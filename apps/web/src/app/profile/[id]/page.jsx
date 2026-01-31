@@ -154,7 +154,10 @@ export default function ProfilePage() {
                   )}
 
                   {/* GITHUB DATA - Show if stats exist even if not connected yet */}
-                  {(isGithubConnected || profile.total_stars > 0 || profile.followers > 0 || profile.commits_30d > 0) && (
+                  {(isGithubConnected ||
+                    profile.total_stars > 0 ||
+                    profile.followers > 0 ||
+                    profile.commits_30d > 0) && (
                     <>
                       <GitHubStats
                         stats={{

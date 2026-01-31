@@ -62,9 +62,16 @@ class GitHubOAuthService {
       console.log('Token exchange response status:', tokenRes.status);
       console.log('Token exchange response data keys:', Object.keys(tokenRes.data));
 
-      const accessToken = tokenRes.data.access_token;
+      const data = tokenRes.data;
+      if (data.error) {
+        const msg = data.error_description || data.error || "GitHub token exchange failed";
+        console.error('GitHub token exchange error:', data.error, data.error_description);
+        throw new Error(msg);
+      }
+
+      const accessToken = data.access_token;
       if (!accessToken) {
-        console.error('Access token missing in response:', tokenRes.data);
+        console.error('Access token missing in response:', data);
         throw new Error("GitHub token missing");
       }
 

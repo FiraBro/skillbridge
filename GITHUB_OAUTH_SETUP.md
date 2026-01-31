@@ -14,9 +14,9 @@
 
 **Application Name**: SkillBridge Dev (or your preferred name)
 **Homepage URL**: http://localhost:5173 (or your frontend URL)
-**Authorization callback URL**: http://localhost:6000/api/github/auth/github/callback
+**Authorization callback URL** (local dev): `http://localhost:5173/api/github/auth/github/callback`
 
-⚠️ **Important**: The "Authorization callback URL" must match exactly with your `GITHUB_CALLBACK_URL` environment variable.
+⚠️ **Important**: For local dev we use the **frontend** URL so that when GitHub redirects, the request goes to port 5173 and the Vite proxy forwards it to the backend. The backend defaults `GITHUB_CALLBACK_URL` to `FRONTEND_URL + "/api/github/auth/github/callback"`. Set the same URL in GitHub OAuth App.
 
 ### 2. Get Client Credentials
 After creating the app, you'll receive:
@@ -29,8 +29,8 @@ Create/update your `.env` file in the `apps/api` directory:
 ```env
 GITHUB_CLIENT_ID=your_client_id_here
 GITHUB_CLIENT_SECRET=your_client_secret_here
-GITHUB_CALLBACK_URL=http://localhost:6000/api/github/auth/github/callback
 FRONTEND_URL=http://localhost:5173
+# GITHUB_CALLBACK_URL defaults to FRONTEND_URL + /api/github/auth/github/callback (http://localhost:5173/api/github/auth/github/callback)
 ```
 
 ### 4. Test the Full OAuth Flow Locally
@@ -39,8 +39,8 @@ FRONTEND_URL=http://localhost:5173
 
 - In GitHub: **Settings → Developer settings → OAuth Apps** → your app.
 - Set **Authorization callback URL** to exactly:
-  - `http://localhost:6000/api/github/auth/github/callback`
-- Do **not** use the frontend URL (e.g. `http://localhost:5173/...`) here. GitHub must redirect to the **backend** so the callback route is hit.
+  - `http://localhost:5173/api/github/auth/github/callback`
+- This is the **frontend** URL so that when GitHub redirects, the browser goes to port 5173 and the Vite proxy forwards the request to the backend. The backend will then receive the callback.
 
 **Step 2 – Start backend and frontend**
 
@@ -59,12 +59,11 @@ On startup, the API logs the callback URL it expects. It must match the one in G
 1. Open **http://localhost:5173** in the browser.
 2. Log in so you have a valid JWT (cookie or `Authorization` header).
 3. Go to the page that has “Connect GitHub” (e.g. profile/settings).
-4. Click **Connect GitHub**. The frontend should call:
-   - `GET http://localhost:6000/api/github/auth/github` (with auth).
+4. Click **Connect GitHub**. The browser goes to `http://localhost:5173/api/github/auth/github` (proxy forwards to backend with cookies).
 5. You are redirected to GitHub to authorize.
 6. After authorizing, GitHub redirects the browser to:
-   - `http://localhost:6000/api/github/auth/github/callback?code=...&state=...`
-7. The **backend** handles that URL, exchanges the code, then redirects you to the frontend (e.g. `http://localhost:5173/profile?success=github_connected` or `/profile/<username>?success=github_connected`).
+   - `http://localhost:5173/api/github/auth/github/callback?code=...&state=...`
+7. The request hits the frontend; Vite proxy forwards it to the backend. The **backend** handles the callback, exchanges the code, then redirects you to the frontend (e.g. `http://localhost:5173/profile?success=github_connected`).
 
 **Step 4 – Verify the callback is hit**
 
@@ -72,9 +71,10 @@ On startup, the API logs the callback URL it expects. It must match the one in G
 
 **Manual check that the callback route is reachable**
 
-- With the backend running, open in the browser or run:
-  - `curl -v "http://localhost:6000/api/github/auth/github/callback?code=test&state=eyJ1c2VySWQiOiJ0ZXN0In0="`
-- You should see the backend log: `INCOMING REQUEST: GET /api/github/auth/github/callback`. You will then get a redirect to the frontend with an error (e.g. `no_code` or token exchange failure) because `code=test` is invalid. That is expected; the important part is that the **callback route ran**.
+- With both backend and frontend running, open in the browser:
+  - `http://localhost:5173/api/github/auth/github/callback?code=test&state=eyJ1c2VySWQiOiJ0ZXN0In0=`
+- Or: `curl -v "http://localhost:5173/api/github/auth/github/callback?code=test&state=eyJ1c2VySWQiOiJ0ZXN0In0="`
+- You should see the backend log: `INCOMING REQUEST: GET /api/github/auth/github/callback`. You will then get a redirect to the frontend with an error (e.g. token exchange failure) because `code=test` is invalid. That is expected; the important part is that the **callback route ran**.
 
 ### 5. Troubleshooting Common Issues
 
@@ -94,13 +94,10 @@ On startup, the API logs the callback URL it expects. It must match the one in G
 **Cause**: The browser is sent to a URL that does not reach your backend.
 
 - **Check GitHub OAuth App “Authorization callback URL”**  
-  It must be exactly: `http://localhost:6000/api/github/auth/github/callback` (no trailing slash, port 6000, backend path). If it is set to the frontend (e.g. `http://localhost:5173/...`), GitHub will redirect there and the backend will never see the request.
+  For local dev set it to: `http://localhost:5173/api/github/auth/github/callback`. GitHub redirects there; the Vite proxy forwards the request to the backend so the callback is hit.
 
-- **Check port**  
-  When testing manually (browser or curl), use **port 6000** (backend), not 5173 (frontend). Example: `http://localhost:6000/api/github/auth/github/callback?...`
-
-- **Check backend is running**  
-  Ensure the API is running and listening on 6000. On startup you should see: `API running on http://0.0.0.0:6000` and the logged GitHub callback URL.
+- **Ensure backend and frontend are both running**  
+  Backend on 6000, frontend (Vite) on 5173 with proxy for `/api` to 6000. On API startup you should see the logged `GitHub callback URL` (for local dev it should be `http://localhost:5173/api/github/auth/github/callback`).
 
 - **Confirm the request reaches Express**  
   Every request that hits the app is logged as: `INCOMING REQUEST: <method> <path>`. If you do not see `GET /api/github/auth/github/callback` when GitHub redirects (or when you open the callback URL manually), the request is not reaching the Node server (wrong host/port or something else handling the URL).

@@ -29,11 +29,9 @@ export const authApi = {
   // For GitHub auth, we'll handle it differently to ensure redirect works properly
 };
 
-// Function to initiate GitHub OAuth flow with proper authentication
-// Now that we store the token in cookies too, the backend can authenticate via cookies
+// Function to initiate GitHub OAuth flow with proper authentication.
+// Use same-origin URL so cookies/JWT are sent; Vite proxy forwards to backend.
+// Backend then redirects to GitHub, and GitHub redirects back to backend callback (no cookie needed there).
 export const initiateGithubAuth = () => {
-  // Since we store the token in cookies (via useAuth hook),
-  // and the axios instance has withCredentials=true,
-  // the cookie will be sent automatically with the redirect
-  window.location.href = `${import.meta.env.VITE_API_URL || "/api"}/github/auth/github`;
+  window.location.href = "/api/github/auth/github";
 };

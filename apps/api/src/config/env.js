@@ -19,8 +19,10 @@ export const env = {
 
   GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
-  // No trailing slash; must match GitHub OAuth App "Authorization callback URL" exactly
-  GITHUB_CALLBACK_URL: (process.env.GITHUB_CALLBACK_URL || "http://localhost:6000/api/github/auth/github/callback").replace(/\/+$/, ""),
+  // Callback URL we send to GitHub. Use FRONTEND URL in dev so GitHub redirects to 5173 and Vite proxy forwards to backend.
+  // Set GITHUB_CALLBACK_URL in .env to override. No trailing slash.
+  GITHUB_CALLBACK_URL: (process.env.GITHUB_CALLBACK_URL ||
+    `${(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "")}/api/github/auth/github/callback`).replace(/\/+$/, ""),
 
   GITHUB_TOKEN:
     process.env.GITHUB_TOKEN || "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",

@@ -43,12 +43,15 @@ function decodeState(stateStr) {
  * Validates code/state, decodes state, exchanges code for token, then redirects to frontend.
  */
 export const githubCallback = async (req, res, next) => {
+  console.log("GitHub callback hit:", req.method, req.url);
   const frontendBase = env.FRONTEND_URL || "http://localhost:5173";
 
   const failRedirect = (error, details = "") => {
     const params = new URLSearchParams({ error });
     if (details) params.set("details", details);
-    return res.redirect(`${frontendBase}/profile?${params.toString()}`);
+    const url = `${frontendBase}/profile?${params.toString()}`;
+    console.log("GitHub callback redirecting to frontend (error):", url);
+    return res.redirect(url);
   };
 
   try {
@@ -79,11 +82,12 @@ export const githubCallback = async (req, res, next) => {
 
     const profileSegment = userInfo.username ? `/profile/${encodeURIComponent(userInfo.username)}` : "/profile";
     const redirectUrl = `${frontendBase}${profileSegment}?success=github_connected`;
+    console.log("GitHub callback redirecting to frontend (success):", redirectUrl);
     return res.redirect(redirectUrl);
   } catch (err) {
-    const message = err.message || "callback_error";
-    const safeDetails = encodeURIComponent(String(message).slice(0, 200));
-    return failRedirect("callback_error", safeDetails);
+    const message = (err && err.message) ? String(err.message).slice(0, 200) : "callback_error";
+    console.error("GitHub callback error:", err);
+    return failRedirect("callback_error", message);
   }
 };
 

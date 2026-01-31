@@ -28,6 +28,22 @@ class GitHubRepository {
 
     const profileId = profileResult.rows[0].id;
 
+    // Ensure JSONB columns get valid JSON (arrays/objects only)
+    const topLanguages = stats.topLanguages ?? stats.top_languages;
+    const topLanguagesJson = Array.isArray(topLanguages)
+      ? JSON.stringify(topLanguages.map((l) => (l != null ? String(l) : "")))
+      : "[]";
+    const weeklyActivity = stats.weeklyActivity ?? stats.weekly_activity;
+    const weeklyActivityJson =
+      weeklyActivity && typeof weeklyActivity === "object" && !Array.isArray(weeklyActivity)
+        ? JSON.stringify(weeklyActivity)
+        : "{}";
+    const mostActiveDays = stats.mostActiveDays ?? stats.most_active_days;
+    const mostActiveDaysJson =
+      mostActiveDays && typeof mostActiveDays === "object" && !Array.isArray(mostActiveDays)
+        ? JSON.stringify(mostActiveDays)
+        : "{}";
+
     // Upsert into github_stats table
     await pool.query(
       `
@@ -38,7 +54,7 @@ class GitHubRepository {
          github_following, account_age_months, weekly_activity, most_active_days,
          verification_status, last_sync_with_github)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(),
-              $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
+              $10::jsonb, $11, $12, $13, $14, $15, $16::jsonb, $17::jsonb, $18, NOW())
       ON CONFLICT (profile_id)
       DO UPDATE SET
         public_repos = EXCLUDED.public_repos,
@@ -63,23 +79,23 @@ class GitHubRepository {
       `,
       [
         profileId,
-        stats.publicRepos || stats.public_repos,
+        stats.publicRepos ?? stats.public_repos,
         stats.followers,
-        stats.totalStars || stats.total_stars,
-        stats.totalCommits || stats.total_commits,
-        stats.commits30d || stats.commits_30d || 0,
-        stats.isActive || stats.is_active || false,
-        stats.lastActivity || stats.last_activity || null,
-        stats.accountCreated || stats.account_created || null,
-        stats.topLanguages || stats.top_languages || [],
-        stats.contributionStreak || stats.contribution_streak || 0,
-        stats.consistencyScore || stats.consistency_score || 0.0,
-        stats.githubBio || stats.github_bio || null,
-        stats.githubFollowing || stats.github_following || 0,
-        stats.accountAgeMonths || stats.account_age_months || 0,
-        stats.weeklyActivity || stats.weekly_activity || {},
-        stats.mostActiveDays || stats.most_active_days || {},
-        stats.verificationStatus || stats.verification_status || "verified",
+        stats.totalStars ?? stats.total_stars,
+        stats.totalCommits ?? stats.total_commits,
+        stats.commits30d ?? stats.commits_30d ?? 0,
+        stats.isActive ?? stats.is_active ?? false,
+        stats.lastActivity ?? stats.last_activity ?? null,
+        stats.accountCreated ?? stats.account_created ?? null,
+        topLanguagesJson,
+        stats.contributionStreak ?? stats.contribution_streak ?? 0,
+        stats.consistencyScore ?? stats.consistency_score ?? 0.0,
+        stats.githubBio ?? stats.github_bio ?? null,
+        stats.githubFollowing ?? stats.github_following ?? 0,
+        stats.accountAgeMonths ?? stats.account_age_months ?? 0,
+        weeklyActivityJson,
+        mostActiveDaysJson,
+        stats.verificationStatus ?? stats.verification_status ?? "verified",
       ],
     );
   }

@@ -7,6 +7,7 @@ import { FaStar, FaPlus } from "react-icons/fa";
 import { formatDistanceToNow } from "date-fns";
 
 export default function EndorsementSection({ endorsements, onEndorse }) {
+  console.log("EndorsementSection - endorsements:", endorsements);
   if (!endorsements || endorsements.length === 0) {
     return (
       <Card className="p-6 bg-card/50 backdrop-blur-sm">

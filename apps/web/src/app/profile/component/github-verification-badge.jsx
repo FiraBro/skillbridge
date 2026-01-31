@@ -7,6 +7,7 @@ import { FaShieldAlt, FaGithub } from "react-icons/fa";
  * Based on account age and activity patterns
  */
 export default function GitHubVerificationBadge({ stats }) {
+  console.log("GitHubVerificationBadge - stats:", stats);
   if (!stats || !stats.account_created) return null;
 
   const accountAge = getAccountAgeInDays(stats.account_created);

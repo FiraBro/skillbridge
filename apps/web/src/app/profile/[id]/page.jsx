@@ -46,50 +46,42 @@ export default function ProfilePage() {
 
   const { data: reputation } = useReputation(userId);
   const { data: history } = useReputationHistory(userId);
+  console.log("ProfilePage - profile:", profile);
+  console.log("ProfilePage - viewer:", viewer);
 
-  /* -------------------- ROLE / VISIBILITY -------------------- */
-
-  const isOwnProfile = viewer?.id === userId;
-  const isAdmin = viewer?.role === "admin";
+  /* -------------------- GITHUB VISIBILITY -------------------- */
 
   const { canShowGithub, canConnectGithub, isGithubConnected } =
     useGithubVisibility(profile, viewer);
 
-  /* -------------------- GITHUB OAUTH CALLBACK (URL PARAMS) -------------------- */
+  /* -------------------- GITHUB OAUTH CALLBACK -------------------- */
 
   useEffect(() => {
     if (handledParams.current || !username) return;
+
     const success = searchParams.get("success");
     const error = searchParams.get("error");
     const details = searchParams.get("details");
+
     if (success === "github_connected") {
       handledParams.current = true;
       toast.success("GitHub account connected successfully.");
+
       queryClient.invalidateQueries({ queryKey: ["profile", username] });
       queryClient.invalidateQueries({ queryKey: ["reputation"] });
+
       setSearchParams({}, { replace: true });
       return;
     }
+
     if (error) {
       handledParams.current = true;
-      const message =
-        error === "callback_error" && details
-          ? decodeURIComponent(details)
-          : error === "missing_state"
-            ? "Missing state. Please try connecting again."
-            : error === "no_code"
-              ? "No authorization code received."
-              : error === "invalid_state"
-                ? "Invalid state. Please try connecting again."
-                : "GitHub connection failed. Please try again.";
-      toast.error(message);
+      toast.error(
+        details ? decodeURIComponent(details) : "GitHub connection failed.",
+      );
       setSearchParams({}, { replace: true });
     }
   }, [username, searchParams, setSearchParams, queryClient]);
-
-  /* -------------------- ENV (VITE) -------------------- */
-
-  const apiUrl = import.meta.env.VITE_API_URL || "/api";
 
   /* -------------------- LOADING / ERROR -------------------- */
 
@@ -133,13 +125,11 @@ export default function ProfilePage() {
                 </TabsTrigger>
               )}
 
-              {canShowGithub && !isOwnProfile && (
+              {canShowGithub && viewer?.id !== userId && (
                 <TabsTrigger value="endorsements">
                   <Award className="h-4 w-4 mr-1" /> Validations
                 </TabsTrigger>
               )}
-
-              {isAdmin && <TabsTrigger value="admin">🛡 Admin</TabsTrigger>}
             </TabsList>
 
             {/* OVERVIEW */}
@@ -147,7 +137,7 @@ export default function ProfilePage() {
               {canShowGithub && (
                 <>
                   <ReputationBreakdown
-                    total={reputation?.data?.total}
+                    total={reputation?.data?.total || profile.reputation_score}
                     breakdown={reputation?.data?.breakdown}
                   />
 
@@ -156,31 +146,39 @@ export default function ProfilePage() {
                   {/* CONNECT GITHUB */}
                   {canConnectGithub && (
                     <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        initiateGithubAuth();
-                      }}
+                      onClick={initiateGithubAuth}
                       className="btn btn-github"
                     >
                       🐙 Connect GitHub
                     </button>
                   )}
 
-                  {/* GITHUB STATS */}
-                  {isGithubConnected && (
+                  {/* GITHUB DATA - Show if stats exist even if not connected yet */}
+                  {(isGithubConnected || profile.total_stars > 0 || profile.followers > 0 || profile.commits_30d > 0) && (
                     <>
                       <GitHubStats
                         stats={{
+                          username: profile.github_username || profile.username,
                           stars: profile.total_stars ?? 0,
                           prs: profile.pull_requests ?? 0,
                           commits30d: profile.commits_30d ?? 0,
-                          username: profile.github_username,
                         }}
                       />
 
                       <div className="flex gap-2 mt-2">
-                        <GitHubVerificationBadge stats={profile.github} />
-                        <GitHubActivityBadge stats={profile.github} />
+                        <GitHubVerificationBadge
+                          stats={{
+                            account_created: profile.account_created,
+                            public_repos: profile.public_repos,
+                            commits_30d: profile.commits_30d,
+                          }}
+                        />
+                        <GitHubActivityBadge
+                          stats={{
+                            commits_30d: profile.commits_30d,
+                            total_commits: profile.total_commits,
+                          }}
+                        />
                       </div>
                     </>
                   )}
@@ -196,23 +194,12 @@ export default function ProfilePage() {
             )}
 
             {/* ENDORSEMENTS */}
-            {canShowGithub && !isOwnProfile && (
+            {canShowGithub && viewer?.id !== userId && (
               <TabsContent value="endorsements">
                 <EndorsementSection
                   skills={profile.skills || []}
                   userId={userId}
                 />
-              </TabsContent>
-            )}
-
-            {/* ADMIN */}
-            {isAdmin && (
-              <TabsContent value="admin">
-                <div className="bg-card rounded-3xl border p-8 space-y-4">
-                  <h3 className="font-bold">Admin Actions</h3>
-                  <button className="btn-danger">Suspend User</button>
-                  <button className="btn-warning">Reset Reputation</button>
-                </div>
               </TabsContent>
             )}
           </Tabs>
@@ -223,7 +210,7 @@ export default function ProfilePage() {
           <ContactPanel
             userId={profile.user_id}
             userName={profile.full_name}
-            isOwnProfile={isOwnProfile}
+            isOwnProfile={viewer?.id === userId}
           />
 
           <div className="bg-card rounded-3xl border p-6 space-y-4">

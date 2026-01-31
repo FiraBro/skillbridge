@@ -16,6 +16,7 @@ const item = {
 };
 
 export default function SkillsCloud({ skills }) {
+  console.log("SkillsCloud - skills:", skills);
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">

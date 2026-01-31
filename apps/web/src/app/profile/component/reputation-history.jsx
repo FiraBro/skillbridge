@@ -2,6 +2,7 @@ import { CheckCircle2, Info, Star, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function ReputationHistory({ events = [] }) {
+  console.log("ReputationHistory - events:", events);
   if (!events || events.length === 0) {
     return (
       <div className="py-20 text-center space-y-4">

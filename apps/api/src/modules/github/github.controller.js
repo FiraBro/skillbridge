@@ -80,7 +80,18 @@ export const githubCallback = async (req, res, next) => {
     const userId = userInfo.userId;
     await githubService.connectGitHubAccount(code, userId);
 
-    const profileSegment = userInfo.username ? `/profile/${encodeURIComponent(userInfo.username)}` : "/profile";
+    // Redirect to /profile/:username so the frontend route matches (route is /profile/:username, not /profile)
+    let username = userInfo.username;
+    if (!username || typeof username !== "string" || !username.trim()) {
+      const profileRow = await query(
+        "SELECT username FROM profiles WHERE user_id = $1 LIMIT 1",
+        [userId],
+      );
+      username = profileRow.rows[0]?.username ?? null;
+    }
+    const profileSegment = username
+      ? `/profile/${encodeURIComponent(username)}`
+      : "/profile";
     const redirectUrl = `${frontendBase}${profileSegment}?success=github_connected`;
     console.log("GitHub callback redirecting to frontend (success):", redirectUrl);
     return res.redirect(redirectUrl);

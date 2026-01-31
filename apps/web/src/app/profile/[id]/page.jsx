@@ -1,4 +1,7 @@
-import { useParams } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useProfile,
@@ -26,7 +29,10 @@ import { ShieldCheck, Award, Zap, History } from "lucide-react";
 
 export default function ProfilePage() {
   const { username } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const { user: viewer } = useAuth();
+  const handledParams = useRef(false);
 
   /* -------------------- DATA -------------------- */
 
@@ -48,6 +54,38 @@ export default function ProfilePage() {
 
   const { canShowGithub, canConnectGithub, isGithubConnected } =
     useGithubVisibility(profile, viewer);
+
+  /* -------------------- GITHUB OAUTH CALLBACK (URL PARAMS) -------------------- */
+
+  useEffect(() => {
+    if (handledParams.current || !username) return;
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+    const details = searchParams.get("details");
+    if (success === "github_connected") {
+      handledParams.current = true;
+      toast.success("GitHub account connected successfully.");
+      queryClient.invalidateQueries({ queryKey: ["profile", username] });
+      queryClient.invalidateQueries({ queryKey: ["reputation"] });
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    if (error) {
+      handledParams.current = true;
+      const message =
+        error === "callback_error" && details
+          ? decodeURIComponent(details)
+          : error === "missing_state"
+            ? "Missing state. Please try connecting again."
+            : error === "no_code"
+              ? "No authorization code received."
+              : error === "invalid_state"
+                ? "Invalid state. Please try connecting again."
+                : "GitHub connection failed. Please try again.";
+      toast.error(message);
+      setSearchParams({}, { replace: true });
+    }
+  }, [username, searchParams, setSearchParams, queryClient]);
 
   /* -------------------- ENV (VITE) -------------------- */
 

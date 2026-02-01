@@ -129,3 +129,13 @@
   font-weight: 500 !important;
   letter-spacing: 0.1px !important;
 }
+
+/* Contain layout for navbar to prevent shifting */
+.navbar-contain {
+  contain: layout;
+}
+
+/* Prevent layout shift due to scrollbar appearing/disappearing */
+html {
+  overflow-y: scroll; /* Always show scrollbar to prevent layout shift */
+}

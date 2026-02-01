@@ -45,31 +45,24 @@ export default function PostDetailPage() {
   const [commentText, setCommentText] = useState("");
 
   /* ----------------------- handlers ----------------------- */
-
   const handleLike = useCallback(() => {
     if (!post) return;
 
     const mutation = post.is_liked ? unlikeMutation : likeMutation;
 
     mutation.mutate(post.id, {
-      onError: () => {
-        showToast("Failed to update reaction");
-      },
+      onError: () => showToast("Failed to update reaction"),
     });
   }, [post, likeMutation, unlikeMutation]);
 
   const handleShare = useCallback(async () => {
     const url = window.location.href;
 
-    // Track share in backend
     shareMutation.mutate(post.id);
 
     try {
       if (navigator.share) {
-        await navigator.share({
-          title: post.title,
-          url,
-        });
+        await navigator.share({ title: post.title, url });
       } else {
         await navigator.clipboard.writeText(url);
         showToast("Link copied to clipboard");
@@ -91,9 +84,7 @@ export default function PostDetailPage() {
             setCommentText("");
             showToast("Comment posted");
           },
-          onError: () => {
-            showToast("Failed to post comment");
-          },
+          onError: () => showToast("Failed to post comment"),
         },
       );
     },
@@ -105,20 +96,13 @@ export default function PostDetailPage() {
       if (!post) return;
 
       deleteCommentMutation.mutate(
-        { postId: post.id, commentId }, // pass object
+        { postId: post.id, commentId },
         {
-          onSuccess: (_, variables) => {
-            // variables = { postId, commentId }
+          onSuccess: (_, variables) =>
             showToast("Comment deleted", "Undo", () => {
-              console.log(
-                "User clicked undo for comment:",
-                variables.commentId,
-              );
-            });
-          },
-          onError: () => {
-            showToast("Failed to delete comment");
-          },
+              console.log("Undo comment:", variables.commentId);
+            }),
+          onError: () => showToast("Failed to delete comment"),
         },
       );
     },
@@ -126,20 +110,18 @@ export default function PostDetailPage() {
   );
 
   /* ----------------------- derived data ----------------------- */
-
   const renderedMarkdown = useMemo(
     () => <MarkdownRenderer content={post?.markdown || ""} />,
     [post?.markdown],
   );
 
-  /* ----------------------- states ----------------------- */
-
+  /* ----------------------- loading & error ----------------------- */
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto py-10 space-y-6 animate-pulse">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-96 w-full rounded-3xl" />
+        <Skeleton className="h-96 w-full rounded-xl" />
       </div>
     );
   }
@@ -163,105 +145,102 @@ export default function PostDetailPage() {
   if (!post) return null;
 
   /* ----------------------- UI ----------------------- */
-
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-10">
-      <Link to="/dashboard">
-        <Button variant="ghost" className="gap-2 text-xs font-bold uppercase">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Feed
-        </Button>
-      </Link>
-
-      {user?.id === post.author_id && (
-        <Link to={`/posts/${post.slug}/edit`}>
-          <Button variant="outline" className="gap-2">
-            <Edit2 className="h-4 w-4" />
-            Edit Insight
+    <div className="max-w-4xl mx-auto py-8 px-4 space-y-10">
+      {/* Back & Edit */}
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+        <Link to="/dashboard">
+          <Button variant="ghost" className="gap-2 text-xs font-bold uppercase">
+            <ArrowLeft className="h-4 w-4" /> Back to Feed
           </Button>
         </Link>
-      )}
 
-      <article className="space-y-8">
-        {/* Header */}
-        <header className="space-y-6">
-          <div className="flex flex-wrap gap-2">
-            {post.tags?.map((tag) => (
-              <Badge key={tag} variant="secondary">
-                #{tag}
-              </Badge>
-            ))}
-          </div>
+        {user?.id === post.author_id && (
+          <Link to={`/posts/${post.slug}/edit`}>
+            <Button variant="outline" className="gap-2">
+              <Edit2 className="h-4 w-4" /> Edit Insight
+            </Button>
+          </Link>
+        )}
+      </div>
 
-          <h1 className="text-4xl font-black tracking-tight">{post.title}</h1>
+      {/* Post Card */}
+      <Card className="p-6 sm:p-10 shadow-md transition-all rounded-xl space-y-6">
+        {/* Tags */}
+        <div className="flex flex-wrap gap-2">
+          {post.tags?.map((tag) => (
+            <Badge key={tag} variant="secondary">
+              #{tag}
+            </Badge>
+          ))}
+        </div>
 
-          <div className="flex justify-between items-center border-y py-6">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center">
-                <User />
-              </div>
-              <div>
-                <Link
-                  to={`/profile/${post.author_username}`}
-                  className="font-bold hover:underline"
-                >
-                  {post.author_name}
-                </Link>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(post.created_at), {
-                    addSuffix: true,
-                  })}
-                </p>
-              </div>
+        {/* Title */}
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight break-words">
+          {post.title}
+        </h1>
+
+        {/* Author + Actions */}
+        <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-4 border-y py-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center">
+              <User className="h-6 w-6" />
             </div>
-
-            <div className="flex gap-2">
-              <Button
-                onClick={handleLike}
-                disabled={likeMutation.isPending || unlikeMutation.isPending}
-                variant={post.is_liked ? "default" : "outline"}
-                aria-label="Like post"
+            <div className="flex flex-col">
+              <Link
+                to={`/profile/${post.author_username}`}
+                className="font-bold hover:underline"
               >
-                <Heart className={post.is_liked ? "fill-current" : ""} />
-                {post.likes_count}
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleShare}
-                aria-label="Share post"
-              >
-                <Share2 />
-              </Button>
+                {post.author_name}
+              </Link>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formatDistanceToNow(new Date(post.created_at), {
+                  addSuffix: true,
+                })}
+              </span>
             </div>
           </div>
-        </header>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={handleLike}
+              disabled={likeMutation.isPending || unlikeMutation.isPending}
+              variant={post.is_liked ? "default" : "outline"}
+              aria-label="Like post"
+              className="flex items-center gap-1"
+            >
+              <Heart className={post.is_liked ? "fill-current" : ""} />{" "}
+              {post.likes_count}
+            </Button>
+
+            <Button variant="outline" onClick={handleShare} aria-label="Share">
+              <Share2 />
+            </Button>
+          </div>
+        </div>
 
         {/* Content */}
-        {renderedMarkdown}
-      </article>
+        <div className="prose max-w-full">{renderedMarkdown}</div>
+      </Card>
 
       {/* Comments */}
       <section className="space-y-8 pt-10 border-t">
         <div className="flex items-center gap-3">
           <MessageSquare />
-          <h3 className="text-xl font-black">
+          <h3 className="text-xl font-bold">
             Comments ({post.comments_count || 0})
           </h3>
         </div>
 
+        {/* Add comment */}
         {user ? (
           <form onSubmit={handleCommentSubmit} className="relative">
-            <label htmlFor="comment" className="sr-only">
-              Add comment
-            </label>
             <textarea
-              id="comment"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Write your thoughts…"
-              className="w-full min-h-[120px] rounded-xl p-4 border resize-none"
+              className="w-full min-h-[100px] rounded-xl p-4 border resize-none"
             />
             <Button
               type="submit"
@@ -280,14 +259,15 @@ export default function PostDetailPage() {
           </Card>
         )}
 
+        {/* Comments list */}
         <div className="space-y-6">
           {post.comments?.map((comment) => (
-            <div key={comment.id} className="flex gap-4">
+            <div key={comment.id} className="flex flex-col sm:flex-row gap-4">
               <div className="h-10 w-10 bg-muted rounded-xl flex items-center justify-center">
                 <User className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-start">
                   <span className="font-bold text-sm">{comment.username}</span>
                   {user?.id === comment.user_id && (
                     <Button

@@ -31,7 +31,7 @@ export default function CommunityPage() {
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 h-14 flex items-center">
         <div className="max-w-5xl mx-auto w-full flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <Button className="bg-indigo-600 hover:bg-indigo-700">
+            <Button className="bg-[#171717] hover:bg-[#17171] text-white">
               Create Post
             </Button>
           </div>
@@ -63,128 +63,6 @@ export default function CommunityPage() {
   );
 }
 
-/**
- * THE DEV.TO POST CARD
- * Pass 'post' object from your API mapping
- */
-// export function DevToPostCard({ post }) {
-//   console.log("post", post);
-//   // Logic to handle missing data gracefully
-//   const authorName = post?.author?.name || "Developer";
-//   const authorUsername = post?.author?.username || "user";
-//   const avatarUrl =
-//     post?.author?.avatar ||
-//     `https://api.dicebear.com/7.x/avataaars/svg?seed=${authorUsername}`;
-//   const postedAt = formatRelativeTime(post?.created_at || new Date());
-
-//   return (
-//     <Card className="bg-white border-gray-200 shadow-sm hover:ring-1 hover:ring-gray-300 transition-all rounded-none sm:rounded-lg overflow-hidden group">
-//       {/* Optional: Cover Image (Only if exists) */}
-//       {post?.cover_image && (
-//         <Link to={`/posts/${post.id}`}>
-//           <img
-//             src={post.cover_image}
-//             alt="cover"
-//             className="w-full h-48 md:h-64 object-cover"
-//           />
-//         </Link>
-//       )}
-
-//       <div className="p-4 md:p-5">
-//         {/* AUTHOR SECTION (Top Left) */}
-//         <div className="flex items-start gap-3 mb-3">
-//           <Link to={`/profile/${authorUsername}`} className="shrink-0">
-//             <div className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-gray-100 overflow-hidden hover:ring-2 hover:ring-indigo-100 transition-all">
-//               <img
-//                 src={avatarUrl}
-//                 alt={authorName}
-//                 className="w-full h-full object-cover"
-//               />
-//             </div>
-//           </Link>
-
-//           <div className="flex flex-col">
-//             <Link
-//               to={`/profile/${authorUsername}`}
-//               className="text-sm font-semibold text-gray-700 hover:bg-gray-100 px-1 rounded -ml-1 transition-all"
-//             >
-//               {authorName}
-//             </Link>
-//             <span className="text-xs text-gray-500">{postedAt}</span>
-//           </div>
-//         </div>
-
-//         {/* POST CONTENT */}
-//         <div className="md:pl-12">
-//           <Link to={`/posts/${post?.id}`} className="block mb-2">
-//             <h2 className="text-2xl md:text-3xl font-extrabold leading-tight text-gray-900 group-hover:text-indigo-700 transition-colors">
-//               {post?.title || "How to build professional UIs like Dev.to"}
-//             </h2>
-//           </Link>
-
-//           {/* TAGS SECTION */}
-//           <div className="flex flex-wrap gap-1 mb-4">
-//             {(post?.tags || ["webdev", "javascript", "career"]).map((tag) => (
-//               <Link
-//                 key={tag}
-//                 to={`/t/${tag}`}
-//                 className="text-sm text-gray-600 hover:bg-gray-100 hover:text-black border border-transparent hover:border-gray-200 px-2 py-1 rounded"
-//               >
-//                 <span className="opacity-60">#</span>
-//                 {tag}
-//               </Link>
-//             ))}
-//           </div>
-
-//           {/* META INFO (Bottom Row) */}
-//           <div className="flex justify-between items-center">
-//             <div className="flex items-center gap-1">
-//               <Button
-//                 variant="ghost"
-//                 size="sm"
-//                 className="h-9 px-2 gap-2 text-gray-600 hover:bg-gray-100"
-//               >
-//                 <Heart className="h-5 w-5 text-red-500" />
-//                 <span className="text-sm">
-//                   {post?.reactions_count || 24}{" "}
-//                   <span className="hidden sm:inline">reactions</span>
-//                 </span>
-//               </Button>
-//               <Button
-//                 variant="ghost"
-//                 size="sm"
-//                 className="h-9 px-2 gap-2 text-gray-600 hover:bg-gray-100"
-//               >
-//                 <MessageSquare className="h-5 w-5 text-gray-400" />
-//                 <span className="text-sm">
-//                   {post?.comments_count || 8}{" "}
-//                   <span className="hidden sm:inline">comments</span>
-//                 </span>
-//               </Button>
-//             </div>
-
-//             <div className="flex items-center gap-2 text-xs text-gray-500">
-//               <span className="flex items-center gap-1">
-//                 {post?.reading_time || 5} min read <Clock className="h-3 w-3" />
-//               </span>
-//               <Button
-//                 variant="ghost"
-//                 size="icon"
-//                 className="h-8 w-8 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600"
-//               >
-//                 <Bookmark className="h-5 w-5" />
-//               </Button>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </Card>
-//   );
-// }
-
-/**
- * Skeleton Loader
- */
 function PostSkeleton() {
   return (
     <div className="space-y-3">

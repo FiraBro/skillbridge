@@ -44,100 +44,130 @@ export async function createPost(data, userId) {
     client.release();
   }
 }
-
+// ---------------------- POSTS ----------------------
 export async function listPosts({ page = 1, limit = 10, tag, userId }) {
   const offset = (page - 1) * limit;
 
-  const query = `
-    SELECT 
-      p.id, p.author_id, u.name AS author_name, pr.username AS author_username,
-      p.title, p.slug, p.markdown, p.sanitized_html, p.views, p.created_at, p.updated_at,
-      p.deleted_at,
-      COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags,
-      (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
-      (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comments_count,
-      p.shares_count
-      ${userId ? `, EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = $4) AS is_liked` : ""}
-    FROM posts p
-    LEFT JOIN users u ON p.author_id=u.id
-    LEFT JOIN profiles pr ON pr.user_id = u.id
-    LEFT JOIN post_tags pt ON pt.post_id=p.id
-    LEFT JOIN tags t ON pt.tag_id=t.id
-    ${tag ? "WHERE t.name=$3 AND p.deleted_at IS NULL" : "WHERE p.deleted_at IS NULL"}
-    GROUP BY p.id, u.name, pr.username
-    ORDER BY p.created_at DESC
-    LIMIT $1 OFFSET $2
-  `;
-  const values = tag ? [limit, offset, tag] : [limit, offset];
-  if (userId && tag) values.push(userId);
-  else if (userId && !tag) values.push(userId);
+  const values = [limit, offset];
+  let userIdIndex = null;
+  let tagIndex = null;
 
-  // Re-map index for userId if needed
-  let finalQuery = query;
-  if (userId && !tag) {
-    finalQuery = finalQuery.replace("$4", "$3");
+  let whereClauses = ["p.deleted_at IS NULL", "pr.deleted_at IS NULL"];
+
+  if (tag) {
+    tagIndex = values.length + 1;
+    values.push(tag);
+    whereClauses.push(`t.name=$${tagIndex}`);
   }
 
-  const { rows } = await pool.query(finalQuery, values);
+  if (userId) {
+    userIdIndex = values.length + 1;
+    values.push(userId);
+  }
+
+  const query = `
+    SELECT
+      p.id,
+      p.author_id,
+      u.name AS author_name,
+      pr.username AS author_username,
+      p.title,
+      p.slug,
+      p.markdown,
+      p.sanitized_html,
+      p.views,
+      p.created_at,
+      p.updated_at,
+      p.deleted_at AS post_deleted_at,
+      pr.deleted_at AS profile_deleted_at,
+      COALESCE(
+        json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL),
+        '[]'
+      ) AS tags,
+      (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
+      (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comments_count,
+      p.shares_count
+      ${userId ? `, EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id=$${userIdIndex}) AS is_liked` : ""}
+    FROM posts p
+    LEFT JOIN users u ON u.id = p.author_id
+    LEFT JOIN profiles pr ON pr.user_id = u.id
+    LEFT JOIN post_tags pt ON pt.post_id = p.id
+    LEFT JOIN tags t ON pt.tag_id = t.id
+    ${whereClauses.length ? "WHERE " + whereClauses.join(" AND ") : ""}
+    GROUP BY p.id, u.name, pr.username, pr.deleted_at
+    ORDER BY p.created_at DESC
+    LIMIT $1 OFFSET $2
+
+  `;
+
+  const { rows } = await pool.query(query, values);
   return rows;
 }
 
 export async function getPost(slug, userId) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
+  const values = [slug];
+  let userIdIndex = null;
 
-    const { rows } = await client.query(
-      `
-      SELECT 
-        p.id, p.author_id, u.name AS author_name, pr.username AS author_username,
-        p.title, p.slug, p.markdown, p.sanitized_html, p.views, p.created_at, p.updated_at,
-        p.deleted_at,
-        COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags,
-        (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
-        (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comments_count,
-        p.shares_count
-        ${userId ? `, EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = $2) AS is_liked` : ""}
-      FROM posts p
-      LEFT JOIN users u ON p.author_id=u.id
-      LEFT JOIN profiles pr ON pr.user_id = u.id
-      LEFT JOIN post_tags pt ON pt.post_id=p.id
-      LEFT JOIN tags t ON pt.tag_id=t.id
-      WHERE p.slug=$1 AND p.deleted_at IS NULL
-      GROUP BY p.id, u.name, pr.username
-      `,
-      userId ? [slug, userId] : [slug],
-    );
-
-    const post = rows[0];
-    if (!post) throw new ApiError(404, "Post not found");
-
-    // Fetch comments for detail view
-    const commentsRes = await client.query(
-      `
-      SELECT 
-        c.id, c.text, c.created_at, c.user_id, pr.username
-      FROM post_comments c
-      LEFT JOIN profiles pr ON pr.user_id = c.user_id
-      WHERE c.post_id = $1 AND c.deleted_at IS NULL
-      ORDER BY c.created_at ASC
-      `,
-      [post.id],
-    );
-    post.comments = commentsRes.rows;
-
-    // Increment views
-    // Increment views logic moved to controller/view tracker
-    // await client.query(`UPDATE posts SET views=views+1 WHERE id=$1`, [post.id]);
-
-    await client.query("COMMIT");
-    return post;
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
+  if (userId) {
+    userIdIndex = 2;
+    values.push(userId);
   }
+
+  const query = `
+    SELECT
+      p.id,
+      p.author_id,
+      u.name AS author_name,
+      pr.username AS author_username,
+      p.title,
+      p.slug,
+      p.markdown,
+      p.sanitized_html,
+      p.views,
+      p.created_at,
+      p.updated_at,
+      COALESCE(
+        json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL),
+        '[]'
+      ) AS tags,
+      (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
+      (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id AND deleted_at IS NULL) AS comments_count,
+      p.shares_count
+      ${userId ? `, EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id=$${userIdIndex}) AS is_liked` : ""}
+    FROM posts p
+    LEFT JOIN users u ON u.id = p.author_id
+    LEFT JOIN profiles pr ON pr.user_id = u.id
+    LEFT JOIN post_tags pt ON pt.post_id = p.id
+    LEFT JOIN tags t ON pt.tag_id = t.id
+    WHERE p.slug=$1
+    GROUP BY p.id, u.name, pr.username
+  `;
+
+  const { rows } = await pool.query(query, values);
+  const post = rows[0];
+
+  if (!post) throw new ApiError(404, "Post not found");
+
+  // Fetch comments
+  const commentsRes = await pool.query(
+    `
+    SELECT
+      c.id,
+      c.content AS text,
+      c.created_at,
+      c.user_id,
+      COALESCE(pr.username, 'Deleted User') AS username
+    FROM post_comments c
+    LEFT JOIN profiles pr ON pr.user_id = c.user_id
+    WHERE c.post_id = $1 AND c.deleted_at IS NULL
+    ORDER BY c.created_at ASC
+    `,
+    [post.id],
+  );
+
+  post.comments = commentsRes.rows;
+
+  return post;
 }
 
 export async function updatePost(
@@ -266,6 +296,7 @@ export async function unlikePost(postId, userId) {
 }
 
 // ---------------------- COMMENTS ----------------------
+// ---------------------- COMMENTS ----------------------
 export async function addComment(postId, userId, text) {
   const sanitizedText = sanitizeHtml(text);
 
@@ -274,8 +305,11 @@ export async function addComment(postId, userId, text) {
     await client.query("BEGIN");
 
     const { rows } = await client.query(
-      `INSERT INTO post_comments(post_id,user_id,text,created_at,updated_at)
-       VALUES($1,$2,$3,NOW(),NOW()) RETURNING *`,
+      `
+      INSERT INTO post_comments(post_id, user_id, content, created_at)
+      VALUES($1, $2, $3, NOW())
+      RETURNING id, post_id, user_id, content AS text, created_at
+      `,
       [postId, userId, sanitizedText],
     );
 

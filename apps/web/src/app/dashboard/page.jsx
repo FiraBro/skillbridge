@@ -9,14 +9,14 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  UserCircle,
-  Briefcase,
   LineChart,
   TrendingUp,
   Zap,
   ArrowRight,
   ShieldCheck,
   MessageSquare,
+  Briefcase,
+  Github,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useRecommendedJobs } from "@/hooks/useJobs";
@@ -25,50 +25,73 @@ import ActivityFeed from "./components/activity-feed";
 
 export default function DashboardPage() {
   const { user: viewer } = useAuth();
-  // Assume dashboard is for the logged-in user
   const { data: profile } = useProfile(viewer?.username);
   const { canShowGithub, isGithubConnected } = useGithubVisibility(
     profile,
     viewer,
   );
-  const { data: recResponse, isLoading: loadingRecs } = useRecommendedJobs();
+  const { data: recResponse } = useRecommendedJobs();
   const recommendedJob = recResponse?.data?.[0];
+
+  // Map your dynamic data from the logs to the UI stats
+  const intelligenceStats = [
+    {
+      label: "Search Appearances",
+      val: profile?.search_views ?? "0",
+      trend: "New",
+    },
+    {
+      label: "Public Repos",
+      val: profile?.public_repos ?? "0",
+      trend: isGithubConnected ? "Synced" : "Pending",
+    },
+    {
+      label: "Average Reputation",
+      val: profile?.reputation_score ?? "0",
+      trend: profile?.reputation_score > 0 ? "Rising" : "Stable",
+    },
+  ];
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Welcome & Global Stats Bar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black tracking-tight italic">
-            COMMAND CENTER
+          <h1 className="text-4xl font-black tracking-tight italic uppercase">
+            Command Center
           </h1>
           <p className="text-muted-foreground font-medium italic">
-            Monitoring your{" "}
-            <span className="text-primary font-bold">verified influence</span>{" "}
-            and career momentum.
+            Monitoring{" "}
+            <span className="text-primary font-bold">
+              {profile?.full_name || viewer?.name}’s
+            </span>{" "}
+            verified influence.
           </p>
         </div>
         <div className="flex gap-4">
           <div className="px-4 py-2 bg-card border rounded-2xl shadow-sm">
             <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-              Active Trials
+              Role
             </p>
-            <p className="text-xl font-bold">02</p>
+            <p className="text-xl font-bold capitalize">
+              {viewer?.role || "Developer"}
+            </p>
           </div>
           <div className="px-4 py-2 bg-primary/5 border border-primary/20 rounded-2xl shadow-sm">
             <p className="text-[10px] font-black uppercase text-primary tracking-widest">
               Trust Index
             </p>
-            <p className="text-xl font-bold text-primary">842</p>
+            <p className="text-xl font-bold text-primary">
+              {profile?.reputation_score ?? 0}
+            </p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Main Feed Column (Left/Center) */}
+        {/* Main Feed Column */}
         <div className="lg:col-span-8 space-y-8">
-          {/* Featured Recommendation (Dev.to Style Top Card) */}
-          {recommendedJob && (
+          {recommendedJob ? (
             <Card className="relative overflow-hidden group border-2 border-primary/20 shadow-xl shadow-primary/5 rounded-3xl p-8 bg-gradient-to-br from-card to-primary/5">
               <div className="absolute top-0 right-0 p-4">
                 <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-black uppercase">
@@ -91,15 +114,23 @@ export default function DashboardPage() {
                     </Button>
                   </Link>
                   <span className="text-xs font-bold text-primary flex items-center gap-1">
-                    <Zap className="h-3 w-3 fill-primary" />{" "}
+                    <Zap className="h-3.5 w-3.5 fill-primary" />
                     {recommendedJob.match_score}% Match Strength
                   </span>
                 </div>
               </div>
             </Card>
+          ) : (
+            <Card className="p-8 rounded-3xl border-dashed border-2 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="p-3 bg-muted rounded-full">
+                <Briefcase className="text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground font-medium">
+                Finding the best job matches for your profile...
+              </p>
+            </Card>
           )}
 
-          {/* Activity/Notifications Feed */}
           <div className="space-y-6">
             <div className="flex items-center justify-between border-b pb-4">
               <h2 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
@@ -121,7 +152,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Intelligence Sidebar (Right) */}
+        {/* Intelligence Sidebar */}
         <div className="lg:col-span-4 space-y-6">
           <Card className="p-8 space-y-6 rounded-3xl border-border/50 shadow-sm">
             <div className="flex items-center gap-4 border-b pb-6">
@@ -131,14 +162,14 @@ export default function DashboardPage() {
               <div>
                 <h3 className="font-bold">Growth Intelligence</h3>
                 <p className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
-                  30 Day Audit
+                  Real-time Audit
                 </p>
               </div>
             </div>
 
             <div className="space-y-6">
-              {/* Example: Show GitHub stats if connected and allowed */}
-              {canShowGithub && isGithubConnected && (
+              {/* GitHub Logic based on your console logs */}
+              {canShowGithub && isGithubConnected ? (
                 <>
                   <GitHubStats
                     stats={{
@@ -146,21 +177,30 @@ export default function DashboardPage() {
                       prs: profile?.pull_requests ?? 0,
                       commits30d: profile?.commits_30d ?? 0,
                       username: profile?.github_username,
-                      ...profile?.github,
                     }}
                   />
                   <div className="flex gap-2 mt-2">
-                    <GitHubVerificationBadge stats={profile?.github} />
-                    <GitHubActivityBadge stats={profile?.github} />
+                    <GitHubVerificationBadge stats={profile} />
+                    <GitHubActivityBadge stats={profile} />
                   </div>
                 </>
+              ) : (
+                <div className="p-6 rounded-2xl bg-muted/30 border border-dashed flex flex-col items-center gap-3 text-center">
+                  <Github className="h-8 w-8 opacity-20" />
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                    GitHub Not Linked
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-[10px] h-7 px-3 font-bold"
+                  >
+                    Connect Account
+                  </Button>
+                </div>
               )}
-              {/* Other dashboard stats */}
-              {[
-                { label: "Search Appearances", val: "124", trend: "+12%" },
-                { label: "Profile Conversions", val: "18", trend: "+5%" },
-                { label: "Average Reputation", val: "842", trend: "Stable" },
-              ].map((stat) => (
+
+              {intelligenceStats.map((stat) => (
                 <div
                   key={stat.label}
                   className="flex justify-between items-end"
@@ -180,37 +220,7 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-
-            <Button
-              variant="outline"
-              className="w-full gap-2 font-bold h-12 rounded-xl group overflow-hidden relative"
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                Download PDF Audit{" "}
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </span>
-              <div className="absolute inset-0 bg-primary/5 origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
-            </Button>
           </Card>
-
-          <div className="p-8 rounded-3xl bg-primary text-primary-foreground space-y-4 shadow-xl shadow-primary/20 relative overflow-hidden group">
-            <ShieldCheck className="absolute -bottom-6 -right-6 h-32 w-32 opacity-10 group-hover:scale-110 transition-transform duration-700" />
-            <div className="relative z-10 space-y-4">
-              <h3 className="text-lg font-black tracking-tight leading-none italic uppercase">
-                Optimize Your Presence
-              </h3>
-              <p className="text-xs text-primary-foreground/80 leading-relaxed font-medium">
-                Developing a project with <b>SkillBridge AI</b> increases your
-                match visibility by 240% for tier-1 recruiters.
-              </p>
-              <Button
-                variant="secondary"
-                className="w-full font-black text-xs uppercase h-10 rounded-lg"
-              >
-                Start Training AI
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

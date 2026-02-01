@@ -41,7 +41,7 @@ export default function ProfilePage() {
     isLoading: loadingProfile,
     isError,
   } = useProfile(username);
-
+  console.log("mamamamma", profile);
   const userId = profile?.user_id;
 
   const { data: reputation } = useReputation(userId);
@@ -161,7 +161,7 @@ export default function ProfilePage() {
                     <>
                       <GitHubStats
                         stats={{
-                          username: profile.github_username || profile.username,
+                          username: profile.github_username,
                           stars: profile.total_stars ?? 0,
                           prs: profile.pull_requests ?? 0,
                           commits30d: profile.commits_30d ?? 0,

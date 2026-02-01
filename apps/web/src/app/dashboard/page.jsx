@@ -77,14 +77,6 @@ export default function DashboardPage() {
               {viewer?.role || "Developer"}
             </p>
           </div>
-          <div className="px-4 py-2 bg-primary/5 border border-primary/20 rounded-2xl shadow-sm">
-            <p className="text-[10px] font-black uppercase text-primary tracking-widest">
-              Trust Index
-            </p>
-            <p className="text-xl font-bold text-primary">
-              {profile?.reputation_score ?? 0}
-            </p>
-          </div>
         </div>
       </div>
 
@@ -150,77 +142,6 @@ export default function DashboardPage() {
               <ActivityFeed />
             </Suspense>
           </div>
-        </div>
-
-        {/* Intelligence Sidebar */}
-        <div className="lg:col-span-4 space-y-6">
-          <Card className="p-8 space-y-6 rounded-3xl border-border/50 shadow-sm">
-            <div className="flex items-center gap-4 border-b pb-6">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                <LineChart className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="font-bold">Growth Intelligence</h3>
-                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
-                  Real-time Audit
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              {/* GitHub Logic based on your console logs */}
-              {canShowGithub && isGithubConnected ? (
-                <>
-                  <GitHubStats
-                    stats={{
-                      stars: profile?.total_stars ?? 0,
-                      prs: profile?.pull_requests ?? 0,
-                      commits30d: profile?.commits_30d ?? 0,
-                      username: profile?.github_username,
-                    }}
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <GitHubVerificationBadge stats={profile} />
-                    <GitHubActivityBadge stats={profile} />
-                  </div>
-                </>
-              ) : (
-                <div className="p-6 rounded-2xl bg-muted/30 border border-dashed flex flex-col items-center gap-3 text-center">
-                  <Github className="h-8 w-8 opacity-20" />
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground">
-                    GitHub Not Linked
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-[10px] h-7 px-3 font-bold"
-                  >
-                    Connect Account
-                  </Button>
-                </div>
-              )}
-
-              {intelligenceStats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="flex justify-between items-end"
-                >
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">
-                      {stat.label}
-                    </p>
-                    <p className="text-2xl font-black">{stat.val}</p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] h-5 bg-primary/5 text-primary border-primary/20"
-                  >
-                    {stat.trend}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
       </div>
     </div>

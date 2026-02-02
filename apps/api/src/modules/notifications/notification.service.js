@@ -105,38 +105,52 @@ export async function updateRequestStatus(requestId, userId, status) {
 /**
  * Get user's active notifications (views and requests)
  */
+/**
+ * Get user's active notifications (views and requests)
+ */
 export async function getUserNotifications(userId) {
-  // Combine views from companies and pending contact requests
-  const viewsQuery = `
-    SELECT 
-      'profile_view' as type,
-      v.id,
-      v.created_at,
-      u.name as actor_name,
-      null as message,
-      null as status
-    FROM profile_views v
-    JOIN profiles p ON p.id = v.profile_id
-    LEFT JOIN users u ON u.id = v.viewer_id
-    WHERE p.user_id = $1 AND v.viewer_role = 'company'
-  `;
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
 
-  const requestsQuery = `
-    SELECT 
-      'contact_request' as type,
-      id,
-      created_at,
-      (SELECT name FROM users WHERE id = sender_id) as actor_name,
-      message,
-      status
-    FROM contact_requests
-    WHERE receiver_id = $1
-  `;
+  try {
+    // We use UNION ALL to get everything in one database trip
+    // We also use COALESCE to ensure actor_name is never undefined
+    const combinedQuery = `
+      SELECT 
+        'profile_view' as type,
+        v.id,
+        v.created_at,
+        COALESCE(u.name, 'Someone') as actor_name,
+        NULL as message,
+        NULL as status
+      FROM profile_views v
+      JOIN profiles p ON p.id = v.profile_id
+      LEFT JOIN users u ON u.id = v.viewer_id
+      WHERE p.user_id = $1 AND v.viewer_role = 'company'
 
-  const { rows: views } = await query(viewsQuery, [userId]);
-  const { rows: requests } = await query(requestsQuery, [userId]);
+      UNION ALL
 
-  return [...views, ...requests].sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at),
-  );
+      SELECT 
+        'contact_request' as type,
+        cr.id,
+        cr.created_at,
+        COALESCE(us.name, 'Unknown User') as actor_name,
+        cr.message,
+        cr.status
+      FROM contact_requests cr
+      LEFT JOIN users us ON us.id = cr.sender_id
+      WHERE cr.receiver_id = $1
+
+      ORDER BY created_at DESC
+    `;
+
+    const { rows } = await query(combinedQuery, [userId]);
+    
+    // Safety check: ensure we always return an array
+    return rows || [];
+  } catch (error) {
+    console.error("Database Error in getUserNotifications:", error.message);
+    throw error;
+  }
 }

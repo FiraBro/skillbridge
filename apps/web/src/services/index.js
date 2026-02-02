@@ -59,6 +59,32 @@ export const postService = {
 };
 
 /* =========================
+   NOTIFICATIONS & INTERACTIONS
+========================= */
+export const notificationService = {
+  /**
+   * GET /api/notifications
+   * Fetch all profile views and contact requests
+   */
+  getNotifications: () => apiClient.get("/notifications"),
+
+  /**
+   * POST /api/notifications/contact
+   * Send a professional connection request
+   * @param {Object} data - { receiverId: string, message: string }
+   */
+  sendRequest: (data) => apiClient.post("/notifications/contact", data),
+
+  /**
+   * PATCH /api/notifications/contact/:id
+   * Accept or Ignore a pending contact request
+   * @param {string} id - The request ID
+   * @param {Object} data - { status: 'accepted' | 'ignored' }
+   */
+  respondToRequest: (id, data) =>
+    apiClient.patch(`/notifications/contact/${id}`, data),
+};
+/* =========================
    AUTH
 ========================= */
 export const authService = {

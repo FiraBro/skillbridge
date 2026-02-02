@@ -7,6 +7,14 @@ import apiResponse from "../utils/apiResponse.js";
  */
 export async function getNotifications(req, res, next) {
   try {
+    // Check if req.user exists before accessing .id
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User not found in request",
+      });
+    }
+
     const userId = req.user.id;
     const notifications =
       await notificationService.getUserNotifications(userId);

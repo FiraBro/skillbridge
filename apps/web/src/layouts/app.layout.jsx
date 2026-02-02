@@ -20,7 +20,7 @@ export default function AppLayout() {
         </main>
 
         {/* Optional Right Sidebar for Trending/Recommendations */}
-        <aside className="hidden xl:flex flex-col w-80 h-[calc(100vh-4rem)] sticky top-16 p-6 space-y-6">
+        {/* <aside className="hidden xl:flex flex-col w-80 h-[calc(100vh-4rem)] sticky top-16 p-6 space-y-6">
           <div className="p-6 rounded-2xl bg-card border border-border/50 space-y-4">
             <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">
               Trending Tags
@@ -46,7 +46,7 @@ export default function AppLayout() {
               get direct hiring requests.
             </p>
           </div>
-        </aside>
+        </aside> */}
       </div>
     </div>
   );

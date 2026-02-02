@@ -33,6 +33,7 @@ const PostEdit = lazy(() => import("./posts/[slug]/edit/page.jsx"));
 const RoleRedirect = lazy(
   () => import("@/components/auth/RoleBasedRedirect.jsx"),
 );
+const Notifications = lazy(() => import("./notifications/page.jsx"));
 // Loader for suspense
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-background">
@@ -91,6 +92,7 @@ export const router = createBrowserRouter([
           { path: "/posts/create", element: <PostCreate /> },
           { path: "/posts/:slug", element: <PostDetail /> },
           { path: "/posts/:slug/edit", element: <PostEdit /> },
+          { path: "/notifications", element: <Notifications /> },
         ],
       },
 

@@ -8,8 +8,10 @@ import {
   useReputation,
   useReputationHistory,
 } from "@/hooks/useProfiles";
+import { usePosts } from "@/hooks/usePosts";
 import { initiateGithubAuth } from "@/lib/api";
 
+// Components
 import ProfileHero from "../component/profile-hero";
 import SkillsCloud from "../component/skill-cloud";
 import GitHubStats from "../component/github-stats";
@@ -19,13 +21,14 @@ import ContactPanel from "../component/contact-panel";
 import EndorsementSection from "../component/endorsement-section";
 import GitHubVerificationBadge from "../component/github-verification-badge";
 import GitHubActivityBadge from "../component/github-activity-badge";
+import PostCard from "@/app/companies/components/postCard";
 
+// Hooks & UI
 import useGithubVisibility from "@/hooks/useGithubVisibility";
-
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, Award, Zap, History } from "lucide-react";
+import { ShieldCheck, Award, Zap, History, FileText } from "lucide-react";
 
 export default function ProfilePage() {
   const { username } = useParams();
@@ -35,72 +38,47 @@ export default function ProfilePage() {
   const handledParams = useRef(false);
 
   /* -------------------- DATA -------------------- */
-
   const {
     data: profile,
     isLoading: loadingProfile,
     isError,
   } = useProfile(username);
-  console.log("mamamamma", profile);
   const userId = profile?.user_id;
 
   const { data: reputation } = useReputation(userId);
   const { data: history } = useReputationHistory(userId);
-  console.log("ProfilePage - profile:", profile);
-  console.log("ProfilePage - viewer:", viewer);
 
-  /* -------------------- GITHUB VISIBILITY -------------------- */
+  const { data: posts = [], isLoading: loadingPosts } = usePosts({
+    authorId: userId,
+    limit: 10,
+  });
 
   const { canShowGithub, canConnectGithub, isGithubConnected } =
     useGithubVisibility(profile, viewer);
 
-  /* -------------------- GITHUB OAUTH CALLBACK -------------------- */
-
+  /* -------------------- CALLBACKS -------------------- */
   useEffect(() => {
     if (handledParams.current || !username) return;
 
-    const success = searchParams.get("success");
-    const error = searchParams.get("error");
-    const details = searchParams.get("details");
-
-    if (success === "github_connected") {
+    if (searchParams.get("success") === "github_connected") {
       handledParams.current = true;
-      toast.success("GitHub account connected successfully.");
-
+      toast.success("GitHub account connected.");
       queryClient.invalidateQueries({ queryKey: ["profile", username] });
-      queryClient.invalidateQueries({ queryKey: ["reputation"] });
-
-      setSearchParams({}, { replace: true });
-      return;
-    }
-
-    if (error) {
-      handledParams.current = true;
-      toast.error(
-        details ? decodeURIComponent(details) : "GitHub connection failed.",
-      );
       setSearchParams({}, { replace: true });
     }
   }, [username, searchParams, setSearchParams, queryClient]);
 
-  /* -------------------- LOADING / ERROR -------------------- */
+  if (loadingProfile) return <Skeleton className="h-96 rounded-3xl w-full" />;
 
-  if (loadingProfile) {
-    return <Skeleton className="h-96 rounded-3xl w-full" />;
-  }
-
-  if (isError || !profile) {
+  if (isError || !profile)
     return (
-      <div className="p-20 text-center font-bold italic text-muted-foreground">
+      <div className="p-20 text-center font-bold text-muted-foreground italic">
         User not found
       </div>
     );
-  }
-
-  /* -------------------- UI -------------------- */
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 max-w-7xl mx-auto px-4">
       <ProfileHero
         user={{
           id: profile.user_id,
@@ -111,12 +89,21 @@ export default function ProfilePage() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* MAIN */}
+        {/* MAIN FEED */}
         <div className="lg:col-span-2 space-y-8">
-          <Tabs defaultValue="overview">
-            <TabsList className="bg-muted/50 p-1 h-12 rounded-xl mb-6">
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="bg-muted/50 p-1 h-12 rounded-xl mb-6 flex overflow-x-auto no-scrollbar">
               <TabsTrigger value="overview">
                 <Zap className="h-4 w-4 mr-1" /> Overview
+              </TabsTrigger>
+
+              <TabsTrigger value="posts">
+                <FileText className="h-4 w-4 mr-1" /> Posts
+                {posts.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {posts.length}
+                  </Badge>
+                )}
               </TabsTrigger>
 
               {canShowGithub && (
@@ -132,75 +119,74 @@ export default function ProfilePage() {
               )}
             </TabsList>
 
-            {/* OVERVIEW */}
-            <TabsContent value="overview" className="space-y-8">
+            {/* OVERVIEW TAB */}
+            <TabsContent value="overview" className="space-y-8 outline-none">
               {canShowGithub && (
                 <>
                   <ReputationBreakdown
-                    total={reputation?.data?.total || profile.reputation_score}
+                    total={reputation?.data?.total ?? profile.reputation_score}
                     breakdown={reputation?.data?.breakdown}
                   />
+                  <SkillsCloud skills={profile.skills ?? []} />
 
-                  <SkillsCloud skills={profile.skills || []} />
-
-                  {/* CONNECT GITHUB */}
-                  {canConnectGithub && (
+                  {canConnectGithub && !isGithubConnected && (
                     <button
                       onClick={initiateGithubAuth}
-                      className="btn btn-github"
+                      className="btn btn-github w-full"
                     >
                       🐙 Connect GitHub
                     </button>
                   )}
 
-                  {/* GITHUB DATA - Show if stats exist even if not connected yet */}
-                  {(isGithubConnected ||
-                    profile.total_stars > 0 ||
-                    profile.followers > 0 ||
-                    profile.commits_30d > 0) && (
-                    <>
+                  {isGithubConnected && (
+                    <div className="space-y-6">
                       <GitHubStats
                         stats={{
-                          username: profile.github_username,
-                          stars: profile.total_stars ?? 0,
-                          prs: profile.pull_requests ?? 0,
-                          commits30d: profile.commits_30d ?? 0,
+                          stars: profile.total_stars,
+                          prs: profile.pull_requests,
+                          commits30d: profile.commits_30d,
                         }}
                       />
-
-                      <div className="flex gap-2 mt-2">
-                        <GitHubVerificationBadge
-                          stats={{
-                            account_created: profile.account_created,
-                            public_repos: profile.public_repos,
-                            commits_30d: profile.commits_30d,
-                          }}
-                        />
-                        <GitHubActivityBadge
-                          stats={{
-                            commits_30d: profile.commits_30d,
-                            total_commits: profile.total_commits,
-                          }}
-                        />
+                      <div className="flex flex-wrap gap-2">
+                        <GitHubVerificationBadge stats={profile} />
+                        <GitHubActivityBadge stats={profile} />
                       </div>
-                    </>
+                    </div>
                   )}
                 </>
               )}
             </TabsContent>
 
-            {/* HISTORY */}
+            {/* POSTS TAB */}
+            <TabsContent value="posts" className="space-y-4 outline-none">
+              {loadingPosts ? (
+                [1, 2].map((i) => (
+                  <Skeleton key={i} className="h-40 w-full rounded-xl" />
+                ))
+              ) : posts.length > 0 ? (
+                posts.map((post, idx) => (
+                  <PostCard key={post.id} post={post} index={idx} />
+                ))
+              ) : (
+                <div className="text-center py-20 bg-muted/10 rounded-3xl border-2 border-dashed">
+                  <FileText className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
+                  <p className="text-muted-foreground font-medium">
+                    No posts published yet
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* HISTORY & ENDORSEMENTS */}
             {canShowGithub && (
               <TabsContent value="history">
-                <ReputationHistory events={history?.data || []} />
+                <ReputationHistory events={history?.data ?? []} />
               </TabsContent>
             )}
-
-            {/* ENDORSEMENTS */}
             {canShowGithub && viewer?.id !== userId && (
               <TabsContent value="endorsements">
                 <EndorsementSection
-                  skills={profile.skills || []}
+                  skills={profile.skills ?? []}
                   userId={userId}
                 />
               </TabsContent>
@@ -209,22 +195,20 @@ export default function ProfilePage() {
         </div>
 
         {/* SIDEBAR */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:sticky lg:top-24">
           <ContactPanel
             userId={profile.user_id}
             userName={profile.full_name}
             isOwnProfile={viewer?.id === userId}
           />
 
-          <div className="bg-card rounded-3xl border p-6 space-y-4">
+          <div className="bg-card rounded-3xl border p-6 space-y-4 shadow-sm">
             <h3 className="font-bold flex items-center gap-2">
-              <ShieldCheck className="h-5 w-4 text-primary" />
-              Verification Status
+              <ShieldCheck className="h-5 w-4 text-primary" /> Verification
             </h3>
-
-            <div className="flex justify-between">
-              <span>Identity</span>
-              <Badge variant="outline" className="text-green-500">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Status</span>
+              <Badge className="bg-green-500/10 text-green-600 border-none">
                 Verified
               </Badge>
             </div>

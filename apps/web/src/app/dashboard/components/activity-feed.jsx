@@ -49,10 +49,15 @@ export default function ActivityFeed() {
               <div className="flex flex-col md:flex-row gap-4 md:gap-4">
                 {/* LEFT — Avatar + Meta */}
                 <div className="w-full md:w-40 shrink-0 flex md:block gap-3">
-                  <Avatar className="h-11 w-11">
-                    <AvatarImage src={post.author_avatar} />
-                    <AvatarFallback>{post.author_name?.[0]}</AvatarFallback>
-                  </Avatar>
+                  <Link
+                    to={`/profile/${post.author_username}`}
+                    className="shrink-0"
+                  >
+                    <Avatar className="h-11 w-11 cursor-pointer">
+                      <AvatarImage src={post.author_avatar} />
+                      <AvatarFallback>{post.author_name?.[0]}</AvatarFallback>
+                    </Avatar>
+                  </Link>
 
                   <div className="space-y-1 text-xs">
                     <Link

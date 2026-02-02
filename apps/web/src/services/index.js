@@ -2,6 +2,8 @@ import apiClient from "./api.client";
 
 /* =========================
    JOBS
+/* =========================
+   JOBS (Updated)
 ========================= */
 export const jobService = {
   getAll: (params) => apiClient.get("/jobs", { params }),
@@ -10,8 +12,11 @@ export const jobService = {
   create: (data) => apiClient.post("/jobs", data),
   apply: (id, data) => apiClient.post(`/jobs/${id}/apply`, data),
   getCompanyJobs: () => apiClient.get("/jobs/company"),
+  getApplicants: (jobId) => apiClient.get(`/jobs/${jobId}/applicants`),
+  // ADD THIS METHOD:
+  updateApplicationStatus: (applicationId, data) =>
+    apiClient.patch(`/jobs/applications/${applicationId}`, data),
 };
-
 /* =========================
    PROFILES & REPUTATION
 ========================= */

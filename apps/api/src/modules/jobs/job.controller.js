@@ -10,7 +10,12 @@ import ApiError from "../utils/apiError.js";
 export const browse = catchAsync(async (req, res, next) => {
   const filters = {
     search: req.query.search,
-    skills: req.query.skills ? req.query.skills.split(",") : [],
+    // Ensure skills is handled as an array even if one or zero skills provided
+    skills: req.query.skills
+      ? Array.isArray(req.query.skills)
+        ? req.query.skills
+        : req.query.skills.split(",")
+      : [],
   };
 
   const jobs = await jobService.browseJobs(filters);
@@ -51,7 +56,9 @@ export const create = catchAsync(async (req, res, next) => {
     trialFriendly,
   });
 
-  return res.status(201).json(apiResponse.success(job));
+  return res
+    .status(201)
+    .json(apiResponse.success(job, "Job created successfully"));
 });
 
 /**
@@ -68,6 +75,26 @@ export const getById = catchAsync(async (req, res, next) => {
   }
 
   return res.status(200).json(apiResponse.success(job));
+});
+
+/**
+ * PATCH /api/jobs/:id/publish
+ * Toggle the publish status of a job
+ */
+export const togglePublish = catchAsync(async (req, res, next) => {
+  const jobId = req.params.id;
+  const clientId = req.user.id;
+  const { isPublished } = req.body;
+
+  const job = await jobService.toggleJobPublish(jobId, clientId, isPublished);
+  return res
+    .status(200)
+    .json(
+      apiResponse.success(
+        job,
+        `Job ${isPublished ? "published" : "unpublished"} successfully`,
+      ),
+    );
 });
 
 /**
@@ -100,7 +127,35 @@ export const getApplicants = catchAsync(async (req, res, next) => {
 });
 
 /**
- * GET /api/jobs/company
+ * PATCH /api/jobs/applications/:applicationId
+ * Update applicant status and private notes (formerly updateUplicant)
+ */
+export const updateApplicationFeedback = catchAsync(async (req, res, next) => {
+  const { applicationId } = req.params;
+  const clientId = req.user.id;
+  const { status, notes } = req.body;
+
+  const updatedApplication = await jobService.updateApplicationFeedback(
+    applicationId,
+    clientId,
+    {
+      status,
+      notes,
+    },
+  );
+
+  return res
+    .status(200)
+    .json(
+      apiResponse.success(
+        updatedApplication,
+        "Application updated successfully",
+      ),
+    );
+});
+
+/**
+ * GET /api/jobs/company/all
  * Get jobs for authenticated company including applicant counts
  */
 export const getCompanyJobs = catchAsync(async (req, res, next) => {

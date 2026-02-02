@@ -184,56 +184,100 @@ export async function toggleJobPublish(jobId, clientId, isPublished) {
 export async function updateApplicationFeedback(applicationId, clientId, data) {
   const { status, notes } = data;
 
-  const { rows } = await query(
-    `
-    UPDATE job_applications ja
-    SET hiring_status = COALESCE($1, hiring_status), 
-        private_notes = COALESCE($2, private_notes), 
+  try {
+    // 1. Log the incoming request to your BACKEND terminal to debug
+    console.log(`Updating App: ${applicationId} for Client: ${clientId}`);
+
+    // 2. Execute the update
+    // Note: We use "status" as the column name here.
+    // IF YOUR DB COLUMN IS 'hiring_status', CHANGE 'status =' TO 'hiring_status =' below.
+    const updateQuery = `
+      UPDATE job_applications
+      SET 
+        hiring_status = COALESCE($1, hiring_status),
+        private_notes = COALESCE($2, private_notes),
         updated_at = NOW()
-    FROM jobs j
-    WHERE ja.id = $3 AND ja.job_id = j.id AND j.client_id = $4
-    RETURNING ja.*
-    `,
-    [status, notes, applicationId, clientId],
-  );
+      WHERE id = $3 
+      AND job_id IN (SELECT id FROM jobs WHERE client_id = $4)
+      RETURNING *
+    `;
 
-  if (rows.length === 0)
-    throw new ApiError(404, "Application not found or unauthorized");
-  const updated = rows[0];
+    const { rows } = await query(updateQuery, [
+      status,
+      notes,
+      applicationId,
+      clientId,
+    ]);
 
-  // If status changed, notify the applicant about status update
-  if (status) {
-    try {
-      const { rows: info } = await query(
-        `SELECT u.email as dev_email, u.name as dev_name, j.title as job_title, c.name as company_name
-         FROM job_applications ja
-         JOIN users u ON u.id = ja.developer_id
-         JOIN jobs j ON j.id = ja.job_id
-         JOIN users c ON c.id = j.client_id
-         WHERE ja.id = $1`,
-        [applicationId],
-      );
-
-      if (info && info[0] && info[0].dev_email) {
-        await emailQueue.add("send-application-status-notification", {
-          to: info[0].dev_email,
-          applicantName: info[0].dev_name,
-          status,
-          jobTitle: info[0].job_title,
-          companyName: info[0].company_name,
-        });
-      }
-    } catch (e) {
-      console.error(
-        "Failed to queue application status notification:",
-        e.message,
-      );
+    if (rows.length === 0) {
+      throw new ApiError(404, "Application not found or unauthorized");
     }
-  }
 
-  return updated;
+    const updated = rows[0];
+
+    // 3. CRITICAL FIX: Wrap the notification in a way that CANNOT crash the request
+    // We don't 'await' this so the user gets their response even if Redis/Email fails
+    if (status) {
+      (async () => {
+        try {
+          const { rows: info } = await query(
+            `SELECT u.email, u.name as dev_name, j.title FROM job_applications ja
+             JOIN users u ON u.id = ja.developer_id
+             JOIN jobs j ON j.id = ja.job_id
+             WHERE ja.id = $1`,
+            [applicationId],
+          );
+
+          if (info?.[0]?.email && emailQueue) {
+            await emailQueue.add("send-application-status-notification", {
+              to: info[0].email,
+              status,
+              jobTitle: info[0].title,
+            });
+          }
+        } catch (err) {
+          console.error(
+            "Background Notification Failed (Non-Fatal):",
+            err.message,
+          );
+        }
+      })();
+    }
+
+    return updated;
+  } catch (error) {
+    // THIS WILL LOG THE REAL ERROR TO YOUR BACKEND CONSOLE
+    console.error("--- DETAILED BACKEND ERROR ---");
+    console.error(error);
+    console.error("------------------------------");
+
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, `Internal Server Error: ${error.message}`);
+  }
 }
 
+// Helper to keep the main function clean
+async function handleStatusNotification(applicationId, status) {
+  const { rows: info } = await query(
+    `SELECT u.email, u.name as dev_name, j.title, c.name as company_name
+     FROM job_applications ja
+     JOIN users u ON u.id = ja.developer_id
+     JOIN jobs j ON j.id = ja.job_id
+     JOIN users c ON c.id = j.client_id
+     WHERE ja.id = $1`,
+    [applicationId],
+  );
+
+  if (info?.[0]?.email) {
+    await emailQueue.add("send-application-status-notification", {
+      to: info[0].email,
+      applicantName: info[0].dev_name,
+      status,
+      jobTitle: info[0].title,
+      companyName: info[0].company_name,
+    });
+  }
+}
 /**
  * Get applicants for a specific job — only visible to the job owner (client)
  */

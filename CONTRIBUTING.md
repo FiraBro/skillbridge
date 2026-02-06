@@ -2,7 +2,8 @@
 
 Thank you for your interest in contributing to SkillBridge! We're excited to have you join our mission to create a transparent, meritocratic platform for developers to learn, teach, and showcase their skills.
 
-## 📖 Table of Contents
+## Table of Contents
+
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
 - [Project Structure](#project-structure)
@@ -12,13 +13,14 @@ Thank you for your interest in contributing to SkillBridge! We're excited to hav
 - [Testing](#testing)
 - [Questions?](#questions)
 
-## 📜 Code of Conduct
+## Code of Conduct
 
 By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please read it before contributing.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
+
 - Node.js (v18 or higher)
 - npm or yarn
 - PostgreSQL
@@ -30,17 +32,20 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
    Click the "Fork" button at the top right of the repository page.
 
 2. **Clone your fork**
+
 ```bash
 git clone https://github.com/YOUR_USERNAME/skillbridge.git
 cd skillbridge
 ```
 
 3. **Install dependencies**
+
 ```bash
 npm install
 ```
 
 4. **Set up environment variables**
+
 ```bash
 # Copy the example environment files
 cp .env.example apps/api/.env
@@ -50,6 +55,7 @@ cp .env.example apps/web/.env
 5. **Configure GitHub OAuth** (follow instructions in [GITHUB_OAUTH_SETUP.md](GITHUB_OAUTH_SETUP.md))
 
 6. **Start the development servers**
+
 ```bash
 # Terminal 1: Start the API server
 cd apps/api && npm run dev
@@ -76,12 +82,14 @@ skillbridge/
 ```
 
 ### Apps Directory
+
 - **api/**: Contains the backend API built with Node.js, Express, and PostgreSQL
 - **web/**: Contains the frontend application built with React, Vite, and Tailwind CSS
 
-## 🔄 Development Workflow
+## Development Workflow
 
 1. **Create a branch** from the `main` branch:
+
 ```bash
 git checkout -b feature/your-feature-name
 ```
@@ -91,19 +99,21 @@ git checkout -b feature/your-feature-name
 3. **Test your changes** thoroughly.
 
 4. **Commit your changes** with a descriptive commit message:
+
 ```bash
 git add .
 git commit -m "feat: add GitHub profile integration to user dashboard"
 ```
 
 5. **Push your changes** to your fork:
+
 ```bash
 git push origin feature/your-feature-name
 ```
 
 6. **Open a Pull Request** to the main repository.
 
-## 📝 Pull Request Process
+## Pull Request Process
 
 1. **Ensure your PR description clearly describes the problem and solution.** Include any relevant issue numbers.
 
@@ -117,9 +127,10 @@ git push origin feature/your-feature-name
 
 6. **Once approved**, your PR will be merged by a maintainer.
 
-## 🎨 Style Guides
+## Style Guides
 
 ### JavaScript/React Style Guide
+
 - Follow [Airbnb JavaScript Style Guide](https://github.com/airbnb/javascript)
 - Use functional components with hooks in React
 - Use TypeScript for type safety where possible
@@ -127,12 +138,14 @@ git push origin feature/your-feature-name
 - Keep components focused and reusable
 
 ### Git Commit Messages
+
 - Use present tense ("Add feature" not "Added feature")
 - Use imperative mood ("Move cursor to..." not "Moves cursor to...")
 - Limit first line to 72 characters or less
 - Reference issues and pull requests liberally after a blank line
 
 Example:
+
 ```
 feat: add GitHub profile integration to user dashboard
 
@@ -144,14 +157,16 @@ Fixes #123
 ```
 
 ### Documentation Style Guide
+
 - Use Markdown for documentation
 - Keep sentences clear and concise
 - Use examples to illustrate concepts
 - Update documentation when making changes that affect users
 
-## 🧪 Testing
+## Testing
 
 ### Running Tests
+
 ```bash
 # Run all tests in the monorepo
 npm run test
@@ -162,12 +177,13 @@ cd apps/web && npm run test
 ```
 
 ### Writing Tests
+
 - Write unit tests for utility functions and services
 - Write integration tests for API endpoints
 - Write component tests for React components
 - Aim for high test coverage, especially for critical functionality
 
-## 🚀 Areas Needing Contributions
+## Areas Needing Contributions
 
 We welcome contributions in all areas, but here are some specific areas where help is especially appreciated:
 
@@ -182,6 +198,7 @@ We welcome contributions in all areas, but here are some specific areas where he
 ## 🙋 Questions?
 
 If you have questions about contributing to SkillBridge:
+
 - Check the existing [Issues](https://github.com/your-username/skillbridge/issues)
 - Open a new issue if your question isn't answered
 - Join our community discussions (if available)

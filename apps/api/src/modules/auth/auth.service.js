@@ -240,6 +240,10 @@ export const handleGithubAuth = async (githubUser) => {
 
   return { user, token };
 };
+export const fetchUser = async () => {
+  const result = await query("SELECT * FROM users");
+  return result;
+};
 
 export const deleteUser = async (userId) => {
   await query("DELETE FROM users WHERE id = $1", [userId]);

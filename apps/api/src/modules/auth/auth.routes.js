@@ -9,5 +9,6 @@ router.post("/login", controller.login);
 router.post("/forgot-password", controller.forgotPassword);
 router.post("/reset-password", controller.resetPassword);
 router.delete("/delete/:id", requireAuth, controller.deleteUser);
+router.get("/", controller.fetchUser);
 
 export default router;

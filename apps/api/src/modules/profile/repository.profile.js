@@ -1,5 +1,24 @@
 import { query } from "../../config/db.js";
 
+// Add this to your existing exports in repository.profile.js
+
+export async function createProfile({
+  userId,
+  username,
+  fullName,
+  githubUsername = null,
+}) {
+  const { rows } = await query(
+    `
+    INSERT INTO profiles (user_id, username, full_name, github_username)
+    VALUES ($1, $2, $3, $4)
+    RETURNING *
+    `,
+    [userId, username, fullName, githubUsername],
+  );
+  return rows[0];
+}
+
 export async function getProfileByUsername(username) {
   const { rows } = await query(
     `

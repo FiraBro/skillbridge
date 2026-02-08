@@ -6,7 +6,6 @@ export const useProfile = (username) => {
     queryKey: ["profile", username],
     queryFn: async () => {
       const res = await profileService.getByUsername(username);
-      console.log("fafafafafa", res);
 
       return res; // res is already data
     },
@@ -17,8 +16,10 @@ export const useReputation = (userId) => {
   return useQuery({
     queryKey: ["reputation", userId],
     queryFn: async () => {
-      const res = await profileService.getReputation(userId);
-      return res;
+      // 1. Use the correct name: getReputationBreakdown
+      // 2. Extract .data from the axios response
+      const res = await profileService.getReputationBreakdown(userId);
+      return res.data;
     },
     enabled: !!userId,
   });

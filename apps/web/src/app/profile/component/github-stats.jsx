@@ -19,7 +19,6 @@ function CountUp({ value = 0 }) {
 }
 
 export default function GitHubStats({ stats }) {
-  console.log("GitHubStats - stats:", stats);
   // ✅ Guard: no GitHub connected
   if (!stats || !stats.username) {
     return (

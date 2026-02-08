@@ -6,14 +6,6 @@ import { FaPaperPlane, FaUserCheck, FaEnvelope } from "react-icons/fa";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function ContactPanel({ userId, userName, isOwnProfile }) {
-  console.log(
-    "ContactPanel - userId:",
-    userId,
-    "userName:",
-    userName,
-    "isOwnProfile:",
-    isOwnProfile,
-  );
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [hasSent, setHasSent] = useState(false);

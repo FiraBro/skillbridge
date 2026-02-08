@@ -22,8 +22,6 @@ export const useAuth = create(
       isLoading: true,
 
       setAuth: (user, token) => {
-        console.log(user, token);
-
         if (token) {
           localStorage.setItem("sb_token", token);
           // Also set the token in a cookie for API requests that need it

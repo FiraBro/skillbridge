@@ -6,8 +6,27 @@ import { trackView } from "./post.view.js";
 
 // ---------------------- POSTS ----------------------
 export const create = catchAsync(async (req, res) => {
+  // 1. Manually parse tags if they arrive as a string (from FormData)
+  if (typeof req.body.tags === "string") {
+    try {
+      req.body.tags = JSON.parse(req.body.tags);
+    } catch (e) {
+      req.body.tags = [];
+    }
+  }
+
+  // 2. Validate data with Zod
   const data = createPostSchema.parse(req.body);
-  const post = await postService.createPost(data, req.user.id);
+
+  // 3. Extract the image path from Multer (req.file)
+  const coverImage = req.file ? `/uploads/${req.file.filename}` : null;
+
+  // 4. Pass the image to the service
+  const post = await postService.createPost(
+    { ...data, coverImage },
+    req.user.id,
+  );
+
   res.status(201).json(post);
 });
 

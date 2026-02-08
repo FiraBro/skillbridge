@@ -6,6 +6,7 @@ import {
   authorize,
 } from "../middlewares/auth.middleware.js";
 import { ownershipMiddleware } from "../middlewares/ownership.middleware.js";
+import upload from "../middlewares/upload.js";
 const router = express.Router();
 
 // ----------------------
@@ -26,7 +27,13 @@ router.post("/:id/share", postController.share);
 // ----------------------
 
 // Create a new post
-router.post("/", requireAuth, authorize("developer"), postController.create);
+router.post(
+  "/",
+  requireAuth,
+  authorize("developer"),
+  upload.single("coverImage"),
+  postController.create,
+);
 
 // Update a post (ownership check)
 router.patch(

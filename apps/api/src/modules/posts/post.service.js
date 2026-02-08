@@ -12,14 +12,15 @@ export async function createPost(data, userId) {
     const slug = await generateUniqueSlug(data.title);
     const sanitizedHtml = sanitizeMarkdown(data.markdown);
 
+    // Added cover_image to the INSERT statement
     const { rows } = await client.query(
-      `INSERT INTO posts(author_id, title, slug, markdown, sanitized_html)
-       VALUES($1,$2,$3,$4,$5) RETURNING *`,
-      [userId, data.title, slug, data.markdown, sanitizedHtml],
+      `INSERT INTO posts(author_id, title, slug, markdown, sanitized_html, cover_image)
+       VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [userId, data.title, slug, data.markdown, sanitizedHtml, data.coverImage],
     );
     const post = rows[0];
 
-    // Insert tags
+    // Insert tags logic remains the same
     for (const tag of data.tags || []) {
       const tagRes = await client.query(
         `INSERT INTO tags(name) VALUES($1)
@@ -30,7 +31,7 @@ export async function createPost(data, userId) {
 
       await client.query(
         `INSERT INTO post_tags(post_id, tag_id)
-         VALUES($1,$2) ON CONFLICT DO NOTHING`,
+         VALUES($1, $2) ON CONFLICT DO NOTHING`,
         [post.id, tagRes.rows[0].id],
       );
     }

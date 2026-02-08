@@ -1,38 +1,45 @@
+// src/api/index.js
 import apiClient from "./api.client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 /* =========================
    JOBS
-/* =========================
-   JOBS (Updated)
 ========================= */
 export const jobService = {
   getAll: (params) => apiClient.get("/jobs", { params }),
   getRecommended: () => apiClient.get("/jobs/recommended"),
-  getById: (id) => apiClient.get(`/jobs/${id}`),
+  getById: (id) => {
+    if (!id) throw new Error("Job ID is required");
+    return apiClient.get(`/jobs/${id}`);
+  },
   create: (data) => apiClient.post("/jobs", data),
-  apply: (id, data) => apiClient.post(`/jobs/${id}/apply`, data),
+  apply: (id, data) => {
+    if (!id) throw new Error("Job ID is required");
+    return apiClient.post(`/jobs/${id}/apply`, data);
+  },
   getCompanyJobs: () => apiClient.get("/jobs/company"),
-  getApplicants: (jobId) => apiClient.get(`/jobs/${jobId}/applicants`),
-  // ADD THIS METHOD:
-  updateApplicationStatus: (applicationId, data) =>
-    apiClient.patch(`/jobs/applications/${applicationId}`, data),
+  getApplicants: (jobId) => {
+    if (!jobId) throw new Error("Job ID is required");
+    return apiClient.get(`/jobs/${jobId}/applicants`);
+  },
+  updateApplicationStatus: (applicationId, data) => {
+    if (!applicationId) throw new Error("Application ID is required");
+    return apiClient.patch(`/jobs/applications/${applicationId}`, data);
+  },
 };
+
 /* =========================
    PROFILES & REPUTATION
 ========================= */
 export const profileService = {
-  // Profile
   getByUsername: (username) => apiClient.get(`/profiles/${username}`),
-
-  // ✅ Reputation (FIXED — matches backend)
   getReputationBreakdown: (userId) =>
     apiClient.get(`/reputation/${userId}/breakdown`),
-
   getReputationHistory: (userId) =>
     apiClient.get(`/reputation/${userId}/history`),
 
-  // Discovery
-  discover: (params) => apiClient.get("/companies/discovery", { params }),
+  // Developer discovery API (role-based)
+  discover: (params) => apiClient.get("/developers/discover", { params }),
 };
 
 /* =========================
@@ -42,48 +49,26 @@ export const postService = {
   getAll: (params) => apiClient.get("/posts", { params }),
   getBySlug: (slug) => apiClient.get(`/posts/${slug}`),
   create: (data) => apiClient.post("/posts", data),
-
   like: (id) => apiClient.post(`/posts/${id}/like`),
   unlike: (id) => apiClient.delete(`/posts/${id}/like`),
-
   addComment: (id, text) => apiClient.post(`/posts/${id}/comments`, { text }),
-
   getComments: (id) => apiClient.get(`/posts/${id}/comments`),
-
   deleteComment: (postId, commentId) =>
     apiClient.delete(`/posts/${postId}/comments/${commentId}`),
-
   update: (id, data) => apiClient.patch(`/posts/${id}`, data),
-
   share: (id) => apiClient.post(`/posts/${id}/share`),
 };
 
 /* =========================
-   NOTIFICATIONS & INTERACTIONS
+   NOTIFICATIONS
 ========================= */
 export const notificationService = {
-  /**
-   * GET /api/notifications
-   * Fetch all profile views and contact requests
-   */
   getNotifications: () => apiClient.get("/notifications"),
-
-  /**
-   * POST /api/notifications/contact
-   * Send a professional connection request
-   * @param {Object} data - { receiverId: string, message: string }
-   */
   sendRequest: (data) => apiClient.post("/notifications/contact", data),
-
-  /**
-   * PATCH /api/notifications/contact/:id
-   * Accept or Ignore a pending contact request
-   * @param {string} id - The request ID
-   * @param {Object} data - { status: 'accepted' | 'ignored' }
-   */
   respondToRequest: (id, data) =>
     apiClient.patch(`/notifications/contact/${id}`, data),
 };
+
 /* =========================
    AUTH
 ========================= */
@@ -91,4 +76,45 @@ export const authService = {
   getCurrentUser: () => apiClient.get("/auth/me"),
   login: (credentials) => apiClient.post("/auth/login", credentials),
   register: (data) => apiClient.post("/auth/register", data),
+};
+
+/* =========================
+   REACT QUERY HOOK: DEVELOPER DISCOVERY
+========================= */
+export const useDeveloperDiscovery = ({ search, minReputation }) => {
+  const queryClient = useQueryClient();
+
+  const developersQuery = useQuery({
+    queryKey: ["developers", search, minReputation],
+    queryFn: () =>
+      profileService
+        .discover({ search, minReputation })
+        .then((res) => res.data), // extract data from axios response
+    keepPreviousData: true,
+  });
+
+  const bookmarksQuery = useQuery({
+    queryKey: ["bookmarks"],
+    queryFn: () =>
+      apiClient
+        .get("/companies/bookmarks")
+        .then((res) => res.data.map((b) => b.id)),
+  });
+
+  const bookmarkMutation = useMutation({
+    mutationFn: ({ devId, isBookmarked }) =>
+      apiClient[isBookmarked ? "delete" : "post"](
+        `/companies/bookmarks/${devId}`,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["bookmarks"]);
+    },
+  });
+
+  return {
+    developers: developersQuery.data || [],
+    bookmarks: bookmarksQuery.data || [],
+    isLoading: developersQuery.isLoading,
+    toggleBookmark: bookmarkMutation.mutate,
+  };
 };

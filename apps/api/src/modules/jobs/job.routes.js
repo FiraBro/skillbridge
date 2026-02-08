@@ -4,15 +4,16 @@ import { authorize, requireAuth } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// --- Public/General Routes ---
+/* =========================
+   Public Routes
+========================= */
 
 // Browse jobs (with filters)
 router.get("/", jobController.browse);
 
-// Get job details (can be public or semi-private)
-router.get("/:id", jobController.getById);
-
-// --- Developer Routes ---
+/* =========================
+   Developer Routes
+========================= */
 
 // Get recommended jobs based on developer profile
 router.get(
@@ -30,10 +31,9 @@ router.post(
   jobController.apply,
 );
 
-// --- Company (Client) Routes ---
-
-// Create a new job post
-router.post("/", requireAuth, authorize("company"), jobController.create);
+/* =========================
+   Company Routes
+========================= */
 
 // Get all jobs posted by the logged-in company
 router.get(
@@ -41,6 +41,17 @@ router.get(
   requireAuth,
   authorize("company"),
   jobController.getCompanyJobs,
+);
+
+// Create a new job post
+router.post("/", requireAuth, authorize("company"), jobController.create);
+
+// Get list of applicants for a specific job
+router.get(
+  "/:id/applicants",
+  requireAuth,
+  authorize("company"),
+  jobController.getApplicants,
 );
 
 // Toggle job status (Published/Draft)
@@ -51,20 +62,19 @@ router.patch(
   jobController.togglePublish,
 );
 
-// Get list of applicants for a specific job
-router.get(
-  "/:id/applicants",
-  requireAuth,
-  authorize("company"),
-  jobController.getApplicants,
-);
-
-// Update status (hired/rejected) and private notes for a specific application
+// Update application status (hired/rejected + notes)
 router.patch(
   "/applications/:applicationId",
   requireAuth,
   authorize("company"),
   jobController.updateApplicationFeedback,
 );
+
+/* =========================
+   Dynamic Route (ALWAYS LAST)
+========================= */
+
+// Get job details by ID
+router.get("/:id", jobController.getById);
 
 export default router;

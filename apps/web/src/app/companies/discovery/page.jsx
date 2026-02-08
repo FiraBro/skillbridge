@@ -1,128 +1,163 @@
 import { useState, useEffect } from "react";
-import DeveloperCard from "../components/developer-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FaSearch, FaFilter, FaUsers } from "react-icons/fa";
+import {
+  FaSearch,
+  FaUsers,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 
+import useDebounce from "@/hooks/useDebounce";
+import {
+  useDevelopers,
+  useBookmarks,
+  useToggleBookmark,
+} from "@/hooks/useTalentDiscovery";
+import { useAuth } from "@/hooks/useAuth";
+import DeveloperListItem from "../components/developer-card";
 export default function TalentDiscovery() {
-  const [developers, setDevelopers] = useState([]);
-  const [bookmarks, setBookmarks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const isCompany = user?.role === "company";
+
   const [search, setSearch] = useState("");
   const [minRep, setMinRep] = useState(0);
+  const [page, setPage] = useState(1);
 
+  const debouncedSearch = useDebounce(search, 500);
+
+  // Only companies can access discovery
+  if (!isCompany) {
+    return (
+      <div className="max-w-3xl mx-auto py-32 text-center">
+        <h2 className="text-2xl font-bold mb-3">
+          Talent Discovery is for Companies
+        </h2>
+        <p className="text-muted-foreground">
+          Only company accounts can browse and bookmark developers.
+        </p>
+      </div>
+    );
+  }
+
+  // Developers query
+  const { data: devRes, isLoading } = useDevelopers({
+    search: debouncedSearch,
+    minReputation: minRep,
+    page,
+    limit: 9,
+  });
+  console.log("Developer Discovery Response:", devRes);
+
+  const { data: bookmarkRes } = useBookmarks();
+  const bookmarkMutation = useToggleBookmark();
+  console.log("Bookmarks:", bookmarkRes);
+  const developers =
+    devRes?.data.data.filter((u) => u.role === "developer") ?? [];
+  const totalPages = devRes?.data.totalPages ?? 1;
+  const bookmarks = bookmarkRes?.data.map((b) => b.id) ?? [];
+
+  // Reset page if filters reduce total pages
   useEffect(() => {
-    fetchDevelopers();
-    fetchBookmarks();
-  }, []);
+    if (page > totalPages) setPage(1);
+  }, [totalPages, page]);
 
-  const fetchDevelopers = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(
-        `/api/companies/discovery?search=${search}&minReputation=${minRep}`,
-      );
-      const data = await res.json();
-      if (data.success) {
-        setDevelopers(data.data);
-      }
-    } catch (error) {
-      console.error("Discovery failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchBookmarks = async () => {
-    try {
-      const res = await fetch("/api/companies/bookmarks");
-      const data = await res.json();
-      if (data.success) {
-        setBookmarks(data.data.map((b) => b.id));
-      }
-    } catch (error) {
-      console.error("Failed to fetch bookmarks:", error);
-    }
-  };
-
-  const handleBookmark = async (devId) => {
-    const isBookmarked = bookmarks.includes(devId);
-    const method = isBookmarked ? "DELETE" : "POST";
-
-    try {
-      const res = await fetch(`/api/companies/bookmarks/${devId}`, { method });
-      if (res.ok) {
-        setBookmarks((prev) =>
-          isBookmarked ? prev.filter((id) => id !== devId) : [...prev, devId],
-        );
-      }
-    } catch (error) {
-      console.error("Bookmark action failed:", error);
-    }
+  const handleBookmark = (devId) => {
+    bookmarkMutation.mutate({
+      devId,
+      isBookmarked: bookmarks.includes(devId),
+    });
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
+    <div className="max-w-7xl mx-auto px-6 py-10 space-y-10">
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-primary/10 to-background rounded-3xl p-8 flex flex-col gap-3">
+        <h1 className="text-4xl font-black flex items-center gap-3">
           <FaUsers className="text-primary" />
-          Talent Discovery
+          Discover Top Developers
         </h1>
-        <p className="text-muted-foreground">
-          Find top developers vetted by the SkillBridge Trust Layer.
+        <p className="text-muted-foreground max-w-2xl">
+          Browse vetted developers based on reputation, skills, and real
+          contribution history.
         </p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
+      {/* Filters */}
+      <div className="bg-card border rounded-2xl p-5 flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full">
           <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
+            className="pl-10"
             placeholder="Search by name, skills, or bio..."
-            className="pl-10 bg-background/50"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && fetchDevelopers()}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
-        <div className="flex gap-2">
-          <Input
-            type="number"
-            placeholder="Min Reputation"
-            className="w-32 bg-background/50"
-            value={minRep}
-            onChange={(e) => setMinRep(e.target.value)}
-          />
-          <Button onClick={fetchDevelopers}>Search</Button>
-          <Button variant="outline" className="gap-2">
-            <FaFilter /> Filters
-          </Button>
-        </div>
+
+        <Input
+          type="number"
+          placeholder="Min Reputation"
+          className="w-full md:w-40"
+          value={minRep}
+          onChange={(e) => {
+            setMinRep(Number(e.target.value));
+            setPage(1);
+          }}
+        />
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-50">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-64 bg-muted animate-pulse rounded-xl" />
+      {/* Developer List */}
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-24 rounded-2xl bg-muted animate-pulse" />
           ))}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      ) : developers.length > 0 ? (
+        <div className="space-y-4">
           {developers.map((dev) => (
-            <DeveloperCard
+            <DeveloperListItem
               key={dev.id}
               developer={dev}
               isBookmarked={bookmarks.includes(dev.id)}
-              onBookmark={handleBookmark}
+              onBookmark={() => handleBookmark(dev.id)}
             />
           ))}
         </div>
+      ) : (
+        <div className="text-center py-24 bg-muted/30 rounded-3xl">
+          <p className="text-lg text-muted-foreground">
+            No developers match your criteria.
+          </p>
+        </div>
       )}
 
-      {!loading && developers.length === 0 && (
-        <div className="text-center py-20 bg-muted/20 rounded-2xl">
-          <p className="text-muted-foreground">
-            No developers found matching your criteria.
-          </p>
+      {/* Pagination */}
+      {developers.length > 0 && (
+        <div className="flex justify-center items-center gap-6 pt-6">
+          <Button
+            variant="outline"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            <FaChevronLeft />
+          </Button>
+
+          <span className="font-medium">
+            Page {page} of {totalPages}
+          </span>
+
+          <Button
+            variant="outline"
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            <FaChevronRight />
+          </Button>
         </div>
       )}
     </div>

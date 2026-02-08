@@ -85,39 +85,137 @@ export async function getBookmarks(companyId) {
  * Developer Discovery / Matching logic for companies
  * Suggests developers based on skill overlap and reputation
  */
-export async function discoverDevelopers(filters = {}) {
-  const { skills, minReputation, search } = filters;
+// export async function discoverDevelopers(filters = {}) {
+//   const { skills, minReputation, search } = filters;
 
-  let sql = `
-    SELECT u.id, u.name, u.avatar_url, p.id as profile_id, p.reputation_score, p.bio,
-           ARRAY(SELECT name FROM profile_skills WHERE profile_id = p.id) as skills
-    FROM profiles p
-    JOIN users u ON u.id = p.user_id
-    WHERE 1=1
-  `;
+//   let sql = `
+//     SELECT u.id, u.name, u.avatar_url, p.id as profile_id, p.reputation_score, p.bio,
+//            ARRAY(SELECT name FROM profile_skills WHERE profile_id = p.id) as skills
+//     FROM profiles p
+//     JOIN users u ON u.id = p.user_id
+//     WHERE 1=1
+//   `;
+//   const params = [];
+
+//   if (minReputation) {
+//     params.push(minReputation);
+//     sql += ` AND p.reputation_score >= $${params.length}`;
+//   }
+
+//   if (search) {
+//     params.push(`%${search}%`);
+//     sql += ` AND (u.name ILIKE $${params.length} OR p.bio ILIKE $${params.length})`;
+//   }
+
+//   // Filter by skills if provided
+//   if (skills && skills.length > 0) {
+//     params.push(skills);
+//     sql += ` AND EXISTS (
+//       SELECT 1 FROM profile_skills ps
+//       WHERE ps.profile_id = p.id AND ps.name = ANY($${params.length})
+//     )`;
+//   }
+
+//   sql += ` ORDER BY p.reputation_score DESC LIMIT 50`;
+
+//   const { rows } = await query(sql, params);
+//   return rows;
+// }
+
+/**
+ * 🔥 FINAL: Developer Discovery (Company Only)
+ * - Developers only
+ * - Pagination
+ * - Search
+ * - Reputation filter
+ * - Skill matching
+ */
+export async function discoverDevelopers(filters = {}) {
+  const {
+    search = "",
+    minReputation = 0,
+    skills = [],
+    page = 1,
+    limit = 9,
+  } = filters;
+
+  const offset = (page - 1) * limit;
   const params = [];
+
+  let whereClause = `
+    WHERE u.role = 'developer'
+  `;
 
   if (minReputation) {
     params.push(minReputation);
-    sql += ` AND p.reputation_score >= $${params.length}`;
+    whereClause += ` AND p.reputation_score >= $${params.length}`;
   }
 
   if (search) {
     params.push(`%${search}%`);
-    sql += ` AND (u.name ILIKE $${params.length} OR p.bio ILIKE $${params.length})`;
+    whereClause += `
+      AND (
+        u.name ILIKE $${params.length}
+        OR p.bio ILIKE $${params.length}
+      )
+    `;
   }
 
-  // Filter by skills if provided
-  if (skills && skills.length > 0) {
+  if (skills.length > 0) {
     params.push(skills);
-    sql += ` AND EXISTS (
-      SELECT 1 FROM profile_skills ps 
-      WHERE ps.profile_id = p.id AND ps.name = ANY($${params.length})
-    )`;
+    whereClause += `
+      AND EXISTS (
+        SELECT 1
+        FROM profile_skills ps
+        WHERE ps.profile_id = p.id
+        AND ps.name = ANY($${params.length})
+      )
+    `;
   }
 
-  sql += ` ORDER BY p.reputation_score DESC LIMIT 50`;
+  // 🔢 Total count (for pagination)
+  const countQuery = `
+    SELECT COUNT(*) 
+    FROM profiles p
+    JOIN users u ON u.id = p.user_id
+    ${whereClause}
+  `;
 
-  const { rows } = await query(sql, params);
-  return rows;
+  const countResult = await query(countQuery, params);
+  const total = Number(countResult.rows[0].count);
+  const totalPages = Math.ceil(total / limit);
+
+  // 📦 Paginated data
+  params.push(limit, offset);
+
+  const dataQuery = `
+    SELECT
+      u.id,
+      u.name,
+      u.avatar_url,
+      u.role,
+      p.id AS profile_id,
+      p.reputation_score,
+      p.bio,
+      ARRAY(
+        SELECT name
+        FROM profile_skills
+        WHERE profile_id = p.id
+      ) AS skills
+    FROM profiles p
+    JOIN users u ON u.id = p.user_id
+    ${whereClause}
+    ORDER BY p.reputation_score DESC
+    LIMIT $${params.length - 1}
+    OFFSET $${params.length}
+  `;
+
+  const { rows } = await query(dataQuery, params);
+
+  return {
+    data: rows,
+    page,
+    total,
+    totalPages,
+  };
 }

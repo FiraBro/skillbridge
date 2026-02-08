@@ -1,6 +1,12 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import path from "path";
+import { fileURLToPath } from "url"; // 1. Import this helper
+
+// 2. Recreate __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import globalErrorHandler from "./modules/middlewares/error.middleware.js";
 
 // Import all route modules
@@ -25,7 +31,8 @@ app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
-// 🔹 Optional: global request logger for debugging
+// 🔹 Optional: global request logger for debugg
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use((req, res, next) => {
   console.log("🌍 INCOMING REQUEST:", req.method, req.url);
   next();

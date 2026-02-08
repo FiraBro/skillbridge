@@ -55,61 +55,59 @@ export default function JobFeed() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] dark:bg-zinc-950 font-sans selection:bg-primary/10">
-      {/* HEADER SECTION - FULL WIDTH SEARCH */}
-      <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shadow-sm">
-        <div className="max-w-5xl mx-auto px-6 py-8">
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-6">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans selection:bg-primary/10">
+      {/* HEADER SECTION - NO RADIUS, BORDER BOTTOM ONLY */}
+      <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="max-w-5xl mx-auto px-4 py-10">
+          <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-8 tracking-tight">
             Find Work
           </h1>
-          <div className="relative group flex items-center gap-2">
+          <div className="flex items-center gap-0">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-primary transition-colors" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search for projects, technologies, or keywords..."
-                className="pl-12 h-14 bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-lg rounded-xl focus-visible:ring-primary/20"
+                placeholder="Search for jobs"
+                className="pl-12 h-12 bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 rounded-l-md rounded-r-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
               />
             </div>
-            <Button className="h-14 px-8 rounded-xl font-bold text-base shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
-              Search
+            <Button className="h-12 px-8 rounded-l-none rounded-r-md font-bold bg-[#108a00] hover:bg-[#0d7300] transition-colors">
+              <Search className="h-5 w-5 md:mr-2" />
+              <span className="hidden md:inline">Search</span>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* CONTENT SECTION */}
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl shadow-zinc-200/40 dark:shadow-none overflow-hidden">
-          {/* MODERN TABS */}
-          <div className="flex border-b border-zinc-100 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md sticky top-0 z-20">
+      {/* CONTENT SECTION - NO ROUNDED CORNERS OR SHADOWS */}
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white dark:bg-zinc-900">
+          {/* TABS - BORDER BOTTOM ONLY */}
+          <div className="flex border-b border-zinc-200 dark:border-zinc-800 sticky top-0 bg-white dark:bg-zinc-900 z-20 px-4">
             <TabButton
-              icon={<Briefcase className="w-4 h-4" />}
               label="Best Matches"
               active={activeTab === "matches"}
               onClick={() => setActiveTab("matches")}
             />
             <TabButton
-              icon={<History className="w-4 h-4" />}
               label="Most Recent"
               active={activeTab === "recent"}
               onClick={() => setActiveTab("recent")}
             />
             <TabButton
-              icon={<Bookmark className="w-4 h-4" />}
               label="Saved Jobs"
               active={activeTab === "saved"}
               onClick={() => setActiveTab("saved")}
             />
           </div>
 
-          {/* JOB LISTINGS */}
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          {/* JOB LISTINGS - SEPARATED BY BORDERS */}
+          <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {loadingJobs ? (
               <div className="p-8 space-y-10">
                 {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-56 w-full rounded-2xl" />
+                  <Skeleton key={i} className="h-48 w-full rounded-none" />
                 ))}
               </div>
             ) : jobs.length > 0 ? (
@@ -117,17 +115,8 @@ export default function JobFeed() {
                 <JobCard key={job.id} job={job} onApply={handleApplyClick} />
               ))
             ) : (
-              <div className="p-20 text-center space-y-4">
-                <div className="inline-flex p-4 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400">
-                  <Search className="w-8 h-8" />
-                </div>
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-                  No projects found
-                </h3>
-                <p className="text-zinc-500 max-w-xs mx-auto text-sm">
-                  Try adjusting your search filters to find what you're looking
-                  for.
-                </p>
+              <div className="py-24 text-center">
+                <p className="text-zinc-500">No projects match your search.</p>
               </div>
             )}
           </div>
@@ -146,20 +135,17 @@ export default function JobFeed() {
 
 // --- SUB-COMPONENTS ---
 
-function TabButton({ icon, label, active, onClick }) {
+function TabButton({ label, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-8 py-5 text-sm font-bold transition-all border-b-2 relative ${
-        active
-          ? "border-primary text-primary bg-primary/5"
-          : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+      className={`px-4 py-4 text-sm font-bold transition-all relative mr-6 ${
+        active ? "text-[#108a00]" : "text-zinc-500 hover:text-zinc-800"
       }`}
     >
-      {icon}
       {label}
       {active && (
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary animate-in fade-in zoom-in duration-300" />
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#108a00]" />
       )}
     </button>
   );
@@ -167,89 +153,81 @@ function TabButton({ icon, label, active, onClick }) {
 
 function JobCard({ job, onApply }) {
   return (
-    <div className="p-10 hover:bg-[#F9FAFB] dark:hover:bg-zinc-800/40 transition-all group relative">
-      <div className="flex justify-between items-start gap-6 mb-4">
-        <div className="space-y-1.5 flex-1">
-          <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-primary transition-colors cursor-pointer leading-tight">
-            {job.title}
-          </h3>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-medium text-zinc-500">
-            <span className="flex items-center gap-1.5 text-zinc-900 dark:text-zinc-100 font-bold">
-              <DollarSign className="h-4 w-4 text-emerald-600" /> $
-              {job.budget_range}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4" /> Intermediate
-            </span>
-            <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4" /> Remote
-            </span>
-            <span className="text-zinc-400 font-normal">
-              Posted {new Date(job.created_at).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className="p-6 md:p-10 hover:bg-[#f9f9f9] dark:hover:bg-zinc-800/40 transition-colors group">
+      <div className="flex justify-between items-start gap-4 mb-2">
+        <h3 className="text-xl font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-[#108a00] cursor-pointer transition-colors leading-snug">
+          {job.title}
+        </h3>
+        <div className="flex gap-2 shrink-0">
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-full border-zinc-200 shadow-sm"
+            className="h-9 w-9 rounded-full border-zinc-300 text-zinc-600"
           >
             <ThumbsDown className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-full border-zinc-200 shadow-sm hover:text-red-500 hover:bg-red-50"
+            className="h-9 w-9 rounded-full border-zinc-300 text-zinc-600 hover:text-red-500"
           >
             <Heart className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <p className="text-zinc-600 dark:text-zinc-400 text-[16px] leading-[1.7] mb-6 line-clamp-3 max-w-4xl">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-zinc-600 mb-4">
+        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+          Fixed-price - Intermediate - Est. Budget: ${job.budget_range}
+        </span>
+        <span className="text-zinc-400">
+          - Posted {new Date(job.created_at).toLocaleDateString()}
+        </span>
+      </div>
+
+      <p className="text-zinc-800 dark:text-zinc-300 text-[15px] leading-normal mb-6 max-w-4xl">
         {job.description}
       </p>
 
-      {/* SKILLS TAGS */}
-      <div className="flex flex-wrap gap-2 mb-8">
+      {/* SKILLS AS FLAT TEXT/BADGES */}
+      <div className="flex flex-wrap gap-2 mb-6">
         {(() => {
           const rawSkills = job.required_skills;
           const skillArray = Array.isArray(rawSkills)
             ? rawSkills
             : typeof rawSkills === "string"
-              ? rawSkills.split(",").map((s) => s.trim())
+              ? rawSkills.split(",")
               : [];
-
           return skillArray.slice(0, 8).map((skill, i) => (
-            <Badge
+            <span
               key={i}
-              variant="secondary"
-              className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-semibold px-4 py-1.5 border-none rounded-full text-xs tracking-wide"
+              className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-400 text-xs px-3 py-1 rounded-full font-medium"
             >
-              {skill}
-            </Badge>
+              {skill.trim()}
+            </span>
           ));
         })()}
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-zinc-50 dark:border-zinc-800">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2 font-bold text-emerald-700 dark:text-emerald-500 text-xs uppercase tracking-widest">
-            <CheckCircle className="h-4 w-4" />
-            Payment Verified
-          </div>
-          <div className="flex items-center gap-1 text-xs font-bold text-zinc-500">
-            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-            5.00 Rating
-          </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-6 text-[13px] text-zinc-500">
+          <span className="flex items-center gap-1 font-bold text-[#108a00]">
+            <CheckCircle className="h-4 w-4 fill-[#108a00] text-white" />{" "}
+            Payment verified
+          </span>
+          <span className="flex items-center gap-1 font-bold">
+            <Star className="h-4 w-4 text-[#108a00] fill-[#108a00]" /> 5.00
+          </span>
+          <span className="flex items-center gap-1">
+            <MapPin className="h-4 w-4" /> Global
+          </span>
         </div>
+
         <Button
           onClick={() => onApply(job)}
-          className="h-11 px-8 rounded-xl font-bold bg-primary hover:bg-primary/90 text-white shadow-md transition-all active:scale-95"
+          className="bg-[#108a00] hover:bg-[#0d7300] text-white font-bold rounded-full px-8 transition-all active:scale-95"
         >
-          Apply to Project
+          Apply Now
         </Button>
       </div>
     </div>

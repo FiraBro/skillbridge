@@ -3,6 +3,28 @@ import github from "../services/github.service.js";
 import { calculateReputation } from "../services/reputation.engine.js";
 import ApiError from "../utils/apiError.js";
 
+// Add this to your existing imports/functions in profile.service.js
+
+/**
+ * Creates a new profile for a newly registered user
+ */
+export async function createProfile({
+  userId,
+  username,
+  fullName,
+  githubUsername = null,
+}) {
+  // We use the repo to handle the actual database insertion
+  const profile = await repo.createProfile({
+    userId,
+    username,
+    fullName,
+    githubUsername,
+  });
+
+  return profile;
+}
+
 export async function getPublicProfile(username) {
   const profile = await repo.getProfileByUsername(username);
   if (!profile) throw new ApiError(404, "Profile not found");

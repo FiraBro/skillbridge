@@ -9,6 +9,8 @@ import { useCompanyJobs } from "@/hooks/useJobs";
 export default function CompanyDashboard() {
   const { data, isLoading, isError } = useCompanyJobs();
 
+  console.log("Company Dashboard - Jobs Data:", data);
+
   const jobs = data?.data || [];
 
   if (isLoading) {

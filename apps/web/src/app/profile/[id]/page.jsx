@@ -43,8 +43,10 @@ export default function ProfilePage() {
     isLoading: loadingProfile,
     isError,
   } = useProfile(username);
+
   const userId = profile?.user_id;
 
+  // These hooks now correctly return the flat data object from your service
   const { data: reputation } = useReputation(userId);
   const { data: history } = useReputationHistory(userId);
 
@@ -85,7 +87,8 @@ export default function ProfilePage() {
           name: profile.full_name,
           username: profile.username,
         }}
-        reputation={reputation?.data?.total ?? profile.reputation_score}
+        // FIXED: Accessing total directly from the object
+        reputation={reputation?.total ?? profile.reputation_score}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -121,14 +124,18 @@ export default function ProfilePage() {
 
             {/* OVERVIEW TAB */}
             <TabsContent value="overview" className="space-y-8 outline-none">
+              {/* Reputation & Skills are visible if basic visibility is granted */}
               {canShowGithub && (
                 <>
                   <ReputationBreakdown
-                    total={reputation?.data?.total ?? profile.reputation_score}
-                    breakdown={reputation?.data?.breakdown}
+                    // FIXED: Accessing total and breakdown directly
+                    total={reputation?.total ?? profile.reputation_score}
+                    breakdown={reputation?.breakdown}
                   />
+
                   <SkillsCloud skills={profile.skills ?? []} />
 
+                  {/* GitHub Connection CTA */}
                   {canConnectGithub && !isGithubConnected && (
                     <button
                       onClick={initiateGithubAuth}
@@ -138,6 +145,7 @@ export default function ProfilePage() {
                     </button>
                   )}
 
+                  {/* Live GitHub Stats */}
                   {isGithubConnected && (
                     <div className="space-y-6">
                       <GitHubStats
@@ -145,6 +153,7 @@ export default function ProfilePage() {
                           stars: profile.total_stars,
                           prs: profile.pull_requests,
                           commits30d: profile.commits_30d,
+                          username: profile.github_username,
                         }}
                       />
                       <div className="flex flex-wrap gap-2">
@@ -180,9 +189,11 @@ export default function ProfilePage() {
             {/* HISTORY & ENDORSEMENTS */}
             {canShowGithub && (
               <TabsContent value="history">
-                <ReputationHistory events={history?.data ?? []} />
+                {/* FIXED: Passing history array directly from object */}
+                <ReputationHistory events={history ?? []} />
               </TabsContent>
             )}
+
             {canShowGithub && viewer?.id !== userId && (
               <TabsContent value="endorsements">
                 <EndorsementSection

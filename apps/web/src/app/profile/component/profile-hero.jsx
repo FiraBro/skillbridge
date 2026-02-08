@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 
 export default function ProfileHero({ user, reputation }) {
-  console.log("ProfileHero - user:", user);
   return (
     <motion.section
       initial={{ opacity: 0, y: 20 }}

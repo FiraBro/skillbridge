@@ -6,9 +6,6 @@ import { useMemo } from "react";
  * @param {object} viewer - Logged-in user
  */
 export default function useGithubVisibility(profile, viewer) {
-  console.log("useGithubVisibility - profile:", profile);
-  console.log("useGithubVisibility - viewer:", viewer);
-
   // Safety guards
   const viewerRole = viewer?.role;
   const isDeveloper = viewerRole === "developer";

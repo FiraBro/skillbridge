@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { FaCheckCircle, FaExclamationTriangle, FaClock } from "react-icons/fa";
 
 export default function GitHubActivityBadge({ stats }) {
-  console.log("GitHubActivityBadge - stats:", stats);
   if (!stats) return null;
 
   const getBadgeConfig = () => {

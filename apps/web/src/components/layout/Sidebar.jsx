@@ -6,6 +6,7 @@ import {
   FileText,
   Settings,
   Plus,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,17 +21,30 @@ export default function Sidebar() {
     : "/auth/login";
 
   const navItems = [
-    { icon: LayoutDashboard, label: "Feed", path: "/dashboard", group: "main" },
-    { icon: Search, label: "Discovery", path: "/discovery", group: "main" },
-    { icon: Briefcase, label: "Opportunities", path: "/jobs", group: "main" },
-
+    {
+      icon: LayoutDashboard,
+      label: "Feed",
+      path: "/dashboard",
+      group: "navigation",
+    },
+    {
+      icon: Search,
+      label: "Discovery",
+      path: "/discovery",
+      group: "navigation",
+    },
+    {
+      icon: Briefcase,
+      label: "Opportunities",
+      path: "/jobs",
+      group: "navigation",
+    },
     {
       icon: FileText,
       label: "My Projects",
       path: profilePath,
-      group: "metrics",
+      group: "career",
     },
-
     {
       icon: Settings,
       label: "Settings",
@@ -42,70 +56,97 @@ export default function Sidebar() {
   const isActive = (path) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
 
-  const renderGroup = (groupName) => (
-    <div className="space-y-1">
-      {navItems
-        .filter((item) => item.group === groupName)
-        .map((item) => (
-          <Link key={item.label} to={item.path}>
-            <Button
-              variant="ghost"
-              className={cn(
-                "w-full justify-start gap-3 h-11 font-medium transition-all group",
-                isActive(item.path)
-                  ? "bg-primary/10 text-primary hover:bg-primary/15"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <item.icon
-                className={cn(
-                  "h-5 w-5",
-                  isActive(item.path)
-                    ? "text-primary"
-                    : "group-hover:text-foreground",
-                )}
-              />
-              {item.label}
-            </Button>
-          </Link>
-        ))}
-    </div>
-  );
+  const NavLink = ({ item }) => {
+    const active = isActive(item.path);
+    return (
+      <Link to={item.path} className="relative group px-3 block">
+        {active && (
+          <div className="absolute left-0 top-1 bottom-1 w-1 rounded-r-full bg-primary" />
+        )}
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start gap-3 h-10 font-medium transition-all duration-200",
+            active
+              ? "bg-primary/5 text-primary hover:bg-primary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
+          )}
+        >
+          <item.icon
+            className={cn(
+              "h-[18px] w-[18px]",
+              active ? "text-primary" : "opacity-70 group-hover:opacity-100",
+            )}
+          />
+          <span className="text-sm">{item.label}</span>
+        </Button>
+      </Link>
+    );
+  };
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 h-[calc(100vh-4rem)] sticky top-16 p-6 space-y-8 border-r bg-card">
-      <div className="space-y-4">
-        <h4 className="px-4 text-xs font-bold tracking-widest text-muted-foreground uppercase">
-          Navigation
-        </h4>
-        {renderGroup("main")}
+    <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 self-start border-r bg-background/50 backdrop-blur-sm overflow-hidden">
+      {/* Scrollable Navigation Area - Added pt-8 for top spacing since header is gone */}
+      <div className="flex-1 overflow-y-auto pt-8 pb-6 space-y-8">
+        <section className="space-y-1">
+          <p className="px-6 mb-3 text-[11px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
+            Overview
+          </p>
+          {navItems
+            .filter((i) => i.group === "navigation")
+            .map((item) => (
+              <NavLink key={item.path} item={item} />
+            ))}
+        </section>
+
+        <section className="space-y-1">
+          <p className="px-6 mb-3 text-[11px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
+            Growth & Projects
+          </p>
+          {navItems
+            .filter((i) => i.group === "career")
+            .map((item) => (
+              <NavLink key={item.path} item={item} />
+            ))}
+        </section>
+
+        <section className="space-y-1">
+          <p className="px-6 mb-3 text-[11px] font-bold text-muted-foreground/50 uppercase tracking-[0.15em]">
+            System
+          </p>
+          {navItems
+            .filter((i) => i.group === "other")
+            .map((item) => (
+              <NavLink key={item.path} item={item} />
+            ))}
+        </section>
       </div>
 
-      <div className="space-y-4">
-        <h4 className="px-4 text-xs font-bold tracking-widest text-muted-foreground uppercase">
-          Career & Trust
-        </h4>
-        {renderGroup("metrics")}
-      </div>
+      {/* Footer Area (Fixed at bottom) */}
+      <div className="p-4 space-y-4 border-t bg-muted/10 flex-shrink-0">
+        <div className="p-4 rounded-xl border bg-card/50 shadow-sm backdrop-blur-md">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+              Reputation
+            </span>
+            <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold tracking-tight">
+              {user?.reputation || 0}
+            </span>
+            <span className="text-[10px] bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded font-bold">
+              +2.4%
+            </span>
+          </div>
+        </div>
 
-      <div className="mt-auto pt-4">
-        <Link to="/posts/create">
-          <Button className="w-full h-12 rounded-2xl font-black uppercase italic shadow-lg shadow-primary/20 gap-2 hover:scale-[1.02] active:scale-95 transition-all">
-            <Plus className="h-4 w-4" /> Share Insight
+        <Link to="/posts/create" className="block">
+          <Button className="w-full h-11 shadow-md shadow-primary/10 font-semibold gap-2 transition-all hover:translate-y-[-0.5px] active:scale-95">
+            <Plus className="h-4 w-4" />
+            <span>New Insight</span>
           </Button>
         </Link>
-      </div>
-
-      <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">
-          Current Reputation
-        </p>
-        <div className="flex items-baseline gap-2 mt-1">
-          <span className="text-2xl font-black text-primary">
-            {user?.reputation || 0}
-          </span>
-          <span className="text-[10px] text-green-500 font-bold">Stable</span>
-        </div>
       </div>
     </aside>
   );

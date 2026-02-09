@@ -6,11 +6,9 @@ import {
   MessageSquare,
   Share2,
   Clock,
-  User,
   ArrowLeft,
   Send,
   Trash2,
-  Edit2,
 } from "lucide-react";
 
 import {
@@ -24,15 +22,18 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import MarkdownRenderer from "@/components/markdown-renderer";
 import { showToast } from "@/lib/toast";
 
 export default function PostDetailPage() {
   const { slug } = useParams();
   const { user } = useAuth();
+  const [commentText, setCommentText] = useState("");
 
   const { data: post, isLoading, isError, error } = usePostDetail(slug);
 
@@ -42,14 +43,10 @@ export default function PostDetailPage() {
   const deleteCommentMutation = useDeleteComment();
   const shareMutation = useSharePost();
 
-  const [commentText, setCommentText] = useState("");
-
-  /* ----------------------- handlers ----------------------- */
+  /* --- Handlers --- */
   const handleLike = useCallback(() => {
     if (!post) return;
-
     const mutation = post.is_liked ? unlikeMutation : likeMutation;
-
     mutation.mutate(post.id, {
       onError: () => showToast("Failed to update reaction"),
     });
@@ -57,9 +54,7 @@ export default function PostDetailPage() {
 
   const handleShare = useCallback(async () => {
     const url = window.location.href;
-
     shareMutation.mutate(post.id);
-
     try {
       if (navigator.share) {
         await navigator.share({ title: post.title, url });
@@ -72,220 +67,220 @@ export default function PostDetailPage() {
     }
   }, [post, shareMutation]);
 
-  const handleCommentSubmit = useCallback(
-    (e) => {
-      e.preventDefault();
-      if (!commentText.trim()) return;
+  const handleCommentSubmit = (e) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
 
-      commentMutation.mutate(
-        { id: post.id, text: commentText },
-        {
-          onSuccess: () => {
-            setCommentText("");
-            showToast("Comment posted");
-          },
-          onError: () => showToast("Failed to post comment"),
+    commentMutation.mutate(
+      { id: post.id, text: commentText },
+      {
+        onSuccess: () => {
+          setCommentText("");
+          showToast("Comment posted");
         },
-      );
-    },
-    [commentText, post, commentMutation],
-  );
-
-  const handleDeleteComment = useCallback(
-    (commentId) => {
-      if (!post) return;
-
-      deleteCommentMutation.mutate(
-        { postId: post.id, commentId },
-        {
-          onSuccess: (_, variables) =>
-            showToast("Comment deleted", "Undo", () => {
-              console.log("Undo comment:", variables.commentId);
-            }),
-          onError: () => showToast("Failed to delete comment"),
-        },
-      );
-    },
-    [deleteCommentMutation, post],
-  );
-
-  /* ----------------------- derived data ----------------------- */
-  const renderedMarkdown = useMemo(
-    () => <MarkdownRenderer content={post?.markdown || ""} />,
-    [post?.markdown],
-  );
-
-  /* ----------------------- loading & error ----------------------- */
-  if (isLoading) {
-    return (
-      <div className="max-w-4xl mx-auto py-10 space-y-6 animate-pulse">
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-96 w-full rounded-xl" />
-      </div>
+        onError: () => showToast("Failed to post comment"),
+      },
     );
-  }
+  };
 
-  if (isError) {
-    return (
-      <Card className="max-w-2xl mx-auto p-10 text-center">
-        <p className="text-lg font-bold text-red-500">Failed to load post</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          {error?.message || "Something went wrong"}
-        </p>
-        <Link to="/dashboard">
-          <Button variant="ghost" className="mt-6">
-            Go back
-          </Button>
-        </Link>
-      </Card>
-    );
-  }
+  /* --- Loading/Error States --- */
+  if (isLoading) return <LoadingSkeleton />;
+  if (isError || !post) return <ErrorState message={error?.message} />;
 
-  if (!post) return null;
-
-  /* ----------------------- UI ----------------------- */
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 space-y-10">
-      {/* Back & Edit */}
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+    <article className="max-w-3xl mx-auto py-12 px-6">
+      {/* Header Navigation */}
+      <nav className="flex items-center justify-between mb-12">
         <Link to="/dashboard">
-          <Button variant="ghost" className="gap-2 text-xs font-bold uppercase">
-            <ArrowLeft className="h-4 w-4" /> Back to Feed
+          <Button
+            variant="ghost"
+            size="sm"
+            className="group text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            Back to feed
           </Button>
         </Link>
-
         {user?.id === post.author_id && (
           <Link to={`/posts/${post.slug}/edit`}>
-            <Button variant="outline" className="gap-2">
-              <Edit2 className="h-4 w-4" /> Edit Insight
+            <Button variant="outline" size="sm">
+              Edit Post
             </Button>
           </Link>
         )}
-      </div>
+      </nav>
 
-      {/* Post Card */}
-      <Card className="p-6 sm:p-10 shadow-md transition-all rounded-xl space-y-6">
-        {/* Tags */}
+      {/* Article Header */}
+      <header className="space-y-6 mb-10">
         <div className="flex flex-wrap gap-2">
           {post.tags?.map((tag) => (
-            <Badge key={tag} variant="secondary">
-              #{tag}
+            <Badge
+              key={tag}
+              variant="secondary"
+              className="rounded-full px-3 font-medium"
+            >
+              {tag}
             </Badge>
           ))}
         </div>
 
-        {/* Title */}
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight break-words">
+        <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tight leading-tight">
           {post.title}
         </h1>
 
-        {/* Author + Actions */}
-        <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-4 border-y py-4">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center">
-              <User className="h-6 w-6" />
-            </div>
-            <div className="flex flex-col">
+        <div className="flex items-center justify-between pt-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border shadow-sm">
+              <AvatarImage
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author_username}`}
+              />
+              <AvatarFallback>{post.author_name?.[0] || "U"}</AvatarFallback>
+            </Avatar>
+            <div>
               <Link
                 to={`/profile/${post.author_username}`}
-                className="font-bold hover:underline"
+                className="text-sm font-semibold hover:underline block"
               >
                 {post.author_name}
               </Link>
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 {formatDistanceToNow(new Date(post.created_at), {
                   addSuffix: true,
                 })}
-              </span>
+              </div>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1">
             <Button
+              variant="ghost"
+              size="sm"
               onClick={handleLike}
-              disabled={likeMutation.isPending || unlikeMutation.isPending}
-              variant={post.is_liked ? "default" : "outline"}
-              aria-label="Like post"
-              className="flex items-center gap-1"
+              className={post.is_liked ? "text-red-500 hover:text-red-600" : ""}
             >
-              <Heart className={post.is_liked ? "fill-current" : ""} />{" "}
-              {post.likes_count}
+              <Heart
+                className={`h-5 w-5 mr-1.5 ${post.is_liked ? "fill-current" : ""}`}
+              />
+              <span className="text-sm font-medium">{post.likes_count}</span>
             </Button>
-
-            <Button variant="outline" onClick={handleShare} aria-label="Share">
-              <Share2 />
+            <Button variant="ghost" size="icon" onClick={handleShare}>
+              <Share2 className="h-5 w-5" />
             </Button>
           </div>
         </div>
+      </header>
 
-        {/* Content */}
-        <div className="prose max-w-full">{renderedMarkdown}</div>
-      </Card>
+      <Separator className="mb-10" />
 
-      {/* Comments */}
-      <section className="space-y-8 pt-10 border-t">
-        <div className="flex items-center gap-3">
-          <MessageSquare />
-          <h3 className="text-xl font-bold">
-            Comments ({post.comments_count || 0})
+      {/* Main Content */}
+      <main className="prose prose-slate prose-lg max-w-none dark:prose-invert prose-headings:font-serif">
+        <MarkdownRenderer content={post.markdown || ""} />
+      </main>
+
+      {/* Comments Section */}
+      <footer className="mt-16 pt-8 border-t">
+        <div className="flex items-center gap-2 mb-8">
+          <MessageSquare className="h-5 w-5" />
+          <h3 className="text-lg font-bold">
+            Responses ({post.comments_count || 0})
           </h3>
         </div>
 
-        {/* Add comment */}
         {user ? (
-          <form onSubmit={handleCommentSubmit} className="relative">
-            <textarea
+          <form onSubmit={handleCommentSubmit} className="group relative mb-12">
+            <Textarea
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Write your thoughts…"
-              className="w-full min-h-[100px] rounded-xl p-4 border resize-none"
+              placeholder="What are your thoughts?"
+              className="min-h-[120px] pr-12 focus-visible:ring-1 resize-none bg-muted/30 border-none shadow-inner"
             />
             <Button
               type="submit"
               size="icon"
-              disabled={commentMutation.isPending}
-              className="absolute bottom-4 right-4"
+              className="absolute bottom-3 right-3 rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity"
+              disabled={commentMutation.isPending || !commentText.trim()}
             >
-              <Send />
+              <Send className="h-4 w-4" />
             </Button>
           </form>
         ) : (
-          <Card className="p-6 text-center">
-            <Link to="/auth/login" className="text-primary font-bold">
-              Login to comment
-            </Link>
-          </Card>
+          <div className="bg-muted/50 rounded-lg p-6 text-center mb-12">
+            <p className="text-sm text-muted-foreground">
+              <Link
+                to="/auth/login"
+                className="text-primary font-bold hover:underline"
+              >
+                Log in
+              </Link>{" "}
+              to join the conversation.
+            </p>
+          </div>
         )}
 
-        {/* Comments list */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {post.comments?.map((comment) => (
-            <div key={comment.id} className="flex flex-col sm:flex-row gap-4">
-              <div className="h-10 w-10 bg-muted rounded-xl flex items-center justify-center">
-                <User className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <span className="font-bold text-sm">{comment.username}</span>
+            <div key={comment.id} className="group flex gap-4">
+              <Avatar className="h-9 w-9 border">
+                <AvatarFallback>{comment.username?.[0]}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-muted-foreground lowercase">
+                    @{comment.username}
+                  </span>
                   {user?.id === comment.user_id && (
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => handleDeleteComment(comment.id)}
-                      aria-label="Delete comment"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() =>
+                        deleteCommentMutation.mutate({
+                          postId: post.id,
+                          commentId: comment.id,
+                        })
+                      }
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">{comment.text}</p>
+                <p className="text-base leading-relaxed">{comment.text}</p>
               </div>
             </div>
           ))}
         </div>
-      </section>
+      </footer>
+    </article>
+  );
+}
+
+/* --- Helpers --- */
+
+function LoadingSkeleton() {
+  return (
+    <div className="max-w-3xl mx-auto py-12 px-6 space-y-8 animate-pulse">
+      <Skeleton className="h-10 w-32" />
+      <Skeleton className="h-16 w-full" />
+      <div className="flex gap-4">
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <Skeleton className="h-12 w-32" />
+      </div>
+      <Skeleton className="h-64 w-full rounded-xl" />
+    </div>
+  );
+}
+
+function ErrorState({ message }) {
+  return (
+    <div className="max-w-md mx-auto my-20 text-center space-y-4">
+      <h2 className="text-2xl font-bold font-serif">Post not found</h2>
+      <p className="text-muted-foreground">
+        {message || "We couldn't load the insight you're looking for."}
+      </p>
+      <Link to="/dashboard">
+        <Button variant="outline">Return to Dashboard</Button>
+      </Link>
     </div>
   );
 }

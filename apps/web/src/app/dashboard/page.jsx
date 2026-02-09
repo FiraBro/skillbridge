@@ -13,8 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ActivityFeed from "./components/activity-feed";
+import { useNavigate } from "react-router-dom";
 
 export default function CommunityPage() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-[#F5F5F5] dark:bg-zinc-950 font-sans">
       {/* 1. Navbar - Clean & Flat */}
@@ -36,7 +38,10 @@ export default function CommunityPage() {
               </Link>
             </nav>
           </div>
-          <Button className="bg-[#108a00] hover:bg-[#0d7300] text-white rounded-md font-bold px-6">
+          <Button
+            onClick={() => navigate("/posts/create")}
+            className="bg-[#108a00] hover:bg-[#0d7300] text-white rounded-md font-bold px-6"
+          >
             Create Post
           </Button>
         </div>

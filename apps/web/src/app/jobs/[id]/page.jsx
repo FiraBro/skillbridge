@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import ApplyModal from "../components/apply-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
@@ -24,31 +23,12 @@ export default function JobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
 
   // Destructure data from the response structure you provided
   const { data: response, isLoading, isError } = useJobDetail(id);
-  const applyMutation = useApplyJob();
 
   // Extract the actual job object from the "data" property of the response
   const job = response?.data;
-
-  const handleConfirmApply = async (jobId, message) => {
-    try {
-      await applyMutation.mutateAsync({ id: jobId, data: { message } });
-      toast({
-        title: "Application Sent",
-        description: "Your proposal is now live.",
-      });
-      setIsApplyModalOpen(false);
-    } catch (error) {
-      toast({
-        title: "Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   if (isLoading) return <DetailSkeleton />;
   if (isError || !job) return <ErrorState navigate={navigate} />;
@@ -208,13 +188,6 @@ export default function JobDetail() {
           </div>
         </aside>
       </div>
-
-      <ApplyModal
-        job={job}
-        isOpen={isApplyModalOpen}
-        onClose={() => setIsApplyModalOpen(false)}
-        onConfirm={handleConfirmApply}
-      />
     </motion.div>
   );
 }

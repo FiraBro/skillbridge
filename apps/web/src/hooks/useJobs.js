@@ -46,7 +46,6 @@ export const useJobApplicants = (jobId) => {
     enabled: !!jobId,
   });
 };
-
 /* =========================
    Mutations
 ========================= */

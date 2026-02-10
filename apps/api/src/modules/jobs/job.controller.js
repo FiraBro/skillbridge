@@ -5,12 +5,15 @@ import ApiError from "../utils/apiError.js";
 
 /**
  * GET /api/jobs
- * Browse or search jobs
+ * Browse or search jobs with Pagination
  */
 export const browse = catchAsync(async (req, res, next) => {
+  // 1. Sanitize Pagination (Real companies never return unlimited data)
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+
   const filters = {
-    search: req.query.search,
-    // Ensure skills is handled as an array even if one or zero skills provided
+    search: req.query.search?.trim(),
     skills: req.query.skills
       ? Array.isArray(req.query.skills)
         ? req.query.skills
@@ -18,7 +21,7 @@ export const browse = catchAsync(async (req, res, next) => {
       : [],
   };
 
-  const jobs = await jobService.browseJobs(filters);
+  const jobs = await jobService.browseJobs(filters, limit, offset);
   return res.status(200).json(apiResponse.success(jobs));
 });
 
@@ -34,10 +37,12 @@ export const getRecommended = catchAsync(async (req, res, next) => {
 
 /**
  * POST /api/jobs
- * Create a new job post
+ * Create a new job post with Field Whitelisting
  */
 export const create = catchAsync(async (req, res, next) => {
   const clientId = req.user.id;
+
+  // Whitelist fields to prevent mass assignment security vulnerabilities
   const {
     title,
     description,
@@ -46,6 +51,10 @@ export const create = catchAsync(async (req, res, next) => {
     expectedOutcome,
     trialFriendly,
   } = req.body;
+
+  if (!title || !description) {
+    throw new ApiError(400, "Job title and description are required");
+  }
 
   const job = await jobService.createJob(clientId, {
     title,
@@ -68,6 +77,8 @@ export const create = catchAsync(async (req, res, next) => {
 export const getById = catchAsync(async (req, res, next) => {
   const jobId = req.params.id;
   const userId = req.user?.id;
+
+  // Note: jobService.getJobDetails must be defined in your service file
   const job = await jobService.getJobDetails(jobId, userId);
 
   if (!job) {
@@ -79,12 +90,15 @@ export const getById = catchAsync(async (req, res, next) => {
 
 /**
  * PATCH /api/jobs/:id/publish
- * Toggle the publish status of a job
  */
 export const togglePublish = catchAsync(async (req, res, next) => {
   const jobId = req.params.id;
   const clientId = req.user.id;
   const { isPublished } = req.body;
+
+  if (typeof isPublished !== "boolean") {
+    throw new ApiError(400, "isPublished must be a boolean value");
+  }
 
   const job = await jobService.toggleJobPublish(jobId, clientId, isPublished);
   return res
@@ -99,24 +113,29 @@ export const togglePublish = catchAsync(async (req, res, next) => {
 
 /**
  * POST /api/jobs/:id/apply
- * Apply to a job
  */
 export const apply = catchAsync(async (req, res, next) => {
   const jobId = req.params.id;
   const developerId = req.user.id;
-  const { message } = req.body;
+  const { message, milestones } = req.body; // Extract milestones from frontend
 
-  const application = await jobService.applyToJob(jobId, developerId, message);
+  // Validation
+  if (!milestones || !Array.isArray(milestones) || milestones.length === 0) {
+    throw new ApiError(400, "You must provide at least one milestone.");
+  }
+
+  const application = await jobService.applyToJob(jobId, developerId, {
+    message,
+    milestones,
+  });
+
   return res
     .status(201)
-    .json(
-      apiResponse.success(application, "Application submitted successfully"),
-    );
+    .json(apiResponse.success(application, "Proposal submitted successfully"));
 });
 
 /**
  * GET /api/jobs/:id/applicants
- * Get list of applicants for a job (company only)
  */
 export const getApplicants = catchAsync(async (req, res, next) => {
   const jobId = req.params.id;
@@ -128,20 +147,31 @@ export const getApplicants = catchAsync(async (req, res, next) => {
 
 /**
  * PATCH /api/jobs/applications/:applicationId
- * Update applicant status and private notes (formerly updateUplicant)
  */
 export const updateApplicationFeedback = catchAsync(async (req, res, next) => {
   const { applicationId } = req.params;
   const clientId = req.user.id;
   const { status, notes } = req.body;
 
+  // Real-world validation: Only allow specific statuses
+  const validStatuses = [
+    "shortlisted",
+    "rejected",
+    "interviewing",
+    "hired",
+    "pending",
+  ];
+  if (status && !validStatuses.includes(status)) {
+    throw new ApiError(
+      400,
+      `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+    );
+  }
+
   const updatedApplication = await jobService.updateApplicationFeedback(
     applicationId,
     clientId,
-    {
-      status,
-      notes,
-    },
+    { status, notes },
   );
 
   return res
@@ -156,7 +186,6 @@ export const updateApplicationFeedback = catchAsync(async (req, res, next) => {
 
 /**
  * GET /api/jobs/company/all
- * Get jobs for authenticated company including applicant counts
  */
 export const getCompanyJobs = catchAsync(async (req, res, next) => {
   const clientId = req.user.id;

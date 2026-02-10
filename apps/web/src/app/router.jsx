@@ -5,6 +5,7 @@ import AuthLayout from "@/components/layout/auth-layout";
 import AppLayout from "@/layouts/app.layout.jsx";
 import { ErrorBoundary } from "react-error-boundary";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import ProposalPage from "./developers/ProposalPage";
 
 // Lazy imports
 const Login = lazy(() => import("./auth/login"));
@@ -93,6 +94,7 @@ export const router = createBrowserRouter([
           { path: "/posts/:slug", element: <PostDetail /> },
           { path: "/posts/:slug/edit", element: <PostEdit /> },
           { path: "/notifications", element: <Notifications /> },
+          { path: "/jobs/:id/apply", element: <ProposalPage /> },
         ],
       },
 

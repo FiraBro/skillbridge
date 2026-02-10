@@ -87,50 +87,84 @@ export async function getRecommendedJobs(userId) {
 /**
  * Apply to a job with profile
  */
-export async function applyToJob(jobId, developerId, message) {
+export async function applyToJob(jobId, developerId, data) {
+  const { message, milestones } = data;
+
+  // 1. Validation: Ensure milestones exist and are valid
+  if (!milestones || !Array.isArray(milestones) || milestones.length === 0) {
+    throw new ApiError(
+      400,
+      "At least one milestone is required to submit a proposal",
+    );
+  }
+
+  // 2. Check if job is open
+  const { rows: jobCheck } = await query(
+    `SELECT status FROM jobs WHERE id = $1`,
+    [jobId],
+  );
+
+  if (!jobCheck[0]) throw new ApiError(404, "Job not found");
+  if (jobCheck[0].status !== "open")
+    throw new ApiError(400, "Job is no longer accepting applications");
+
+  // 3. PROFESSIONAL LOGIC: Recalculate total bid on the server
+  const totalBidAmount = milestones.reduce((sum, m) => {
+    const amount = parseFloat(m.amount);
+    if (isNaN(amount) || amount <= 0) {
+      throw new ApiError(
+        400,
+        "Each milestone must have a valid amount greater than 0",
+      );
+    }
+    return sum + amount;
+  }, 0);
+
+  // 4. Insert application with structured data
+  // Note: milestones is stored as JSONB for flexibility
   const { rows } = await query(
-    `
-    INSERT INTO job_applications (job_id, developer_id, message)
-    VALUES ($1, $2, $3)
+    `INSERT INTO job_applications (
+      job_id, 
+      developer_id, 
+      message, 
+      milestones, 
+      total_bid_amount
+    )
+    VALUES ($1, $2, $3, $4, $5)
     ON CONFLICT (job_id, developer_id) DO NOTHING
-    RETURNING *
-    `,
-    [jobId, developerId, message],
+    RETURNING *`,
+    [jobId, developerId, message, JSON.stringify(milestones), totalBidAmount],
   );
 
   if (rows.length === 0) {
-    throw new ApiError(400, "Already applied to this job");
+    throw new ApiError(409, "You have already applied to this job");
   }
 
-  const application = rows[0];
-
-  // Notify the job owner (client/company) via email queue
+  // 5. Background Notification (Email)
   try {
-    const { rows: clientRows } = await query(
-      `SELECT u.email as client_email, u.name as client_name, j.title as job_title
-       FROM jobs j JOIN users u ON u.id = j.client_id WHERE j.id = $1`,
-      [jobId],
+    const { rows: meta } = await query(
+      `SELECT u.email as client_email, u.name as client_name, j.title, dev.name as dev_name
+       FROM jobs j 
+       JOIN users u ON u.id = j.client_id 
+       JOIN users dev ON dev.id = $1
+       WHERE j.id = $2`,
+      [developerId, jobId],
     );
 
-    if (clientRows && clientRows[0] && clientRows[0].client_email) {
-      // Get applicant name
-      const { rows: devRows } = await query(
-        `SELECT name as dev_name FROM users WHERE id = $1`,
-        [developerId],
-      );
-
+    if (meta[0]?.client_email) {
       await emailQueue.add("send-job-application-notification", {
-        to: clientRows[0].client_email,
-        clientName: clientRows[0].client_name,
-        applicantName: devRows[0]?.dev_name || "A developer",
-        jobTitle: clientRows[0].job_title,
+        to: meta[0].client_email,
+        clientName: meta[0].client_name,
+        applicantName: meta[0].dev_name,
+        jobTitle: meta[0].title,
+        totalBid: totalBidAmount, // Now we can include the price in the notification!
       });
     }
   } catch (e) {
-    console.error("Failed to queue job application notification:", e.message);
+    console.error("Non-fatal email queue error:", e.message);
   }
 
-  return application;
+  return rows[0];
 }
 
 /**

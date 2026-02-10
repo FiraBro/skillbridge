@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,7 +10,6 @@ import {
   LogOut,
   LayoutDashboard,
   Search,
-  Command,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,12 +21,63 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-
+import { useJobs } from "@/hooks/useJobs";
+import { useDeveloperDiscovery } from "@/hooks/useDeveloper";
 export default function Navbar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  // Helper to get initials for avatar fallback
+  const [searchQuery, setSearchQuery] = useState("");
+  const trimmedQuery = searchQuery.trim();
+
+  /* =========================
+   DEVELOPERS SEARCH
+========================= */
+  // Pass an empty object {} instead of null if trimmedQuery is empty
+  const { developers, isLoading: devLoading } = useDeveloperDiscovery(
+    trimmedQuery ? { search: trimmedQuery } : {},
+  );
+
+  // Note: In the previous step we updated the hook to return 'developers' directly
+  // so you don't need 'devResponse?.data?.data' anymore.
+
+  // const developers = devResponse?.data?.data || [];
+
+  /* =========================
+     JOBS SEARCH
+  ========================= */
+  const { data: jobsData, isLoading: jobLoading } = useJobs(
+    trimmedQuery ? { search: trimmedQuery } : null,
+  );
+
+  const jobs = jobsData?.data || [];
+
+  /* =========================
+     SEARCH SUBMIT
+  ========================= */
+  const handleSearchSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (!trimmedQuery) return;
+      navigate(`/search?q=${encodeURIComponent(trimmedQuery)}`);
+    },
+    [trimmedQuery, navigate],
+  );
+
+  /* =========================
+     CMD / CTRL + K
+  ========================= */
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        document.getElementById("navbar-search")?.focus();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const initials = user?.name
     ? user.name
         .split(" ")
@@ -39,129 +90,146 @@ export default function Navbar() {
     <>
       <nav className="fixed top-0 left-0 w-full z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center px-4 md:px-6">
-          {/* Brand Logo */}
-          <Link
-            to="/"
-            className="flex items-center space-x-2 transition-all hover:opacity-90 group"
-          >
-            {/* The Text */}
-            <span className="text-lg font-bold tracking-tight text-slate-900">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2">
+            <span className="text-lg font-bold tracking-tight">
               SKILL<span className="text-emerald-600">BRIDGE</span>
             </span>
           </Link>
 
-          {/* Search - Center Balanced */}
-          <div className="hidden md:flex flex-1 items-center justify-center px-8">
-            <div className="relative w-full max-w-md group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          {/* Search */}
+          <div className="hidden md:flex flex-1 justify-center px-8">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+
               <Input
-                placeholder="Search talent or opportunities..."
-                className="pl-10 pr-12 bg-muted/30 border-muted-foreground/20 hover:bg-muted/50 focus-visible:ring-1 focus-visible:ring-primary h-9 w-full transition-all"
-                onKeyDown={(e) =>
-                  e.key === "Enter" &&
-                  navigate(`/search?q=${e.currentTarget.value}`)
-                }
+                id="navbar-search"
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search developers or jobs..."
+                className="pl-10 h-9"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearchSubmit(e);
+                }}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1 text-[10px] font-mono text-muted-foreground border rounded px-1.5 bg-background">
-                <Command className="h-2.5 w-2.5" /> K
-              </div>
+
+              {trimmedQuery && (
+                <div className="absolute top-full mt-2 w-full rounded-md border bg-background shadow-lg z-50 max-h-96 overflow-auto">
+                  {(devLoading || jobLoading) && (
+                    <p className="p-3 text-sm text-muted-foreground">
+                      Searching...
+                    </p>
+                  )}
+
+                  {/* Developers */}
+                  {developers.length > 0 && (
+                    <>
+                      <p className="px-3 pt-2 text-xs font-semibold text-muted-foreground">
+                        Developers
+                      </p>
+                      {developers.slice(0, 3).map((dev) => (
+                        <button
+                          key={dev._id}
+                          onClick={() => navigate(`/profile/${dev.username}`)}
+                          className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
+                        >
+                          {dev.name} • ⭐ {dev.reputation_score ?? 0}
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Jobs */}
+                  {jobs.length > 0 && (
+                    <>
+                      <p className="px-3 pt-2 text-xs font-semibold text-muted-foreground">
+                        Jobs
+                      </p>
+                      {jobs.slice(0, 3).map((job) => (
+                        <button
+                          key={job.id}
+                          onClick={() => navigate(`/jobs/${job.id}`)}
+                          className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
+                        >
+                          {job.title}
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {!devLoading &&
+                    !jobLoading &&
+                    developers.length === 0 &&
+                    jobs.length === 0 && (
+                      <p className="p-3 text-sm text-muted-foreground">
+                        No results found
+                      </p>
+                    )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right Actions */}
+          {/* Right */}
           <div className="flex items-center space-x-3">
             <Link to="/jobs" className="hidden lg:block">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="font-medium text-muted-foreground hover:text-foreground"
-              >
+              <Button variant="ghost" size="sm">
                 <Briefcase className="mr-2 h-4 w-4" />
                 Opportunities
               </Button>
             </Link>
 
-            <div className="h-4 w-[1px] bg-border hidden lg:block mx-1" />
-
-            {/* Notifications */}
             <Button
               variant="ghost"
               size="icon"
-              className="relative h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted"
               onClick={() => navigate("/notifications")}
             >
               <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary border-2 border-background" />
             </Button>
 
-            {/* User Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-9 w-9 rounded-full p-0 overflow-hidden ring-offset-background transition-all hover:ring-2 hover:ring-primary/20"
-                >
-                  <Avatar className="h-9 w-9 border">
-                    <AvatarImage src={user?.avatar} alt={user?.name} />
-                    <AvatarFallback className="bg-muted text-xs font-semibold">
-                      {initials}
-                    </AvatarFallback>
+                <Button variant="ghost" className="h-9 w-9 rounded-full p-0">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={user?.avatar} />
+                    <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent
-                className="w-60 mt-2"
-                align="end"
-                sideOffset={5}
-              >
-                <DropdownMenuLabel className="p-3">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-semibold text-foreground leading-none">
-                      {user?.name || "Member Account"}
-                    </p>
-                    <p className="text-xs font-medium leading-none text-muted-foreground">
-                      {user?.email || "user@skillbridge.io"}
-                    </p>
-                  </div>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuLabel>
+                  <p className="text-sm font-semibold">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </DropdownMenuLabel>
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem
-                  className="py-2 cursor-pointer"
-                  onClick={() => navigate("/dashboard")}
-                >
-                  <LayoutDashboard className="mr-3 h-4 w-4 text-muted-foreground" />
-                  <span>Dashboard</span>
+                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
-                  className="py-2 cursor-pointer"
                   onClick={() => navigate(`/profile/${user?.username || "me"}`)}
                 >
-                  <User className="mr-3 h-4 w-4 text-muted-foreground" />
-                  <span>Public Profile</span>
+                  <User className="mr-2 h-4 w-4" />
+                  Public Profile
                 </DropdownMenuItem>
 
                 {user?.role === "admin" && (
-                  <DropdownMenuItem
-                    className="py-2 cursor-pointer"
-                    onClick={() => navigate("/admin")}
-                  >
-                    <Shield className="mr-3 h-4 w-4 text-muted-foreground" />
-                    <span>Admin Panel</span>
+                  <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    <Shield className="mr-2 h-4 w-4" />
+                    Admin Panel
                   </DropdownMenuItem>
                 )}
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem
-                  className="py-2 text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
-                  onClick={logout}
-                >
-                  <LogOut className="mr-3 h-4 w-4" />
-                  <span>Sign out</span>
+                <DropdownMenuItem className="text-destructive" onClick={logout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -169,7 +237,6 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Spacer to prevent content overlap */}
       <div className="h-16" />
     </>
   );

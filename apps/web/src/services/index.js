@@ -44,7 +44,7 @@ export const profileService = {
     apiClient.get(`/reputation/${userId}/history`),
 
   // Developer discovery API (role-based)
-  discover: (params) => apiClient.get("/developers/discover", { params }),
+  discover: (params) => apiClient.get("/company/discovery", { params }),
 };
 
 /* =========================
@@ -83,43 +83,26 @@ export const authService = {
   register: (data) => apiClient.post("/auth/register", data),
 };
 
-/* =========================
-   REACT QUERY HOOK: DEVELOPER DISCOVERY
-========================= */
-export const useDeveloperDiscovery = ({ search, minReputation }) => {
-  const queryClient = useQueryClient();
+export const companyService = {
+  // --- Profile Management ---
+  getProfile: () => apiClient.get("/company/profile"),
 
-  const developersQuery = useQuery({
-    queryKey: ["developers", search, minReputation],
-    queryFn: () =>
-      profileService
-        .discover({ search, minReputation })
-        .then((res) => res.data), // extract data from axios response
-    keepPreviousData: true,
-  });
+  updateProfile: (profileData) =>
+    apiClient.post("/company/profile", profileData),
 
-  const bookmarksQuery = useQuery({
-    queryKey: ["bookmarks"],
-    queryFn: () =>
-      apiClient
-        .get("/companies/bookmarks")
-        .then((res) => res.data.map((b) => b.id)),
-  });
+  // --- Talent Discovery ---
+  // Matches the router.get("/discovery")
+  discoverTalent: (params) => apiClient.get("/company/discovery", { params }),
 
-  const bookmarkMutation = useMutation({
-    mutationFn: ({ devId, isBookmarked }) =>
-      apiClient[isBookmarked ? "delete" : "post"](
-        `/companies/bookmarks/${devId}`,
-      ),
-    onSuccess: () => {
-      queryClient.invalidateQueries(["bookmarks"]);
-    },
-  });
+  // --- Bookmarks ---
+  getBookmarks: () => apiClient.get("/company/bookmarks"),
 
-  return {
-    developers: developersQuery.data || [],
-    bookmarks: bookmarksQuery.data || [],
-    isLoading: developersQuery.isLoading,
-    toggleBookmark: bookmarkMutation.mutate,
-  };
+  bookmarkDeveloper: (devId) => apiClient.post(`/company/bookmarks/${devId}`),
+
+  removeBookmark: (devId) => apiClient.delete(`/company/bookmarks/${devId}`),
+
+  // --- Applicant Management ---
+  // Handles the hiring workflow (Status updates/Feedback)
+  updateApplicationStatus: (appId, feedbackData) =>
+    apiClient.patch(`/company/applications/${appId}/feedback`, feedbackData),
 };

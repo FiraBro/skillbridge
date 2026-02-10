@@ -18,6 +18,7 @@ export default function ApplicantReview() {
   const [selectedApp, setSelectedApp] = useState(null);
 
   const { data: applicantsResponse, isLoading } = useJobApplicants(jobId);
+  console.log("Applicants Data for Job ID", jobId, ":", applicantsResponse);
   const applicants = applicantsResponse?.data || [];
   const updateMutation = useUpdateApplication();
 

@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   Heart,
@@ -83,13 +83,13 @@ export default function PostDetailPage() {
     );
   };
 
-  /* --- Loading/Error States --- */
+  /* --- UI States --- */
   if (isLoading) return <LoadingSkeleton />;
   if (isError || !post) return <ErrorState message={error?.message} />;
 
   return (
     <article className="max-w-3xl mx-auto py-12 px-6">
-      {/* Header Navigation */}
+      {/* Navigation */}
       <nav className="flex items-center justify-between mb-12">
         <Link to="/dashboard">
           <Button
@@ -104,85 +104,86 @@ export default function PostDetailPage() {
         {user?.id === post.author_id && (
           <Link to={`/posts/${post.slug}/edit`}>
             <Button variant="outline" size="sm">
-              Edit Post
+              Edit Insight
             </Button>
           </Link>
         )}
       </nav>
 
-      {/* Article Header */}
-      <header className="space-y-6 mb-10">
-        <div className="flex flex-wrap gap-2">
-          {post.tags?.map((tag) => (
-            <Badge
-              key={tag}
-              variant="secondary"
-              className="rounded-full px-3 font-medium"
-            >
-              {tag}
-            </Badge>
-          ))}
-        </div>
-
-        <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tight leading-tight">
-          {post.title}
-        </h1>
-
-        <div className="flex items-center justify-between pt-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border shadow-sm">
-              <AvatarImage
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author_username}`}
-              />
-              <AvatarFallback>{post.author_name?.[0] || "U"}</AvatarFallback>
-            </Avatar>
-            <div>
-              <Link
-                to={`/profile/${post.author_username}`}
-                className="text-sm font-semibold hover:underline block"
+      {/* Main Post Content Area */}
+      <div className="group/post -mx-4 px-4 py-8 rounded-2xl transition-all duration-300 hover:bg-slate-50/60 dark:hover:bg-white/5">
+        <header className="space-y-6 mb-10">
+          <div className="flex flex-wrap gap-2">
+            {post.tags?.map((tag) => (
+              <Badge
+                key={tag}
+                variant="secondary"
+                className="rounded-full px-3 font-medium border-none bg-slate-100 text-slate-600"
               >
-                {post.author_name}
-              </Link>
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {formatDistanceToNow(new Date(post.created_at), {
-                  addSuffix: true,
-                })}
+                {tag}
+              </Badge>
+            ))}
+          </div>
+
+          <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tight leading-tight text-slate-900 dark:text-slate-50">
+            {post.title}
+          </h1>
+
+          <div className="flex items-center justify-between pt-4">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border shadow-sm">
+                <AvatarImage
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author_username}`}
+                />
+                <AvatarFallback>{post.author_name?.[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <Link
+                  to={`/profile/${post.author_username}`}
+                  className="text-sm font-semibold hover:underline block"
+                >
+                  {post.author_name}
+                </Link>
+                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatDistanceToNow(new Date(post.created_at), {
+                    addSuffix: true,
+                  })}
+                </div>
               </div>
             </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLike}
+                className={`transition-colors ${post.is_liked ? "text-red-500 hover:text-red-600 hover:bg-red-50" : ""}`}
+              >
+                <Heart
+                  className={`h-5 w-5 mr-1.5 ${post.is_liked ? "fill-current" : ""}`}
+                />
+                <span className="text-sm font-medium">{post.likes_count}</span>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleShare}>
+                <Share2 className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
+        </header>
 
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLike}
-              className={post.is_liked ? "text-red-500 hover:text-red-600" : ""}
-            >
-              <Heart
-                className={`h-5 w-5 mr-1.5 ${post.is_liked ? "fill-current" : ""}`}
-              />
-              <span className="text-sm font-medium">{post.likes_count}</span>
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleShare}>
-              <Share2 className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
+        <main className="prose prose-slate prose-lg max-w-none dark:prose-invert prose-headings:font-serif">
+          <MarkdownRenderer content={post.markdown || ""} />
+        </main>
+      </div>
 
-      <Separator className="mb-10" />
+      <Separator className="my-12" />
 
-      {/* Main Content */}
-      <main className="prose prose-slate prose-lg max-w-none dark:prose-invert prose-headings:font-serif">
-        <MarkdownRenderer content={post.markdown || ""} />
-      </main>
-
-      {/* Comments Section */}
-      <footer className="mt-16 pt-8 border-t">
-        <div className="flex items-center gap-2 mb-8">
-          <MessageSquare className="h-5 w-5" />
-          <h3 className="text-lg font-bold">
+      {/* Responses Section */}
+      <footer className="space-y-8">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5 text-slate-400" />
+          <h3 className="text-xl font-bold tracking-tight">
             Responses ({post.comments_count || 0})
           </h3>
         </div>
@@ -193,47 +194,53 @@ export default function PostDetailPage() {
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="What are your thoughts?"
-              className="min-h-[120px] pr-12 focus-visible:ring-1 resize-none bg-muted/30 border-none shadow-inner"
+              className="min-h-[120px] p-4 rounded-xl border-none bg-slate-100/50 dark:bg-white/5 focus-visible:ring-1 focus-visible:bg-white dark:focus-visible:bg-slate-900 transition-all resize-none shadow-inner"
             />
             <Button
               type="submit"
               size="icon"
-              className="absolute bottom-3 right-3 rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity"
+              className="absolute bottom-3 right-3 rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-all transform group-focus-within:translate-y-0 translate-y-2"
               disabled={commentMutation.isPending || !commentText.trim()}
             >
               <Send className="h-4 w-4" />
             </Button>
           </form>
         ) : (
-          <div className="bg-muted/50 rounded-lg p-6 text-center mb-12">
+          <div className="bg-slate-50 dark:bg-white/5 rounded-xl p-8 text-center border border-dashed border-slate-200">
             <p className="text-sm text-muted-foreground">
               <Link
                 to="/auth/login"
                 className="text-primary font-bold hover:underline"
               >
-                Log in
+                Sign in
               </Link>{" "}
-              to join the conversation.
+              to share your thoughts on this insight.
             </p>
           </div>
         )}
 
-        <div className="space-y-8">
+        {/* Comment List */}
+        <div className="space-y-2">
           {post.comments?.map((comment) => (
-            <div key={comment.id} className="group flex gap-4">
-              <Avatar className="h-9 w-9 border">
-                <AvatarFallback>{comment.username?.[0]}</AvatarFallback>
+            <div
+              key={comment.id}
+              className="group flex gap-4 p-5 rounded-2xl transition-all duration-200 hover:bg-slate-50 dark:hover:bg-white/5 border border-transparent hover:border-slate-100 dark:hover:border-white/10"
+            >
+              <Avatar className="h-9 w-9 border shadow-sm shrink-0">
+                <AvatarFallback className="bg-slate-200 text-slate-600 text-xs">
+                  {comment.username?.[0]}
+                </AvatarFallback>
               </Avatar>
-              <div className="flex-1 space-y-1">
+              <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-muted-foreground lowercase">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     @{comment.username}
                   </span>
                   {user?.id === comment.user_id && (
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 hover:bg-red-50"
                       onClick={() =>
                         deleteCommentMutation.mutate({
                           postId: post.id,
@@ -241,11 +248,13 @@ export default function PostDetailPage() {
                         })
                       }
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
-                <p className="text-base leading-relaxed">{comment.text}</p>
+                <p className="text-base text-slate-700 dark:text-slate-300 leading-relaxed break-words">
+                  {comment.text}
+                </p>
               </div>
             </div>
           ))}
@@ -259,27 +268,35 @@ export default function PostDetailPage() {
 
 function LoadingSkeleton() {
   return (
-    <div className="max-w-3xl mx-auto py-12 px-6 space-y-8 animate-pulse">
-      <Skeleton className="h-10 w-32" />
-      <Skeleton className="h-16 w-full" />
+    <div className="max-w-3xl mx-auto py-12 px-6 space-y-8">
+      <Skeleton className="h-10 w-32 rounded-lg" />
+      <div className="space-y-4">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-3/4" />
+      </div>
       <div className="flex gap-4">
         <Skeleton className="h-12 w-12 rounded-full" />
         <Skeleton className="h-12 w-32" />
       </div>
-      <Skeleton className="h-64 w-full rounded-xl" />
+      <Skeleton className="h-80 w-full rounded-2xl" />
     </div>
   );
 }
 
 function ErrorState({ message }) {
   return (
-    <div className="max-w-md mx-auto my-20 text-center space-y-4">
-      <h2 className="text-2xl font-bold font-serif">Post not found</h2>
-      <p className="text-muted-foreground">
-        {message || "We couldn't load the insight you're looking for."}
-      </p>
+    <div className="max-w-md mx-auto my-32 text-center space-y-6">
+      <div className="space-y-2">
+        <h2 className="text-3xl font-serif font-bold">Post unavailable</h2>
+        <p className="text-muted-foreground">
+          {message ||
+            "The insight you are looking for has been moved or deleted."}
+        </p>
+      </div>
       <Link to="/dashboard">
-        <Button variant="outline">Return to Dashboard</Button>
+        <Button variant="outline" className="rounded-full px-8">
+          Return to feed
+        </Button>
       </Link>
     </div>
   );

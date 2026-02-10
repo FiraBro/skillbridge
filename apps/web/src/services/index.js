@@ -17,10 +17,15 @@ export const jobService = {
     if (!id) throw new Error("Job ID is required");
     return apiClient.post(`/jobs/${id}/apply`, data);
   },
-  getCompanyJobs: () => apiClient.get("/jobs/company"),
+  getCompanyJobs: () => {
+    const res = apiClient.get("/jobs/company");
+    console.log("res:", res);
+    return res;
+  },
   getApplicants: (jobId) => {
     if (!jobId) throw new Error("Job ID is required");
-    return apiClient.get(`/jobs/${jobId}/applicants`);
+    const res = apiClient.get(`/jobs/${jobId}/applicants`);
+    return res;
   },
   updateApplicationStatus: (applicationId, data) => {
     if (!applicationId) throw new Error("Application ID is required");

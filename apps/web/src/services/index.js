@@ -91,18 +91,24 @@ export const companyService = {
     apiClient.post("/company/profile", profileData),
 
   // --- Talent Discovery ---
-  // Matches the router.get("/discovery")
-  discoverTalent: (params) => apiClient.get("/companies/discovery", { params }),
+  // ✅ Use async/await to ensure the promise resolves correctly before returning
+  discoverTalent: async (params) => {
+    const response = await apiClient.get("/companies/discovery", { params });
+    // This logs the actual data object returned by your backend apiResponse.success
+    console.log("Discovery API response data:", response.data);
+    return response.data;
+  },
 
   // --- Bookmarks ---
   getBookmarks: () => apiClient.get("/company/bookmarks"),
 
+  // Ensure these match your router: router.post("/bookmarks/:devId")
+  // Since your router is mounted at /company, the path /company/bookmarks/:devId is correct.
   bookmarkDeveloper: (devId) => apiClient.post(`/company/bookmarks/${devId}`),
 
   removeBookmark: (devId) => apiClient.delete(`/company/bookmarks/${devId}`),
 
   // --- Applicant Management ---
-  // Handles the hiring workflow (Status updates/Feedback)
   updateApplicationStatus: (appId, feedbackData) =>
     apiClient.patch(`/company/applications/${appId}/feedback`, feedbackData),
 };

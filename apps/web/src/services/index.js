@@ -92,7 +92,7 @@ export const companyService = {
 
   // --- Talent Discovery ---
   // Matches the router.get("/discovery")
-  discoverTalent: (params) => apiClient.get("/company/discovery", { params }),
+  discoverTalent: (params) => apiClient.get("/companies/discovery", { params }),
 
   // --- Bookmarks ---
   getBookmarks: () => apiClient.get("/company/bookmarks"),

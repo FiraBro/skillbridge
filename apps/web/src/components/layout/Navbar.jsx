@@ -10,6 +10,7 @@ import {
   LogOut,
   LayoutDashboard,
   Search,
+  Frown,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,49 +24,48 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useJobs } from "@/hooks/useJobs";
 import { useDeveloperDiscovery } from "@/hooks/useDeveloper";
+
 export default function Navbar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-
   const [searchQuery, setSearchQuery] = useState("");
   const trimmedQuery = searchQuery.trim();
 
-  /* =========================
-   DEVELOPERS SEARCH
-========================= */
-  // Pass an empty object {} instead of null if trimmedQuery is empty
-  const { developers, isLoading: devLoading } = useDeveloperDiscovery(
-    trimmedQuery ? { search: trimmedQuery } : {},
-  );
-
-  // Note: In the previous step we updated the hook to return 'developers' directly
-  // so you don't need 'devResponse?.data?.data' anymore.
-
-  // const developers = devResponse?.data?.data || [];
+  // Helper to navigate and reset search
+  const handleSelection = (path) => {
+    navigate(path);
+    setSearchQuery("");
+  };
 
   /* =========================
-     JOBS SEARCH
+     SEARCH LOGIC
   ========================= */
+  // Only search if user types 2+ characters to prevent showing everything by default
+  const isQueryValid = trimmedQuery.length >= 2;
+
+  const { developers: devResponse, isLoading: devLoading } =
+    useDeveloperDiscovery(
+      isQueryValid ? { search: trimmedQuery } : { search: "" },
+    );
+
   const { data: jobsData, isLoading: jobLoading } = useJobs(
-    trimmedQuery ? { search: trimmedQuery } : null,
+    isQueryValid ? { search: trimmedQuery } : null,
   );
 
+  const developers = devResponse?.data || [];
   const jobs = jobsData?.data || [];
 
-  /* =========================
-     SEARCH SUBMIT
-  ========================= */
   const handleSearchSubmit = useCallback(
     (e) => {
       e.preventDefault();
       if (!trimmedQuery) return;
-      navigate(`/search?q=${encodeURIComponent(trimmedQuery)}`);
+      handleSelection(`/search?q=${encodeURIComponent(trimmedQuery)}`);
     },
-    [trimmedQuery, navigate],
+    [trimmedQuery],
   );
 
   /* =========================
-     CMD / CTRL + K
+     CMD + K FOCUS
   ========================= */
   useEffect(() => {
     const handler = (e) => {
@@ -90,18 +90,19 @@ export default function Navbar() {
     <>
       <nav className="fixed top-0 left-0 w-full z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center px-4 md:px-6">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link
+            to="/"
+            onClick={() => setSearchQuery("")}
+            className="flex items-center space-x-2"
+          >
             <span className="text-lg font-bold tracking-tight">
               SKILL<span className="text-emerald-600">BRIDGE</span>
             </span>
           </Link>
 
-          {/* Search */}
           <div className="hidden md:flex flex-1 justify-center px-8">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-
               <Input
                 id="navbar-search"
                 type="search"
@@ -114,72 +115,80 @@ export default function Navbar() {
                 }}
               />
 
-              {trimmedQuery && (
-                <div className="absolute top-full mt-2 w-full rounded-md border bg-background shadow-lg z-50 max-h-96 overflow-auto">
+              {isQueryValid && (
+                <div className="absolute top-full mt-2 w-full rounded-md border bg-background shadow-lg z-50 max-h-96 overflow-auto py-2">
                   {(devLoading || jobLoading) && (
-                    <p className="p-3 text-sm text-muted-foreground">
+                    <p className="p-3 text-sm text-muted-foreground animate-pulse">
                       Searching...
                     </p>
                   )}
 
-                  {/* Developers */}
-                  {developers.length > 0 && (
-                    <>
-                      <p className="px-3 pt-2 text-xs font-semibold text-muted-foreground">
+                  {/* Developers Results */}
+                  {!devLoading && developers.length > 0 && (
+                    <div className="pb-2">
+                      <p className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase">
                         Developers
                       </p>
-                      {developers.slice(0, 3).map((dev) => (
+                      {developers.slice(0, 5).map((dev) => (
                         <button
-                          key={dev._id}
-                          onClick={() => navigate(`/profile/${dev.username}`)}
-                          className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
+                          key={dev.id}
+                          onClick={() =>
+                            handleSelection(
+                              `/profile/${dev.username || dev.id}`,
+                            )
+                          }
+                          className="w-full text-left px-4 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-sm flex justify-between"
                         >
-                          {dev.name} • ⭐ {dev.reputation_score ?? 0}
+                          <span>{dev.name}</span>
+                          <span className="text-emerald-600 text-xs">
+                            @{dev.username}
+                          </span>
                         </button>
                       ))}
-                    </>
+                    </div>
                   )}
 
-                  {/* Jobs */}
-                  {jobs.length > 0 && (
-                    <>
-                      <p className="px-3 pt-2 text-xs font-semibold text-muted-foreground">
+                  {/* Jobs Results */}
+                  {!jobLoading && jobs.length > 0 && (
+                    <div className="border-t pt-2">
+                      <p className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase">
                         Jobs
                       </p>
-                      {jobs.slice(0, 3).map((job) => (
+                      {jobs.slice(0, 5).map((job) => (
                         <button
                           key={job.id}
-                          onClick={() => navigate(`/jobs/${job.id}`)}
-                          className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
+                          onClick={() => handleSelection(`/jobs/${job.id}`)}
+                          className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-sm"
                         >
                           {job.title}
                         </button>
                       ))}
-                    </>
+                    </div>
                   )}
 
+                  {/* Friendly Empty State */}
                   {!devLoading &&
                     !jobLoading &&
                     developers.length === 0 &&
                     jobs.length === 0 && (
-                      <p className="p-3 text-sm text-muted-foreground">
-                        No results found
-                      </p>
+                      <div className="p-4 text-center">
+                        <Frown className="h-6 w-6 mx-auto mb-2 text-muted-foreground/50" />
+                        <p className="text-sm text-muted-foreground font-medium">
+                          No results for "{trimmedQuery}"
+                        </p>
+                      </div>
                     )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right */}
           <div className="flex items-center space-x-3">
-            <Link to="/jobs" className="hidden lg:block">
-              <Button variant="ghost" size="sm">
-                <Briefcase className="mr-2 h-4 w-4" />
-                Opportunities
+            <Link to="/jobs">
+              <Button variant="ghost" size="sm" className="hidden lg:flex">
+                <Briefcase className="mr-2 h-4 w-4" /> Opportunities
               </Button>
             </Link>
-
             <Button
               variant="ghost"
               size="icon"
@@ -187,56 +196,41 @@ export default function Navbar() {
             >
               <Bell className="h-5 w-5" />
             </Button>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-9 w-9 rounded-full p-0">
+                <Button
+                  variant="ghost"
+                  className="h-9 w-9 rounded-full p-0 border"
+                >
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={user?.avatar} />
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-
               <DropdownMenuContent align="end" className="w-60">
                 <DropdownMenuLabel>
                   <p className="text-sm font-semibold">{user?.name}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </DropdownMenuLabel>
-
                 <DropdownMenuSeparator />
-
                 <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Dashboard
+                  <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
                 </DropdownMenuItem>
-
                 <DropdownMenuItem
                   onClick={() => navigate(`/profile/${user?.username || "me"}`)}
                 >
-                  <User className="mr-2 h-4 w-4" />
-                  Public Profile
+                  <User className="mr-2 h-4 w-4" /> Public Profile
                 </DropdownMenuItem>
-
-                {user?.role === "admin" && (
-                  <DropdownMenuItem onClick={() => navigate("/admin")}>
-                    <Shield className="mr-2 h-4 w-4" />
-                    Admin Panel
-                  </DropdownMenuItem>
-                )}
-
                 <DropdownMenuSeparator />
-
                 <DropdownMenuItem className="text-destructive" onClick={logout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
+                  <LogOut className="mr-2 h-4 w-4" /> Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       </nav>
-
       <div className="h-16" />
     </>
   );

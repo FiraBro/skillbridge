@@ -37,14 +37,34 @@ export async function updateProfile(req, res, next) {
  * GET /api/companies/discovery
  * Discover top developers
  */
+// export async function discover(req, res, next) {
+//   try {
+//     const filters = {
+//       skills: req.query.skills ? req.query.skills.split(",") : [],
+//       minReputation: req.query.minReputation
+//         ? parseInt(req.query.minReputation)
+//         : 0,
+//       search: req.query.search,
+//     };
+
+//     const developers = await companyService.discoverDevelopers(filters);
+//     return res.status(200).json(apiResponse.success(developers));
+//   } catch (error) {
+//     next(error);
+//   }
+// }
+
 export async function discover(req, res, next) {
   try {
     const filters = {
+      // ✅ Handle both 'search' and 'q' from the frontend
+      search: req.query.search || req.query.q || "",
       skills: req.query.skills ? req.query.skills.split(",") : [],
       minReputation: req.query.minReputation
         ? parseInt(req.query.minReputation)
         : 0,
-      search: req.query.search,
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 9,
     };
 
     const developers = await companyService.discoverDevelopers(filters);
@@ -53,7 +73,6 @@ export async function discover(req, res, next) {
     next(error);
   }
 }
-
 /**
  * POST /api/companies/bookmarks/:devId
  * Bookmark a developer

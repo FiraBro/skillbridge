@@ -130,6 +130,96 @@ export async function getBookmarks(companyId) {
  * - Reputation filter
  * - Skill matching
  */
+// export async function discoverDevelopers(filters = {}) {
+//   const {
+//     search = "",
+//     minReputation = 0,
+//     skills = [],
+//     page = 1,
+//     limit = 9,
+//   } = filters;
+
+//   const offset = (page - 1) * limit;
+//   const params = [];
+
+//   let whereClause = `
+//     WHERE u.role = 'developer'
+//   `;
+
+//   if (minReputation) {
+//     params.push(minReputation);
+//     whereClause += ` AND p.reputation_score >= $${params.length}`;
+//   }
+
+//   if (search) {
+//     params.push(`%${search}%`);
+//     whereClause += `
+//       AND (
+//         u.name ILIKE $${params.length}
+//         OR p.bio ILIKE $${params.length}
+//       )
+//     `;
+//   }
+
+//   if (skills.length > 0) {
+//     params.push(skills);
+//     whereClause += `
+//       AND EXISTS (
+//         SELECT 1
+//         FROM profile_skills ps
+//         WHERE ps.profile_id = p.id
+//         AND ps.name = ANY($${params.length})
+//       )
+//     `;
+//   }
+
+//   // 🔢 Total count (for pagination)
+//   const countQuery = `
+//     SELECT COUNT(*)
+//     FROM profiles p
+//     JOIN users u ON u.id = p.user_id
+//     ${whereClause}
+//   `;
+
+//   const countResult = await query(countQuery, params);
+//   const total = Number(countResult.rows[0].count);
+//   const totalPages = Math.ceil(total / limit);
+
+//   // 📦 Paginated data
+//   params.push(limit, offset);
+
+//   const dataQuery = `
+//     SELECT
+//       u.id,
+//       u.name,
+//       u.avatar_url,
+//       u.role,
+//       p.id AS profile_id,
+//       p.reputation_score,
+//       p.bio,
+//       ARRAY(
+//         SELECT name
+//         FROM profile_skills
+//         WHERE profile_id = p.id
+//       ) AS skills
+//     FROM profiles p
+//     JOIN users u ON u.id = p.user_id
+//     ${whereClause}
+//     ORDER BY p.reputation_score DESC
+//     LIMIT $${params.length - 1}
+//     OFFSET $${params.length}
+//   `;
+
+//   const { rows } = await query(dataQuery, params);
+
+//   return {
+//     data: rows,
+//     page,
+//     total,
+//     totalPages,
+//   };
+// }
+
 export async function discoverDevelopers(filters = {}) {
   const {
     search = "",
@@ -156,6 +246,7 @@ export async function discoverDevelopers(filters = {}) {
     whereClause += `
       AND (
         u.name ILIKE $${params.length}
+        OR u.username ILIKE $${params.length} -- ✅ Added username to search
         OR p.bio ILIKE $${params.length}
       )
     `;
@@ -173,7 +264,7 @@ export async function discoverDevelopers(filters = {}) {
     `;
   }
 
-  // 🔢 Total count (for pagination)
+  // 🔢 Total count
   const countQuery = `
     SELECT COUNT(*) 
     FROM profiles p
@@ -183,15 +274,15 @@ export async function discoverDevelopers(filters = {}) {
 
   const countResult = await query(countQuery, params);
   const total = Number(countResult.rows[0].count);
-  const totalPages = Math.ceil(total / limit);
 
   // 📦 Paginated data
-  params.push(limit, offset);
+  const dataParams = [...params, limit, offset];
 
   const dataQuery = `
     SELECT
       u.id,
       u.name,
+      u.username,    -- ✅ Included username in results
       u.avatar_url,
       u.role,
       p.id AS profile_id,
@@ -206,16 +297,16 @@ export async function discoverDevelopers(filters = {}) {
     JOIN users u ON u.id = p.user_id
     ${whereClause}
     ORDER BY p.reputation_score DESC
-    LIMIT $${params.length - 1}
-    OFFSET $${params.length}
+    LIMIT $${dataParams.length - 1}
+    OFFSET $${dataParams.length}
   `;
 
-  const { rows } = await query(dataQuery, params);
+  const { rows } = await query(dataQuery, dataParams);
 
   return {
     data: rows,
     page,
     total,
-    totalPages,
+    totalPages: Math.ceil(total / limit),
   };
 }

@@ -54,7 +54,7 @@ export default function ProfilePage() {
     authorId: userId,
     limit: 10,
   });
-
+  console.log("post", posts);
   const { canShowGithub, canConnectGithub, isGithubConnected } =
     useGithubVisibility(profile, viewer);
 

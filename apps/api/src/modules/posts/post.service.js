@@ -46,24 +46,95 @@ export async function createPost(data, userId) {
   }
 }
 // ---------------------- POSTS ----------------------
-export async function listPosts({ page = 1, limit = 10, tag, userId }) {
-  const offset = (page - 1) * limit;
+// export async function listPosts({ page = 1, limit = 10, tag, userId }) {
+//   const offset = (page - 1) * limit;
 
+//   const values = [limit, offset];
+//   let userIdIndex = null;
+//   let tagIndex = null;
+
+//   let whereClauses = ["p.deleted_at IS NULL", "pr.deleted_at IS NULL"];
+
+//   if (tag) {
+//     tagIndex = values.length + 1;
+//     values.push(tag);
+//     whereClauses.push(`t.name=$${tagIndex}`);
+//   }
+
+//   if (userId) {
+//     userIdIndex = values.length + 1;
+//     values.push(userId);
+//   }
+
+//   const query = `
+//     SELECT
+//       p.id,
+//       p.author_id,
+//       u.name AS author_name,
+//       pr.username AS author_username,
+//       p.title,
+//       p.slug,
+//       p.markdown,
+//       p.sanitized_html,
+//       p.views,
+//       p.created_at,
+//       p.updated_at,
+//       p.deleted_at AS post_deleted_at,
+//       pr.deleted_at AS profile_deleted_at,
+//       COALESCE(
+//         json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL),
+//         '[]'
+//       ) AS tags,
+//       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
+//       (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comments_count,
+//       p.shares_count
+//       ${userId ? `, EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id=$${userIdIndex}) AS is_liked` : ""}
+//     FROM posts p
+//     LEFT JOIN users u ON u.id = p.author_id
+//     LEFT JOIN profiles pr ON pr.user_id = u.id
+//     LEFT JOIN post_tags pt ON pt.post_id = p.id
+//     LEFT JOIN tags t ON pt.tag_id = t.id
+//     ${whereClauses.length ? "WHERE " + whereClauses.join(" AND ") : ""}
+//     GROUP BY p.id, u.name, pr.username, pr.deleted_at
+//     ORDER BY p.created_at DESC
+//     LIMIT $1 OFFSET $2
+
+//   `;
+
+//   const { rows } = await pool.query(query, values);
+//   return rows;
+// }
+
+// Add authorId to the destructuring
+export async function listPosts({
+  page = 1,
+  limit = 10,
+  tag,
+  userId,
+  authorId,
+}) {
+  const offset = (page - 1) * limit;
   const values = [limit, offset];
-  let userIdIndex = null;
-  let tagIndex = null;
 
   let whereClauses = ["p.deleted_at IS NULL", "pr.deleted_at IS NULL"];
 
+  // 1. Existing Tag Filter
   if (tag) {
-    tagIndex = values.length + 1;
     values.push(tag);
-    whereClauses.push(`t.name=$${tagIndex}`);
+    whereClauses.push(`t.name=$${values.length}`);
   }
 
+  // 2. NEW: Author Filter (This fixes your profile page issue)
+  if (authorId) {
+    values.push(authorId);
+    whereClauses.push(`p.author_id=$${values.length}`);
+  }
+
+  // 3. User ID for 'is_liked' status
+  let userIdIndex = null;
   if (userId) {
-    userIdIndex = values.length + 1;
     values.push(userId);
+    userIdIndex = values.length;
   }
 
   const query = `
@@ -74,20 +145,14 @@ export async function listPosts({ page = 1, limit = 10, tag, userId }) {
       pr.username AS author_username,
       p.title,
       p.slug,
-      p.markdown,
-      p.sanitized_html,
-      p.views,
       p.created_at,
-      p.updated_at,
-      p.deleted_at AS post_deleted_at,
-      pr.deleted_at AS profile_deleted_at,
+      -- ... (keep your other fields)
       COALESCE(
         json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL),
         '[]'
       ) AS tags,
       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
-      (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comments_count,
-      p.shares_count
+      (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comments_count
       ${userId ? `, EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id=$${userIdIndex}) AS is_liked` : ""}
     FROM posts p
     LEFT JOIN users u ON u.id = p.author_id
@@ -98,7 +163,6 @@ export async function listPosts({ page = 1, limit = 10, tag, userId }) {
     GROUP BY p.id, u.name, pr.username, pr.deleted_at
     ORDER BY p.created_at DESC
     LIMIT $1 OFFSET $2
-
   `;
 
   const { rows } = await pool.query(query, values);

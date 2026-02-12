@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 export default function ActivityFeed() {
   const { data: posts, isLoading } = usePosts({ limit: 5 });
   const toggleLike = useToggleLikePost();
+  console.log("ActivityFeed posts:", posts);
 
   if (isLoading) {
     return (

@@ -15,6 +15,7 @@ export default function DeveloperListItem({
   isBookmarked,
   onBookmark,
 }) {
+  console.log("Rendering DeveloperListItem for:", developer);
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -70,7 +71,7 @@ export default function DeveloperListItem({
             {isBookmarked ? <FaBookmark /> : <FaRegBookmark />}
           </Button>
 
-          <Link to={`/profile/${developer.profile_id}`}>
+          <Link to={`/profile/${developer.username}`}>
             <Button variant="outline" size="sm" className="gap-2">
               View
               <FaArrowRight className="w-3 h-3" />

@@ -52,6 +52,7 @@ export const profileService = {
 ========================= */
 export const postService = {
   getAll: (params) => apiClient.get("/posts", { params }),
+
   getBySlug: (slug) => apiClient.get(`/posts/${slug}`),
   create: (data) => apiClient.post("/posts", data),
   like: (id) => apiClient.post(`/posts/${id}/like`),

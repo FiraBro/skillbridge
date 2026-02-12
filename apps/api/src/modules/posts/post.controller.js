@@ -30,20 +30,37 @@ export const create = catchAsync(async (req, res) => {
   res.status(201).json(post);
 });
 
+// export const list = catchAsync(async (req, res) => {
+//   const page = Number(req.query.page) || 1;
+//   const limit = Number(req.query.limit) || 10;
+//   const tag = req.query.tag;
+
+//   const posts = await postService.listPosts({
+//     page,
+//     limit,
+//     tag,
+//     userId: req.user?.id,
+//   });
+//   res.json(posts);
+// });
+
 export const list = catchAsync(async (req, res) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const tag = req.query.tag;
 
+  // ✅ Extract authorId from the request query
+  const authorId = req.query.authorId;
+
   const posts = await postService.listPosts({
     page,
     limit,
     tag,
-    userId: req.user?.id,
+    authorId, // 👈 Filter by who wrote it
+    userId: req.user?.id, // 👈 Used for checking if 'is_liked'
   });
   res.json(posts);
 });
-
 export const get = catchAsync(async (req, res) => {
   // 1. Fetch the post data from the service
   const post = await postService.getPost(req.params.slug, req.user?.id);

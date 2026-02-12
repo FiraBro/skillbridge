@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 export default function ReputationBreakdown({ total, breakdown }) {
+  console.log("Reputation Breakdown:", breakdown, "total", total);
   if (!breakdown) return null;
 
   const sources = [

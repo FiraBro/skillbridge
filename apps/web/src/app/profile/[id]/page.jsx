@@ -58,6 +58,8 @@ export default function ProfilePage() {
   const { canShowGithub, canConnectGithub, isGithubConnected } =
     useGithubVisibility(profile, viewer);
 
+  console.log("github Data:", canShowGithub);
+
   /* -------------------- CALLBACKS -------------------- */
   useEffect(() => {
     if (handledParams.current || !username) return;

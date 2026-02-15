@@ -141,6 +141,7 @@ const NotificationDropdown = forwardRef(
   ({ isOpen, onClose, onSeeAll }, ref) => {
     const dropdownRef = useClickOutside(onClose);
     const { data: notifications = [], isLoading } = useNotifications();
+    console.log("notification data:", data);
 
     return (
       <AnimatePresence>
@@ -203,6 +204,8 @@ export { NotificationItem, NotificationDropdown };
 
 export default function NotificationPage() {
   const { data: notifications = [], isLoading } = useNotifications();
+
+  console.log("data:", notifications);
 
   return (
     <div className="container max-w-2xl py-10">

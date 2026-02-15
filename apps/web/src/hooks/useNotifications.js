@@ -1,69 +1,68 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { notificationService } from "@/services/notification.service";
+import { notificationService } from "@/services";
+import { useAuth } from "@/hooks/useAuth"; // Ensure you have an auth hook
 
 export const useNotifications = () => {
+  const { user } = useAuth();
+
   return useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
       const response = await notificationService.getNotifications();
-      // Since apiClient returns response.data, and your controller
-      // returns apiResponse.success(notifications), the array is in .data
-      return response.data || [];
+
+      // DEBUG: See exactly what the hook is about to return to the UI
+      console.log("Hook receiving from service:", response.data);
+
+      if (response.data) {
+        return response.data;
+      }
+
+      // If your backend returns the array directly [...]
+      return Array.isArray(response.data) ? response.data : [];
     },
     staleTime: 30000,
-    // Note: 'cacheTime' is now 'gcTime' in TanStack Query v5
     gcTime: 60000,
-    onError: (error) => {
-      toast.error(error.message || "Failed to load notifications");
-    },
+    enabled: !!user,
   });
 };
 
 export const useContactMutation = () => {
   const queryClient = useQueryClient();
 
-  // Unified mutation for sending and responding
   const mutation = useMutation({
     mutationFn: async ({ action, id, payload }) => {
-      if (action === "send") {
+      if (action === "send")
         return await notificationService.sendRequest(payload);
-      }
-      if (action === "respond") {
+      if (action === "respond")
         return await notificationService.respondToRequest(id, payload);
-      }
       throw new Error("Invalid action");
     },
-    onSuccess: (response, variables) => {
-      // Refresh the feed instantly
-      queryClient.invalidateQueries(["notifications"]);
-
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
       if (variables.action === "send") {
         toast.success("Contact request sent!");
       } else {
-        const status = variables.payload.status;
-        toast.info(`Request ${status}`);
+        toast.info(`Request ${variables.payload.status}`);
       }
     },
     onError: (error) => {
-      // Uses the error message from your api.client.js interceptor
-      toast.error(error.message || "Action failed");
+      const msg =
+        error.response?.data?.message || error.message || "Action failed";
+      toast.error(msg);
     },
   });
 
   return {
     sendRequest: (receiverId, message) =>
-      mutation.mutate({
-        action: "send",
-        payload: { receiverId, message },
-      }),
+      mutation.mutate({ action: "send", payload: { receiverId, message } }),
     respondToRequest: (requestId, status) =>
       mutation.mutate({
         action: "respond",
         id: requestId,
         payload: { status },
       }),
-    isLoading: mutation.isLoading,
+    isPending: mutation.isPending, // v5: renamed from isLoading
     isError: mutation.isError,
   };
 };

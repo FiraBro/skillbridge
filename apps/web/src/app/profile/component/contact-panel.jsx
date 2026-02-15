@@ -3,54 +3,34 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { FaPaperPlane, FaUserCheck, FaEnvelope } from "react-icons/fa";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "react-toastify"; // Using toastify to match your hooks
+import { useContactMutation } from "@/hooks/useNotifications";
 
 export default function ContactPanel({ userId, userName, isOwnProfile }) {
   const [message, setMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
   const [hasSent, setHasSent] = useState(false);
-  const { toast } = useToast();
+
+  // Use the mutation hook instead of manual fetch
+  const { sendRequest, isPending } = useContactMutation();
 
   if (isOwnProfile) return null;
 
   const handleSendRequest = async () => {
     if (!message.trim()) {
-      toast({
-        title: "Message required",
-        description:
-          "Please include a short message with your contact request.",
-        variant: "destructive",
-      });
+      toast.error("Please include a short message.");
       return;
     }
 
-    setIsSending(true);
-    try {
-      const res = await fetch("/api/notifications/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ receiverId: userId, message }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
+    // This uses the apiClient (Axios) which automatically includes your Auth Token
+    sendRequest(userId, message, {
+      onSuccess: () => {
         setHasSent(true);
-        toast({
-          title: "Request Sent",
-          description: `Your contact request has been sent to ${userName}.`,
-        });
-      } else {
-        toast({
-          title: "Failed to send",
-          description: data.message || "Something went wrong.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Contact request failed:", error);
-    } finally {
-      setIsSending(false);
-    }
+      },
+      onError: (err) => {
+        // If it's a 400, it might be a "Request already sent" error from your SQL 'ON CONFLICT'
+        toast.error(err.response?.data?.message || "Failed to send request");
+      },
+    });
   };
 
   if (hasSent) {
@@ -59,8 +39,7 @@ export default function ContactPanel({ userId, userName, isOwnProfile }) {
         <FaUserCheck className="mx-auto text-3xl text-primary animate-bounce" />
         <h3 className="font-bold">Request Pending</h3>
         <p className="text-xs text-muted-foreground">
-          You've sent a contact request to {userName}. You'll be notified via
-          email if they accept.
+          You've sent a contact request to {userName}.
         </p>
       </Card>
     );
@@ -75,13 +54,13 @@ export default function ContactPanel({ userId, userName, isOwnProfile }) {
         </div>
 
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Send a professional contact request to {userName}. This will share
-          your profile and start a lightweight connection without the hassle of
-          a chat system.
+          Send a professional contact request to {userName}.
         </p>
 
         <Textarea
-          placeholder="Hi! I saw your work on SkillBridge and would love to discuss..."
+          id="contact-message" // Added ID to fix browser warning
+          name="message" // Added Name to fix browser warning
+          placeholder="Hi! I saw your work on SkillBridge..."
           className="bg-background/50 text-sm h-24 resize-none"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -89,11 +68,11 @@ export default function ContactPanel({ userId, userName, isOwnProfile }) {
 
         <Button
           className="w-full gap-2"
-          disabled={isSending}
+          disabled={isPending}
           onClick={handleSendRequest}
         >
           <FaPaperPlane className="w-3 h-3" />
-          {isSending ? "Sending..." : "Send Contact Request"}
+          {isPending ? "Sending..." : "Send Contact Request"}
         </Button>
       </div>
     </Card>

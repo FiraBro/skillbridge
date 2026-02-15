@@ -1,27 +1,20 @@
 import React, { forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Eye,
-  UserPlus,
-  Check,
-  X,
-  Bell,
-  Clock,
-  CheckCircle,
-  CircleDot,
-} from "lucide-react";
+import { Eye, UserPlus, Bell, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useNotifications, useContactMutation } from "@/hooks/useNotifications"; // Updated hook name
+import { useNotifications, useContactMutation } from "@/hooks/useNotifications";
 import { useClickOutside } from "@/hooks/useClickOutside";
 
+/**
+ * Individual Notification Card logic
+ */
 const NotificationItem = ({ notification }) => {
-  const { respondToRequest, isLoading } = useContactMutation();
+  const { respondToRequest, isPending: isLoading } = useContactMutation();
 
   const handleAction = (status) => {
-    // Backend expects 'accepted' or 'ignored'
     respondToRequest(notification.id, status);
   };
 
@@ -31,6 +24,8 @@ const NotificationItem = ({ notification }) => {
         return <Eye className="h-5 w-5 text-blue-500" />;
       case "contact_request":
         return <UserPlus className="h-5 w-5 text-green-500" />;
+      case "request_accepted":
+        return <CheckCircle className="h-5 w-5 text-emerald-500" />;
       default:
         return <Bell className="h-5 w-5 text-gray-400" />;
     }
@@ -71,9 +66,11 @@ const NotificationItem = ({ notification }) => {
             <p className="text-sm font-semibold truncate">
               {notification.actor_name || "Someone"}
               <span className="font-normal text-muted-foreground ml-1">
-                {notification.type === "profile_view"
-                  ? "viewed your profile"
-                  : "wants to connect"}
+                {notification.type === "profile_view" && "viewed your profile"}
+                {notification.type === "contact_request" &&
+                  "sent a connection request"}
+                {notification.type === "request_accepted" &&
+                  "accepted your contact request"}
               </span>
             </p>
             {!notification.read && (
@@ -81,7 +78,7 @@ const NotificationItem = ({ notification }) => {
             )}
           </div>
 
-          {notification.message && (
+          {notification.message && notification.type !== "request_accepted" && (
             <p className="text-xs text-muted-foreground mt-1 bg-muted/50 p-2 rounded italic">
               "{notification.message}"
             </p>
@@ -121,7 +118,7 @@ const NotificationItem = ({ notification }) => {
                     variant="outline"
                     className={`text-[10px] capitalize ${
                       notification.status === "accepted"
-                        ? "text-green-600 border-green-200"
+                        ? "text-green-600 border-green-200 bg-green-50"
                         : "text-muted-foreground"
                     }`}
                   >
@@ -137,11 +134,13 @@ const NotificationItem = ({ notification }) => {
   );
 };
 
+/**
+ * Dropdown Menu used in Navbar
+ */
 const NotificationDropdown = forwardRef(
   ({ isOpen, onClose, onSeeAll }, ref) => {
     const dropdownRef = useClickOutside(onClose);
     const { data: notifications = [], isLoading } = useNotifications();
-    console.log("notification data:", data);
 
     return (
       <AnimatePresence>
@@ -168,8 +167,8 @@ const NotificationDropdown = forwardRef(
               <CardContent className="p-0">
                 <div className="max-h-[400px] overflow-y-auto p-2 space-y-2">
                   {isLoading ? (
-                    <div className="py-10 text-center text-sm text-muted-foreground">
-                      Loading...
+                    <div className="py-10 text-center text-sm text-muted-foreground animate-pulse">
+                      Loading notifications...
                     </div>
                   ) : notifications.length === 0 ? (
                     <div className="py-10 text-center text-sm text-muted-foreground">
@@ -184,7 +183,7 @@ const NotificationDropdown = forwardRef(
                 <Separator />
                 <Button
                   variant="ghost"
-                  className="w-full rounded-none text-xs text-primary"
+                  className="w-full rounded-none text-xs text-primary font-bold"
                   onClick={onSeeAll}
                 >
                   View All Activity
@@ -200,12 +199,11 @@ const NotificationDropdown = forwardRef(
 
 NotificationDropdown.displayName = "NotificationDropdown";
 
-export { NotificationItem, NotificationDropdown };
-
+/**
+ * Full Notification Page View
+ */
 export default function NotificationPage() {
   const { data: notifications = [], isLoading } = useNotifications();
-
-  console.log("data:", notifications);
 
   return (
     <div className="container max-w-2xl py-10">
@@ -215,14 +213,21 @@ export default function NotificationPage() {
             Activity
           </h1>
           <p className="text-muted-foreground text-sm font-medium">
-            Profile views and connection requests.
+            Stay updated on profile views and connection requests.
           </p>
         </div>
       </div>
 
       <div className="space-y-4">
         {isLoading ? (
-          <p>Loading your feed...</p>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-24 w-full bg-muted animate-pulse rounded-lg"
+              />
+            ))}
+          </div>
         ) : notifications.length === 0 ? (
           <Card className="p-10 text-center border-dashed">
             <p className="text-muted-foreground">No recent activity found.</p>
@@ -238,3 +243,5 @@ export default function NotificationPage() {
     </div>
   );
 }
+
+export { NotificationItem, NotificationDropdown };

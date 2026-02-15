@@ -48,14 +48,11 @@ export default function Navbar() {
       isQueryValid ? { search: trimmedQuery } : { search: "" },
     );
 
-  console.log("deve:", devResponse);
-
   const { data: jobsData, isLoading: jobLoading } = useJobs(
     isQueryValid ? { search: trimmedQuery } : null,
   );
 
   const developers = devResponse || [];
-  console.log("Developer search results:", developers);
   const jobs = jobsData?.data || [];
 
   const handleSearchSubmit = useCallback(

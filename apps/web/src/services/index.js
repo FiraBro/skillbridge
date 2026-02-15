@@ -69,7 +69,17 @@ export const postService = {
    NOTIFICATIONS
 ========================= */
 export const notificationService = {
-  getNotifications: () => apiClient.get("/notifications"),
+  getNotifications: async () => {
+    try {
+      const res = await apiClient.get("/notifications");
+      // This matches your console log: { success: true, data: [] }
+      console.log("✅ notification service check:", res);
+      return res;
+    } catch (err) {
+      console.error("❌ notification service error:", err);
+      throw err;
+    }
+  },
   sendRequest: (data) => apiClient.post("/notifications/contact", data),
   respondToRequest: (id, data) =>
     apiClient.patch(`/notifications/contact/${id}`, data),

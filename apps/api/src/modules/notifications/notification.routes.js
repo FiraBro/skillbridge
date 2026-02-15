@@ -1,8 +1,9 @@
 import { Router } from "express";
 import * as notificationController from "./notification.controller.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-
+router.use(requireAuth);
 // Get all notifications
 router.get("/", notificationController.getNotifications);
 

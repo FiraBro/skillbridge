@@ -45,12 +45,6 @@ export default function Sidebar() {
       path: profilePath,
       group: "career",
     },
-    {
-      icon: Settings,
-      label: "Settings",
-      path: "/company/settings",
-      group: "other",
-    },
   ];
 
   const isActive = (path) =>

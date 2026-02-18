@@ -93,7 +93,7 @@ export default function CreatePostPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans text-zinc-900 overflow-x-hidden">
       {/* --- RESPONSIVE HEADER --- */}
-      <header className="h-14 px-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm z-50">
+      <header className="h-14 px-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm z-40">
         <div className="flex items-center gap-2 md:gap-4">
           <Link
             to="/"

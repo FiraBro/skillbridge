@@ -1,28 +1,36 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Eye, Users } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useQuery } from '@tanstack/react-query';
-import { notificationService } from '@/services/notification.service';
+import React from "react";
+import { motion } from "framer-motion";
+import { Eye, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { notificationService } from "@/services/notification.service";
 
 const SocialProofBadge = ({ userId }) => {
-  const { data: notifications = [], isLoading, isError } = useQuery({
-    queryKey: ['notifications'],
+  const {
+    data: notifications = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["notifications"],
     queryFn: notificationService.getNotifications,
     staleTime: 60000, // 1 minute
     cacheTime: 120000, // 2 minutes
   });
 
   // Filter for profile views only
-  const profileViews = notifications.filter(notification => notification.type === 'profile_view');
+  const profileViews = notifications.filter(
+    (notification) => notification.type === "profile_view",
+  );
 
   if (isLoading || isError || !profileViews || profileViews.length <= 0) {
     return null;
   }
 
   // Extract unique viewers and their names from the profile view notifications
-  const uniqueViewers = [...new Set(profileViews.map(view => view.actor_name || view.actorName))];
+  const uniqueViewers = [
+    ...new Set(profileViews.map((view) => view.actor_name || view.actorName)),
+  ];
   const viewCount = uniqueViewers.length;
 
   if (viewCount <= 0) return null;
@@ -44,7 +52,8 @@ const SocialProofBadge = ({ userId }) => {
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-blue-500" />
             <span className="font-medium">
-              {viewCount} {viewCount === 1 ? 'Company' : 'Companies'} viewed your profile
+              {viewCount} {viewCount === 1 ? "Company" : "Companies"} viewed
+              your profile
             </span>
           </div>
           {uniqueViewers.length > 0 && (

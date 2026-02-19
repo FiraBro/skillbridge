@@ -171,94 +171,83 @@ export async function listPosts({
   tag,
   userId,
   authorId,
+  sortBy = "latest", // Defaults to latest
 }) {
   const offset = (page - 1) * limit;
   const values = [limit, offset];
-
   const whereClauses = ["p.deleted_at IS NULL", "pr.deleted_at IS NULL"];
 
-  /* =========================
-     Filters
-  ========================= */
-
-  // Tag filter
+  // 1. FILTERS
   if (tag) {
     values.push(tag);
     whereClauses.push(`t.name = $${values.length}`);
   }
 
-  // Author filter (profile page)
   if (authorId) {
     values.push(authorId);
     whereClauses.push(`p.author_id = $${values.length}`);
   }
 
-  /* =========================
-     Personalization
-  ========================= */
   let userIdIndex = null;
   if (userId) {
     values.push(userId);
     userIdIndex = values.length;
   }
 
+  // 2. DYNAMIC SORTING LOGIC (Fixed for PostgreSQL)
+  let orderByClause = "p.created_at DESC"; // Default: Latest
+
+  if (sortBy === "top") {
+    // We use the actual subqueries in ORDER BY because aliases aren't available yet
+    orderByClause = `(
+      (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) * 5 + 
+      (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) * 10 + 
+      p.views
+    ) DESC`;
+  } else if (sortBy === "relevant") {
+    if (userId) {
+      // Personalization: Boost posts matching user interests
+      orderByClause = `(
+        CASE WHEN EXISTS (
+          SELECT 1 FROM post_tags pt2 
+          JOIN user_interests ui ON ui.tag_id = pt2.tag_id 
+          WHERE pt2.post_id = p.id AND ui.user_id = $${userIdIndex}
+        ) THEN 1 ELSE 0 END
+      ) DESC, p.created_at DESC`;
+    } else {
+      // For guests, "Relevant" is simply Trending (Views + Date)
+      orderByClause = "p.views DESC, p.created_at DESC";
+    }
+  }
+
+  // 3. THE FINAL QUERY
   const query = `
     SELECT
       p.id,
       p.author_id,
       u.name AS author_name,
       pr.username AS author_username,
-
-      -- Content
       p.title,
       p.slug,
       p.markdown,
       p.sanitized_html,
       p.cover_image,
-
-      -- Metrics
       p.views,
       p.shares_count,
-
-      -- Dates
       p.created_at,
       p.updated_at,
-
-      -- Soft delete visibility
-      p.deleted_at AS post_deleted_at,
-      pr.deleted_at AS profile_deleted_at,
-
-      -- Tags
+      
+      -- Tags Aggregation
       COALESCE(
-        json_agg(DISTINCT t.name)
-        FILTER (WHERE t.name IS NOT NULL),
+        json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), 
         '[]'
       ) AS tags,
-
-      -- Counts
-      (SELECT COUNT(*)
-       FROM post_likes pl
-       WHERE pl.post_id = p.id
-      ) AS likes_count,
-
-      (SELECT COUNT(*)
-       FROM post_comments c
-       WHERE c.post_id = p.id
-         AND c.deleted_at IS NULL
-      ) AS comments_count
-
-      ${
-        userId
-          ? `
-      , EXISTS(
-          SELECT 1
-          FROM post_likes pl
-          WHERE pl.post_id = p.id
-            AND pl.user_id = $${userIdIndex}
-        ) AS is_liked
-      `
-          : ""
-      }
+      
+      -- Engagement Counts
+      (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
+      (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comments_count
+      
+      ${userId ? `, EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdIndex}) AS is_liked` : ""}
 
     FROM posts p
     LEFT JOIN users u ON u.id = p.author_id
@@ -268,13 +257,11 @@ export async function listPosts({
 
     ${whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : ""}
 
-    GROUP BY
-      p.id,
-      u.name,
-      pr.username,
-      pr.deleted_at
-
-    ORDER BY p.created_at DESC
+    GROUP BY p.id, u.name, pr.username, pr.deleted_at
+    
+    -- Use the dynamic sorting variable here
+    ORDER BY ${orderByClause}
+    
     LIMIT $1 OFFSET $2
   `;
 

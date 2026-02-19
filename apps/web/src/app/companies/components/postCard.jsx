@@ -1,14 +1,19 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
-import { MessageSquare, Clock, ArrowRight, Heart } from "lucide-react";
+import { MessageSquare, Clock, ArrowRight, Heart, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useToggleLikePost } from "@/hooks/usePosts";
 
-export default function PostCard({ post, index = 0 }) {
+export default function PostCard({
+  post,
+  index = 0,
+  canDelete = false,
+  onDelete,
+}) {
   const toggleLike = useToggleLikePost();
 
   return (
@@ -17,9 +22,20 @@ export default function PostCard({ post, index = 0 }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
     >
-      <Card className="p-4 hover:shadow-md transition-all rounded-xl border border-border/50 bg-card group/card">
+      <Card className="relative p-4 hover:shadow-md transition-all rounded-xl border border-border/50 bg-card group/card">
+        {/* DELETE BUTTON */}
+        {canDelete && (
+          <button
+            onClick={onDelete}
+            className="absolute top-3 right-3 text-muted-foreground hover:text-red-500 transition-colors"
+            title="Delete post"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+
         <div className="flex gap-4">
-          {/* LEFT — Avatar Section (Narrower & Tighter) */}
+          {/* LEFT — Avatar Section */}
           <div className="shrink-0 flex flex-col items-center">
             <Link to={`/profile/${post.author_username}`}>
               <Avatar className="h-10 w-10 border border-border/50">
@@ -33,7 +49,7 @@ export default function PostCard({ post, index = 0 }) {
 
           {/* RIGHT — Content Section */}
           <div className="flex-1 min-w-0">
-            {/* Author Meta — Now placed above title for better flow */}
+            {/* Author Meta */}
             <div className="flex items-center gap-2 mb-1">
               <Link
                 to={`/profile/${post.author_username}`}

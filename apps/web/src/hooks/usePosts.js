@@ -200,3 +200,13 @@ export const useSharePost = () => {
     mutationFn: (id) => postService.share(id),
   });
 };
+
+export const useDeletePost = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => postService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
+};

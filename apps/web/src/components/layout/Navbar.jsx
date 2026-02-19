@@ -180,7 +180,7 @@ export default function Navbar() {
               />
             </div>
 
-            <DropdownMenu>
+            {/* <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -208,6 +208,49 @@ export default function Navbar() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" /> Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu> */}
+
+            {/* Change the DropdownMenu root to be non-modal to prevent scrollbar hiding */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-9 w-9 rounded-full p-0 border focus-visible:ring-0 focus-visible:ring-offset-0"
+                >
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={user?.avatar} />
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+
+              {/* Add a slight slide-up animation and ensure it doesn't shift layout */}
+              <DropdownMenuContent
+                align="end"
+                className="w-60 mt-1"
+                onCloseAutoFocus={(e) => e.preventDefault()} // Prevents page jumping back to trigger
+              >
+                <DropdownMenuLabel>
+                  <p className="text-sm font-semibold">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                  <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate(`/profile/${user?.username || "me"}`)}
+                >
+                  <User className="mr-2 h-4 w-4" /> Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={logout}
+                  className="text-destructive font-medium"
+                >
                   <LogOut className="mr-2 h-4 w-4" /> Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>

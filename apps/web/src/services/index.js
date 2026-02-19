@@ -55,7 +55,11 @@ export const postService = {
 
   getBySlug: (slug) => apiClient.get(`/posts/${slug}`),
   create: (data) => apiClient.post("/posts", data),
-  like: (id) => apiClient.post(`/posts/${id}/like`),
+  like: (id) => {
+    const res = apiClient.post(`/posts/${id}/like`);
+    console.log("res:", res);
+    return res;
+  },
   unlike: (id) => apiClient.delete(`/posts/${id}/like`),
   addComment: (id, text) => apiClient.post(`/posts/${id}/comments`, { text }),
   getComments: (id) => apiClient.get(`/posts/${id}/comments`),
@@ -63,6 +67,7 @@ export const postService = {
     apiClient.delete(`/posts/${postId}/comments/${commentId}`),
   update: (id, data) => apiClient.patch(`/posts/${id}`, data),
   share: (id) => apiClient.post(`/posts/${id}/share`),
+  delete: (id) => apiClient.delete(`/posts/${id}`),
 };
 
 /* =========================

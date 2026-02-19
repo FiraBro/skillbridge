@@ -8,7 +8,7 @@ import {
   useReputation,
   useReputationHistory,
 } from "@/hooks/useProfiles";
-import { usePosts } from "@/hooks/usePosts";
+import { usePosts, useDeletePost } from "@/hooks/usePosts";
 import { initiateGithubAuth } from "@/lib/api";
 
 // Components
@@ -28,7 +28,14 @@ import useGithubVisibility from "@/hooks/useGithubVisibility";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, Award, Zap, History, FileText } from "lucide-react";
+import {
+  ShieldCheck,
+  Award,
+  Zap,
+  History,
+  FileText,
+  Trash2,
+} from "lucide-react";
 
 export default function ProfilePage() {
   const { username } = useParams();
@@ -46,7 +53,6 @@ export default function ProfilePage() {
 
   const userId = profile?.user_id;
 
-  // These hooks now correctly return the flat data object from your service
   const { data: reputation } = useReputation(userId);
   const { data: history } = useReputationHistory(userId);
 
@@ -54,13 +60,26 @@ export default function ProfilePage() {
     authorId: userId,
     limit: 10,
   });
-  console.log("post", posts);
+
+  const deletePost = useDeletePost();
   const { canShowGithub, canConnectGithub, isGithubConnected } =
     useGithubVisibility(profile, viewer);
 
-  console.log("github Data:", canShowGithub);
-
   /* -------------------- CALLBACKS -------------------- */
+  const handleDeletePost = (postId) => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+
+    deletePost.mutate(postId, {
+      onSuccess: () => {
+        toast.success("Post deleted successfully!");
+        queryClient.invalidateQueries({ queryKey: ["posts"] });
+      },
+      onError: () => {
+        toast.error("Failed to delete post. Try again.");
+      },
+    });
+  };
+
   useEffect(() => {
     if (handledParams.current || !username) return;
 
@@ -89,7 +108,6 @@ export default function ProfilePage() {
           name: profile.full_name,
           username: profile.username,
         }}
-        // FIXED: Accessing total directly from the object
         reputation={reputation?.total ?? profile.reputation_score}
       />
 
@@ -126,18 +144,14 @@ export default function ProfilePage() {
 
             {/* OVERVIEW TAB */}
             <TabsContent value="overview" className="space-y-8 outline-none">
-              {/* Reputation & Skills are visible if basic visibility is granted */}
               {canShowGithub && (
                 <>
                   <ReputationBreakdown
-                    // FIXED: Accessing total and breakdown directly
                     total={reputation?.total ?? profile.reputation_score}
                     breakdown={reputation?.breakdown}
                   />
-
                   <SkillsCloud skills={profile.skills ?? []} />
 
-                  {/* GitHub Connection CTA */}
                   {canConnectGithub && !isGithubConnected && (
                     <button
                       onClick={initiateGithubAuth}
@@ -147,7 +161,6 @@ export default function ProfilePage() {
                     </button>
                   )}
 
-                  {/* Live GitHub Stats */}
                   {isGithubConnected && (
                     <div className="space-y-6">
                       <GitHubStats
@@ -176,7 +189,13 @@ export default function ProfilePage() {
                 ))
               ) : posts.length > 0 ? (
                 posts.map((post, idx) => (
-                  <PostCard key={post.id} post={post} index={idx} />
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    index={idx}
+                    canDelete={viewer?.id === post.author_id}
+                    onDelete={() => handleDeletePost(post.id)}
+                  />
                 ))
               ) : (
                 <div className="text-center py-20 bg-muted/10 rounded-3xl border-2 border-dashed">
@@ -191,7 +210,6 @@ export default function ProfilePage() {
             {/* HISTORY & ENDORSEMENTS */}
             {canShowGithub && (
               <TabsContent value="history">
-                {/* FIXED: Passing history array directly from object */}
                 <ReputationHistory events={history ?? []} />
               </TabsContent>
             )}

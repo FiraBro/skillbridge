@@ -18,7 +18,6 @@ const Dashboard = lazy(() => import("./dashboard/page.jsx"));
 
 const CompanyDashboard = lazy(() => import("./companies/dashboard/page.jsx"));
 const TalentDiscovery = lazy(() => import("./companies/discovery/page.jsx"));
-const CompanyProfile = lazy(() => import("./companies/profile/page.jsx"));
 const CreateJob = lazy(() => import("./jobs/create/page.jsx"));
 const ApplicantReview = lazy(() => import("./companies/applicants/page.jsx"));
 
@@ -104,7 +103,6 @@ export const router = createBrowserRouter([
         children: [
           { path: "/company-dashboard", element: <CompanyDashboard /> },
           { path: "/discovery", element: <TalentDiscovery /> },
-          { path: "/company/settings", element: <CompanyProfile /> },
           { path: "/jobs/create", element: <CreateJob /> },
           { path: "/applicants/:jobId", element: <ApplicantReview /> },
         ],

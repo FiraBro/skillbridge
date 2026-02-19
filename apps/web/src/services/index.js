@@ -1,6 +1,5 @@
 // src/api/index.js
 import apiClient from "./api.client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 /* =========================
    JOBS
@@ -54,7 +53,13 @@ export const postService = {
   getAll: (params) => apiClient.get("/posts", { params }),
 
   getBySlug: (slug) => apiClient.get(`/posts/${slug}`),
-  create: (data) => apiClient.post("/posts", data),
+  create: (formData) =>
+    apiClient.post("/posts", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }),
+
   like: (id) => {
     const res = apiClient.post(`/posts/${id}/like`);
     console.log("res:", res);

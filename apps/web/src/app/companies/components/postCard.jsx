@@ -15,6 +15,7 @@ export default function PostCard({
   onDelete,
 }) {
   const toggleLike = useToggleLikePost();
+  console.log("post:", post);
 
   return (
     <motion.div

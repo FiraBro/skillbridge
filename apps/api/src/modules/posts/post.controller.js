@@ -4,9 +4,8 @@ import ApiError from "../utils/apiError.js";
 import catchAsync from "../utils/catchAsync.js";
 import { trackView } from "./post.view.js";
 
-// ---------------------- POSTS ----------------------
 export const create = catchAsync(async (req, res) => {
-  // 1. Manually parse tags if they arrive as a string (from FormData)
+  // 1. Parse tags if sent as string
   if (typeof req.body.tags === "string") {
     try {
       req.body.tags = JSON.parse(req.body.tags);
@@ -15,34 +14,23 @@ export const create = catchAsync(async (req, res) => {
     }
   }
 
-  // 2. Validate data with Zod
-  const data = createPostSchema.parse(req.body);
+  // 2. Validate request body (without cover_image)
+  const data = createPostSchema.parse({
+    ...req.body,
+    cover_image: undefined, // temporarily undefined for validation
+  });
 
-  // 3. Extract the image path from Multer (req.file)
-  const coverImage = req.file ? `/uploads/${req.file.filename}` : null;
+  // 3. Extract cover image path from Multer
+  const cover_image = req.file ? `/uploads/${req.file.filename}` : null;
 
-  // 4. Pass the image to the service
+  // 4. Create post
   const post = await postService.createPost(
-    { ...data, coverImage },
+    { ...data, cover_image }, // now add cover_image as string
     req.user.id,
   );
 
   res.status(201).json(post);
 });
-
-// export const list = catchAsync(async (req, res) => {
-//   const page = Number(req.query.page) || 1;
-//   const limit = Number(req.query.limit) || 10;
-//   const tag = req.query.tag;
-
-//   const posts = await postService.listPosts({
-//     page,
-//     limit,
-//     tag,
-//     userId: req.user?.id,
-//   });
-//   res.json(posts);
-// });
 
 export const list = catchAsync(async (req, res) => {
   const page = Number(req.query.page) || 1;

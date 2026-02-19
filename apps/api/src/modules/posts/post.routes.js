@@ -31,7 +31,7 @@ router.post(
   "/",
   requireAuth,
   authorize("developer"),
-  upload.single("coverImage"),
+  upload.single("cover_image"),
   postController.create,
 );
 

@@ -85,7 +85,7 @@ export default function CreatePostPage() {
     formData.append("title", title);
     formData.append("markdown", markdown);
     formData.append("tags", JSON.stringify(tags));
-    if (selectedFile) formData.append("coverImage", selectedFile);
+    if (selectedFile) formData.append("cover_image", selectedFile);
 
     mutation.mutate(formData);
   };
@@ -145,6 +145,7 @@ export default function CreatePostPage() {
                   </button>
                   <input
                     type="file"
+                    name="cover_image"
                     ref={fileInputRef}
                     onChange={handleImageChange}
                     className="hidden"

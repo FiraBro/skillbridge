@@ -2,6 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import path from "path";
+import cors from "cors";
 import { fileURLToPath } from "url"; // 1. Import this helper
 
 // 2. Recreate __dirname
@@ -30,9 +31,28 @@ export const app = express();
 app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
+// // Serve uploads folder correctly
+// const uploadsFolder = path.join(__dirname, "modules/uploads");
+// console.log("Serving uploads from:", uploadsFolder); // debug
+// app.use("/uploads", express.static(uploadsFolder));
 
-// 🔹 Optional: global request logger for debugg
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static(path.join(__dirname, "modules/uploads")),
+);
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  }),
+);
+
 app.use((req, res, next) => {
   console.log("🌍 INCOMING REQUEST:", req.method, req.url);
   next();

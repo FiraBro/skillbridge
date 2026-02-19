@@ -3,23 +3,27 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 
-// Helper to fix __dirname in ES Modules
+// Fix __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, "../uploads/");
+const uploadDir = path.join(__dirname, "uploads"); // inside modules/uploads
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// 1. Storage Configuration
+// ✅ Ensure the folder exists before saving
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer storage configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    // Double-check folder exists (optional safety)
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    // Generates: coverImage-1710561418819-123456789.jpg
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     cb(
       null,
@@ -28,7 +32,7 @@ const storage = multer.diskStorage({
   },
 });
 
-// 2. File Filter (Security)
+// File filter for images only
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp/;
   const isMimeValid = allowedTypes.test(file.mimetype);
@@ -36,18 +40,16 @@ const fileFilter = (req, file, cb) => {
     path.extname(file.originalname).toLowerCase(),
   );
 
-  if (isMimeValid && isExtValid) {
-    return cb(null, true);
-  }
+  if (isMimeValid && isExtValid) return cb(null, true);
   cb(new Error("Only images are allowed (jpeg, jpg, png, gif, webp)!"), false);
 };
 
-// 3. Initialize Multer
+// Export the multer middleware
 export const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB Limit
-  fileFilter: fileFilter,
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter,
 });
 
-// Default export if you prefer
+// Default export
 export default upload;

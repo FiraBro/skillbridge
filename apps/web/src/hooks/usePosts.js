@@ -4,11 +4,25 @@ import { postService } from "@/services";
 /* ============================
    POSTS QUERIES
 ============================ */
-
-export const usePosts = (params) => {
+export const usePosts = ({
+  page = 1,
+  limit = 10,
+  sortBy = "relevant",
+  tag,
+  authorId,
+}) => {
   return useQuery({
-    queryKey: ["posts", params],
-    queryFn: () => postService.getAll(params),
+    queryKey: ["posts", sortBy, page, limit, tag, authorId],
+    queryFn: () =>
+      postService.getAll({
+        page,
+        limit,
+        sortBy,
+        tag,
+        authorId,
+      }),
+    staleTime: 0,
+    keepPreviousData: true,
   });
 };
 

@@ -36,17 +36,20 @@ export const list = catchAsync(async (req, res) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const tag = req.query.tag;
-
-  // ✅ Extract authorId from the request query
   const authorId = req.query.authorId;
+
+  // 1. ✅ Extract the sortBy parameter from the URL query
+  const sortBy = req.query.sortBy;
 
   const posts = await postService.listPosts({
     page,
     limit,
     tag,
-    authorId, // 👈 Filter by who wrote it
-    userId: req.user?.id, // 👈 Used for checking if 'is_liked'
+    authorId,
+    sortBy, // 2. ✅ Pass it to the service!
+    userId: req.user?.id,
   });
+
   res.json(posts);
 });
 export const get = catchAsync(async (req, res) => {

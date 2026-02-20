@@ -4,12 +4,25 @@ import { postService } from "@/services";
 /* ============================
    POSTS QUERIES
 ============================ */
-export const usePosts = (params) => {
+export const usePosts = ({
+  page = 1,
+  limit = 10,
+  sortBy = "relevant",
+  tag,
+  authorId,
+}) => {
   return useQuery({
-    queryKey: ["posts", params], // This ensures 'top' and 'latest' use different cache buckets
-    queryFn: () => postService.getAll(params),
-    staleTime: 0, // Forces refresh when user clicks a new tab
-    placeholderData: (prev) => prev, // Keeps current posts visible while loading the new tab
+    queryKey: ["posts", sortBy, page, limit, tag, authorId],
+    queryFn: () =>
+      postService.getAll({
+        page,
+        limit,
+        sortBy,
+        tag,
+        authorId,
+      }),
+    staleTime: 0,
+    keepPreviousData: true,
   });
 };
 

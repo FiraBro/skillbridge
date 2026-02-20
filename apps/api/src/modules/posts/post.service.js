@@ -49,121 +49,6 @@ export async function createPost(data, userId) {
 }
 
 // ---------------------- POSTS ----------------------
-// export async function listPosts({
-//   page = 1,
-//   limit = 10,
-//   tag,
-//   userId,
-//   authorId,
-// }) {
-//   const offset = (page - 1) * limit;
-//   const values = [limit, offset];
-
-//   const whereClauses = ["p.deleted_at IS NULL", "pr.deleted_at IS NULL"];
-
-//   /* =========================
-//      Filters
-//   ========================= */
-
-//   // Tag filter
-//   if (tag) {
-//     values.push(tag);
-//     whereClauses.push(`t.name = $${values.length}`);
-//   }
-
-//   // Author filter (profile page)
-//   if (authorId) {
-//     values.push(authorId);
-//     whereClauses.push(`p.author_id = $${values.length}`);
-//   }
-
-//   /* =========================
-//      Personalization
-//   ========================= */
-//   let userIdIndex = null;
-//   if (userId) {
-//     values.push(userId);
-//     userIdIndex = values.length;
-//   }
-
-//   const query = `
-//     SELECT
-//       p.id,
-//       p.author_id,
-//       u.name AS author_name,
-//       pr.username AS author_username,
-
-//       -- Content
-//       p.title,
-//       p.slug,
-//       p.markdown,
-//       p.sanitized_html,
-
-//       -- Metrics
-//       p.views,
-//       p.shares_count,
-
-//       -- Dates
-//       p.created_at,
-//       p.updated_at,
-
-//       -- Soft delete visibility (useful for admin/debug)
-//       p.deleted_at AS post_deleted_at,
-//       pr.deleted_at AS profile_deleted_at,
-
-//       -- Tags
-//       COALESCE(
-//         json_agg(DISTINCT t.name)
-//         FILTER (WHERE t.name IS NOT NULL),
-//         '[]'
-//       ) AS tags,
-
-//       -- Counts
-//       (SELECT COUNT(*)
-//         FROM post_likes pl
-//         WHERE pl.post_id = p.id
-//       ) AS likes_count,
-
-//       (SELECT COUNT(*)
-//         FROM post_comments c
-//         WHERE c.post_id = p.id
-//         AND c.deleted_at IS NULL
-//       ) AS comments_count
-
-//       ${
-//         userId
-//           ? `
-//       , EXISTS(
-//           SELECT 1
-//           FROM post_likes pl
-//           WHERE pl.post_id = p.id
-//           AND pl.user_id = $${userIdIndex}
-//         ) AS is_liked
-//       `
-//           : ""
-//       }
-
-//     FROM posts p
-//     LEFT JOIN users u ON u.id = p.author_id
-//     LEFT JOIN profiles pr ON pr.user_id = u.id
-//     LEFT JOIN post_tags pt ON pt.post_id = p.id
-//     LEFT JOIN tags t ON pt.tag_id = t.id
-
-//     ${whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : ""}
-
-//     GROUP BY
-//       p.id,
-//       u.name,
-//       pr.username,
-//       pr.deleted_at
-
-//     ORDER BY p.created_at DESC
-//     LIMIT $1 OFFSET $2
-//   `;
-
-//   const { rows } = await pool.query(query, values);
-//   return rows;
-// }
 
 export async function listPosts({
   page = 1,
@@ -171,13 +56,20 @@ export async function listPosts({
   tag,
   userId,
   authorId,
-  sortBy = "latest", // Defaults to latest
+  sortBy = "latest",
 }) {
   const offset = (page - 1) * limit;
   const values = [limit, offset];
+
+  // Base filters: ignore deleted content
   const whereClauses = ["p.deleted_at IS NULL", "pr.deleted_at IS NULL"];
 
-  // 1. FILTERS
+  // 1. NEW: Time-box the "Latest" feed to only 3 days
+  if (sortBy === "latest") {
+    whereClauses.push("p.created_at >= NOW() - INTERVAL '3 days'");
+  }
+
+  // 2. FILTERS
   if (tag) {
     values.push(tag);
     whereClauses.push(`t.name = $${values.length}`);
@@ -194,11 +86,11 @@ export async function listPosts({
     userIdIndex = values.length;
   }
 
-  // 2. DYNAMIC SORTING LOGIC (Fixed for PostgreSQL)
-  let orderByClause = "p.created_at DESC"; // Default: Latest
+  // 3. DYNAMIC SORTING LOGIC
+  let orderByClause = "p.created_at DESC";
 
   if (sortBy === "top") {
-    // We use the actual subqueries in ORDER BY because aliases aren't available yet
+    // Weighted algorithm: Comments (10pt) > Likes (5pt) > Views (1pt)
     orderByClause = `(
       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) * 5 + 
       (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) * 10 + 
@@ -206,7 +98,6 @@ export async function listPosts({
     ) DESC`;
   } else if (sortBy === "relevant") {
     if (userId) {
-      // Personalization: Boost posts matching user interests
       orderByClause = `(
         CASE WHEN EXISTS (
           SELECT 1 FROM post_tags pt2 
@@ -215,12 +106,10 @@ export async function listPosts({
         ) THEN 1 ELSE 0 END
       ) DESC, p.created_at DESC`;
     } else {
-      // For guests, "Relevant" is simply Trending (Views + Date)
       orderByClause = "p.views DESC, p.created_at DESC";
     }
   }
 
-  // 3. THE FINAL QUERY
   const query = `
     SELECT
       p.id,
@@ -236,39 +125,24 @@ export async function listPosts({
       p.shares_count,
       p.created_at,
       p.updated_at,
-      
-      -- Tags Aggregation
-      COALESCE(
-        json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), 
-        '[]'
-      ) AS tags,
-      
-      -- Engagement Counts
+      COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags,
       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
       (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comments_count
-      
       ${userId ? `, EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdIndex}) AS is_liked` : ""}
-
     FROM posts p
     LEFT JOIN users u ON u.id = p.author_id
     LEFT JOIN profiles pr ON pr.user_id = u.id
     LEFT JOIN post_tags pt ON pt.post_id = p.id
     LEFT JOIN tags t ON pt.tag_id = t.id
-
     ${whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : ""}
-
     GROUP BY p.id, u.name, pr.username, pr.deleted_at
-    
-    -- Use the dynamic sorting variable here
     ORDER BY ${orderByClause}
-    
     LIMIT $1 OFFSET $2
   `;
 
   const { rows } = await pool.query(query, values);
   return rows;
 }
-
 export async function getPost(slug, userId) {
   const values = [slug];
   let userIdIndex = null;

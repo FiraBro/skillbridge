@@ -137,7 +137,26 @@ export default function Navbar() {
                       ))}
                     </div>
                   )}
-                  {/* ... Jobs Mapping ... */}
+                  {/* Jobs Section */}
+                  {!jobLoading && jobs.length > 0 && (
+                    <div className="pb-2 border-t mt-2 pt-2">
+                      <p className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase">
+                        Jobs
+                      </p>
+                      {jobs.slice(0, 5).map((job) => (
+                        <button
+                          key={job.id}
+                          onClick={() => handleSelection(`/jobs/${job.id}`)}
+                          className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-sm flex flex-col"
+                        >
+                          <span className="font-medium">{job.title}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {job.company_name || "Company"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   {!devLoading &&
                     !jobLoading &&
                     developers.length === 0 &&

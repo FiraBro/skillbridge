@@ -1,15 +1,7 @@
 import React, { Suspense } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Heart,
-  MessageSquare,
-  Bookmark,
-  Plus,
-  TrendingUp,
-  Clock,
-  Zap,
-} from "lucide-react";
+import { Heart, MessageSquare, Bookmark, Plus } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,22 +45,6 @@ export default function CommunityPage() {
             <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">
               Discover high-signal insights from the community.
             </p>
-          </div>
-
-          <div className="flex bg-zinc-100/80 dark:bg-zinc-900/80 p-1 rounded-full w-fit border border-zinc-200/50 dark:border-zinc-800/50">
-            <FilterTab
-              label="Relevant"
-              active
-              icon={<Zap className="w-3.5 h-3.5" />}
-            />
-            <FilterTab
-              label="Latest"
-              icon={<Clock className="w-3.5 h-3.5" />}
-            />
-            <FilterTab
-              label="Top"
-              icon={<TrendingUp className="w-3.5 h-3.5" />}
-            />
           </div>
         </div>
 

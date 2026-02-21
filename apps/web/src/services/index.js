@@ -1,135 +1,112 @@
-// src/api/index.js
 import apiClient from "./api.client";
+
+// Helper to keep code DRY (Don't Repeat Yourself)
+// This ensures every service returns the exact same data structure
+const extractData = (promise) => promise.then((res) => res.data || res);
 
 /* =========================
    JOBS
 ========================= */
 export const jobService = {
-  getAll: (params) => apiClient.get("/jobs", { params }),
-  getRecommended: () => apiClient.get("/jobs/recommended"),
-  getById: (id) => {
-    if (!id) throw new Error("Job ID is required");
-    return apiClient.get(`/jobs/${id}`);
-  },
-  create: (data) => apiClient.post("/jobs", data),
-  apply: (id, data) => {
-    if (!id) throw new Error("Job ID is required");
-    return apiClient.post(`/jobs/${id}/apply`, data);
-  },
-  getCompanyJobs: () => {
-    const res = apiClient.get("/jobs/company");
-    console.log("res:", res);
-    return res;
-  },
-  getApplicants: (jobId) => {
-    if (!jobId) throw new Error("Job ID is required");
-    const res = apiClient.get(`/jobs/${jobId}/applicants`);
-    return res;
-  },
-  updateApplicationStatus: (applicationId, data) => {
-    if (!applicationId) throw new Error("Application ID is required");
-    return apiClient.patch(`/jobs/applications/${applicationId}`, data);
-  },
-};
-
-/* =========================
-   PROFILES & REPUTATION
-========================= */
-export const profileService = {
-  getByUsername: (username) => apiClient.get(`/profiles/${username}`),
-  getReputationBreakdown: (userId) =>
-    apiClient.get(`/reputation/${userId}/breakdown`),
-  getReputationHistory: (userId) =>
-    apiClient.get(`/reputation/${userId}/history`),
-
-  // Developer discovery API (role-based)
-  discover: (params) => apiClient.get("/company/discovery", { params }),
+  getAll: (params) => extractData(apiClient.get("/jobs", { params })),
+  getRecommended: () => extractData(apiClient.get("/jobs/recommended")),
+  getById: (id) => extractData(apiClient.get(`/jobs/${id}`)),
+  create: (data) => extractData(apiClient.post("/jobs", data)),
+  apply: (id, data) => extractData(apiClient.post(`/jobs/${id}/apply`, data)),
+  getCompanyJobs: () => extractData(apiClient.get("/jobs/company")),
+  getApplicants: (jobId) =>
+    extractData(apiClient.get(`/jobs/${jobId}/applicants`)),
+  updateApplicationStatus: (applicationId, data) =>
+    extractData(apiClient.patch(`/jobs/applications/${applicationId}`, data)),
 };
 
 /* =========================
    POSTS
 ========================= */
 export const postService = {
-  getAll: (params) => apiClient.get("/posts", { params }),
+  // Now consistently returns data, making your usePosts hook cleaner
+  getAll: (params) => extractData(apiClient.get("/posts", { params })),
 
-  getBySlug: (slug) => apiClient.get(`/posts/${slug}`),
+  getBySlug: (slug) => extractData(apiClient.get(`/posts/${slug}`)),
+
   create: (formData) =>
-    apiClient.post("/posts", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }),
+    extractData(
+      apiClient.post("/posts", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
+    ),
 
-  like: (id) => {
-    const res = apiClient.post(`/posts/${id}/like`);
-    console.log("res:", res);
-    return res;
-  },
-  unlike: (id) => apiClient.delete(`/posts/${id}/like`),
-  addComment: (id, text) => apiClient.post(`/posts/${id}/comments`, { text }),
-  getComments: (id) => apiClient.get(`/posts/${id}/comments`),
+  like: (id) => extractData(apiClient.post(`/posts/${id}/like`)),
+  unlike: (id) => extractData(apiClient.delete(`/posts/${id}/like`)),
+
+  toggleFollow: (authorId) =>
+    extractData(apiClient.post(`/posts/${authorId}/follow`)),
+
+  share: (id) => extractData(apiClient.post(`/posts/${id}/share`)),
+
+  addComment: (id, text) =>
+    extractData(apiClient.post(`/posts/${id}/comments`, { text })),
+  getComments: (id) => extractData(apiClient.get(`/posts/${id}/comments`)),
   deleteComment: (postId, commentId) =>
-    apiClient.delete(`/posts/${postId}/comments/${commentId}`),
-  update: (id, data) => apiClient.patch(`/posts/${id}`, data),
-  share: (id) => apiClient.post(`/posts/${id}/share`),
-  delete: (id) => apiClient.delete(`/posts/${id}`),
+    extractData(apiClient.delete(`/posts/${postId}/comments/${commentId}`)),
+
+  update: (id, data) => extractData(apiClient.patch(`/posts/${id}`, data)),
+  delete: (id) => extractData(apiClient.delete(`/posts/${id}`)),
 };
 
 /* =========================
-   NOTIFICATIONS
+   COMPANY & DISCOVERY
 ========================= */
-export const notificationService = {
-  getNotifications: async () => {
-    try {
-      const res = await apiClient.get("/notifications");
-      // This matches your console log: { success: true, data: [] }
-      console.log("✅ notification service check:", res);
-      return res;
-    } catch (err) {
-      console.error("❌ notification service error:", err);
-      throw err;
-    }
-  },
-  sendRequest: (data) => apiClient.post("/notifications/contact", data),
-  respondToRequest: (id, data) =>
-    apiClient.patch(`/notifications/contact/${id}`, data),
+export const companyService = {
+  getProfile: () => extractData(apiClient.get("/company/profile")),
+  updateProfile: (profileData) =>
+    extractData(apiClient.post("/company/profile", profileData)),
+
+  // Talent Discovery
+  discoverTalent: (params) =>
+    extractData(apiClient.get("/companies/discovery", { params })),
+
+  // Bookmarks
+  getBookmarks: () => extractData(apiClient.get("/company/bookmarks")),
+  bookmarkDeveloper: (devId) =>
+    extractData(apiClient.post(`/company/bookmarks/${devId}`)),
+  removeBookmark: (devId) =>
+    extractData(apiClient.delete(`/company/bookmarks/${devId}`)),
+
+  updateApplicationStatus: (appId, feedbackData) =>
+    extractData(
+      apiClient.patch(`/company/applications/${appId}/feedback`, feedbackData),
+    ),
 };
 
 /* =========================
    AUTH
 ========================= */
 export const authService = {
-  getCurrentUser: () => apiClient.get("/auth/me"),
-  login: (credentials) => apiClient.post("/auth/login", credentials),
-  register: (data) => apiClient.post("/auth/register", data),
+  getCurrentUser: () => extractData(apiClient.get("/auth/me")),
+  login: (credentials) =>
+    extractData(apiClient.post("/auth/login", credentials)),
+  register: (data) => extractData(apiClient.post("/auth/register", data)),
 };
 
-export const companyService = {
-  // --- Profile Management ---
-  getProfile: () => apiClient.get("/company/profile"),
+/* =========================
+   NOTIFICATIONS & OTHERS
+========================= */
+export const notificationService = {
+  getNotifications: () => extractData(apiClient.get("/notifications")),
+  sendRequest: (data) =>
+    extractData(apiClient.post("/notifications/contact", data)),
+  respondToRequest: (id, data) =>
+    extractData(apiClient.patch(`/notifications/contact/${id}`, data)),
+};
 
-  updateProfile: (profileData) =>
-    apiClient.post("/company/profile", profileData),
-
-  // --- Talent Discovery ---
-  // ✅ Use async/await to ensure the promise resolves correctly before returning
-  discoverTalent: async (params) => {
-    const response = await apiClient.get("/companies/discovery", { params });
-    // This logs the actual data object returned by your backend apiResponse.success
-    console.log("Discovery API response data:", response.data);
-    return response.data;
-  },
-
-  // --- Bookmarks ---
-  getBookmarks: () => apiClient.get("/company/bookmarks"),
-
-  // Ensure these match your router: router.post("/bookmarks/:devId")
-  // Since your router is mounted at /company, the path /company/bookmarks/:devId is correct.
-  bookmarkDeveloper: (devId) => apiClient.post(`/company/bookmarks/${devId}`),
-
-  removeBookmark: (devId) => apiClient.delete(`/company/bookmarks/${devId}`),
-
-  // --- Applicant Management ---
-  updateApplicationStatus: (appId, feedbackData) =>
-    apiClient.patch(`/company/applications/${appId}/feedback`, feedbackData),
+export const profileService = {
+  getByUsername: (username) =>
+    extractData(apiClient.get(`/profiles/${username}`)),
+  getReputationBreakdown: (userId) =>
+    extractData(apiClient.get(`/reputation/${userId}/breakdown`)),
+  getReputationHistory: (userId) =>
+    extractData(apiClient.get(`/reputation/${userId}/history`)),
+  discover: (params) =>
+    extractData(apiClient.get("/company/discovery", { params })),
 };

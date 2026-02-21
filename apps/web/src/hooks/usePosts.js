@@ -34,79 +34,185 @@ export const usePostDetail = (slug) => {
   });
 };
 
-/* ============================
-   UNIVERSAL CACHE UPDATER
-   (works for arrays & objects)
-============================ */
-
-const updateLocalCache = (queryClient, postId, nextIsLiked) => {
+const updateLocalCache = (queryClient, id, newValue, action) => {
   queryClient.setQueriesData({ queryKey: ["posts"], exact: false }, (old) => {
     if (!old) return old;
-
     const transform = (item) => {
       if (Array.isArray(item)) return item.map(transform);
-
       if (item && typeof item === "object") {
-        if (item.id === postId) {
-          if (item.is_liked === nextIsLiked) {
-            return item;
-          }
-
-          const currentLikes = Number(item.likes_count) || 0;
-
+        // Force ID string comparison to avoid UUID mismatch
+        if (action === "follow" && String(item.author_id) === String(id)) {
+          return { ...item, is_following_author: newValue };
+        }
+        if (action === "like" && String(item.id) === String(id)) {
+          const count = Number(item.likes_count) || 0;
           return {
             ...item,
-            is_liked: nextIsLiked,
-            likes_count: nextIsLiked
-              ? currentLikes + 1
-              : Math.max(0, currentLikes - 1),
+            is_liked: newValue,
+            likes_count: newValue ? count + 1 : Math.max(0, count - 1),
           };
         }
-
+        if (action === "share" && String(item.id) === String(id)) {
+          return {
+            ...item,
+            shares_count: (Number(item.shares_count) || 0) + 1,
+          };
+        }
         const next = {};
         for (const key in item) {
           next[key] = transform(item[key]);
         }
         return next;
       }
-
       return item;
     };
-
     return transform(old);
   });
 };
 
-/* ============================
-   LIKE POST
-============================ */
-
-export const useLikePost = () => {
+export const useToggleFollow = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id) => postService.like(id),
+    mutationFn: (authorId) => postService.toggleFollow(authorId),
 
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ["posts"], exact: false });
+    onMutate: async (authorId) => {
+      // 1. Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["posts"] });
 
-      const previousData = queryClient.getQueriesData({
+      // 2. Snapshot ALL current post queries (captures every sortBy/page variation)
+      const previousQueries = queryClient.getQueriesData({
         queryKey: ["posts"],
-        exact: false,
       });
 
-      updateLocalCache(queryClient, id, true);
+      // 3. Optimistically update the UI to "true" (Following)
+      updateLocalCache(queryClient, authorId, true, "follow");
 
-      return { previousData };
+      // 4. Return the full snapshot for rollback
+      return { previousQueries };
     },
 
-    onError: (_, __, context) => {
-      context?.previousData?.forEach(([key, data]) => {
-        queryClient.setQueryData(key, data);
-      });
+    onSuccess: (res, authorId) => {
+      // res.is_following_author should be true here from your backend
+      updateLocalCache(
+        queryClient,
+        authorId,
+        res.is_following_author,
+        "follow",
+      );
+    },
+
+    onError: (err, authorId, context) => {
+      // 5. If it fails, rollback every query key we captured in onMutate
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, oldData]) => {
+          queryClient.setQueryData(queryKey, oldData);
+        });
+      }
+      toast.error("Follow action failed");
+    },
+
+    onSettled: () => {
+      // 6. Refresh in the background to ensure absolute sync with DB
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
     },
   });
 };
+
+// const updateLocalCache = (queryClient, id, newValue, action = "like") => {
+//   // Use 'exact: false' to catch all variations of the "posts" query
+//   queryClient.setQueriesData({ queryKey: ["posts"], exact: false }, (old) => {
+//     if (!old) return old;
+
+//     const transform = (item) => {
+//       if (Array.isArray(item)) return item.map(transform);
+//       if (String(item.author_id) === String(id)) {
+//         console.log("MATCH FOUND! Changing follow state to:", newValue);
+//       }
+
+//       if (item && typeof item === "object") {
+//         // --- FIX FOR FOLLOW ---
+//         // We match item.author_id because multiple posts can have the same author
+//         if (action === "follow" && String(item.author_id) === String(id)) {
+//           return { ...item, is_following_author: newValue };
+//         }
+
+//         // --- FIX FOR SHARE ---
+//         if (action === "share" && String(item.id) === String(id)) {
+//           return {
+//             ...item,
+//             shares_count: (Number(item.shares_count) || 0) + 1,
+//           };
+//         }
+
+//         // --- FIX FOR LIKE ---
+//         if (action === "like" && String(item.id) === String(id)) {
+//           const currentLikes = Number(item.likes_count) || 0;
+//           return {
+//             ...item,
+//             is_liked: newValue,
+//             likes_count: newValue
+//               ? currentLikes + 1
+//               : Math.max(0, currentLikes - 1),
+//           };
+//         }
+
+//         // Handle nested data (e.g., if API returns { data: [...] })
+//         const next = {};
+//         for (const key in item) {
+//           next[key] = transform(item[key]);
+//         }
+//         return next;
+//       }
+//       return item;
+//     };
+//     return transform(old);
+//   });
+// };
+// export const useToggleFollow = () => {
+//   const queryClient = useQueryClient();
+
+//   return useMutation({
+//     mutationFn: (authorId) => postService.toggleFollow(authorId),
+
+//     onMutate: async (authorId) => {
+//       await queryClient.cancelQueries({ queryKey: ["posts"] });
+//       const previousData = queryClient.getQueryData(["posts"]);
+
+//       // Optimistic update
+//       updateLocalCache(queryClient, authorId, true, "follow");
+
+//       return { previousData };
+//     },
+
+//     onSuccess: (res, authorId) => {
+//       // Use the server's confirmed state: res.is_following_author
+//       updateLocalCache(
+//         queryClient,
+//         authorId,
+//         res.is_following_author,
+//         "follow",
+//       );
+//     },
+
+//     onError: (err, authorId, context) => {
+//       if (context?.previousData) {
+//         queryClient.setQueryData(["posts"], context.previousData);
+//       }
+//       toast.error("Follow failed");
+//     },
+
+//     // REMOVE invalidateQueries from here or delay it
+//     onSettled: () => {
+//       // Optional: only invalidate after a delay to ensure DB is ready
+//       // setTimeout(() => queryClient.invalidateQueries({ queryKey: ["posts"] }), 1000);
+//     },
+//   });
+// };
+
+/* ============================
+   LIKE POST
+============================ */
 export const useToggleLikePost = () => {
   const queryClient = useQueryClient();
 
@@ -117,40 +223,12 @@ export const useToggleLikePost = () => {
 
     onMutate: async ({ id, isLiked }) => {
       await queryClient.cancelQueries({ queryKey: ["posts"], exact: false });
-
       const previousData = queryClient.getQueriesData({
         queryKey: ["posts"],
         exact: false,
       });
 
-      updateLocalCache(queryClient, id, !isLiked);
-
-      return { previousData };
-    },
-
-    onError: (_, __, context) => {
-      context?.previousData?.forEach(([key, data]) => {
-        queryClient.setQueryData(key, data);
-      });
-    },
-  });
-};
-
-export const useUnlikePost = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id) => postService.unlike(id),
-
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ["posts"], exact: false });
-
-      const previousData = queryClient.getQueriesData({
-        queryKey: ["posts"],
-        exact: false,
-      });
-
-      updateLocalCache(queryClient, id, false);
+      updateLocalCache(queryClient, id, !isLiked, "like");
 
       return { previousData };
     },
@@ -164,12 +242,40 @@ export const useUnlikePost = () => {
 };
 
 /* ============================
-   ADD COMMENT
+   SHARE POST
 ============================ */
-
-export const useAddComment = () => {
+export const useSharePost = () => {
   const queryClient = useQueryClient();
 
+  return useMutation({
+    mutationFn: (id) => postService.share(id),
+
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["posts"], exact: false });
+      const previousData = queryClient.getQueriesData({
+        queryKey: ["posts"],
+        exact: false,
+      });
+
+      // Optimistically increment the count
+      updateLocalCache(queryClient, id, null, "share");
+
+      return { previousData };
+    },
+
+    onError: (_, __, context) => {
+      context?.previousData?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
+    },
+  });
+};
+
+/* ============================
+   COMMENTS & POSTS MANAGEMENT
+============================ */
+export const useAddComment = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, text }) => postService.addComment(id, text),
     onSuccess: (_, { id }) => {
@@ -181,16 +287,11 @@ export const useAddComment = () => {
 
 export const useDeleteComment = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ postId, commentId }) =>
       postService.deleteComment(postId, commentId),
-
     onSuccess: (_, { postId }) => {
-      queryClient.invalidateQueries({
-        queryKey: ["posts", postId],
-      });
-
+      queryClient.invalidateQueries({ queryKey: ["posts", postId] });
       queryClient.invalidateQueries({
         queryKey: ["posts", postId, "comments"],
       });
@@ -206,12 +307,6 @@ export const useUpdatePost = () => {
       queryClient.invalidateQueries({ queryKey: ["posts", id] });
       queryClient.invalidateQueries({ queryKey: ["posts"] });
     },
-  });
-};
-
-export const useSharePost = () => {
-  return useMutation({
-    mutationFn: (id) => postService.share(id),
   });
 };
 

@@ -21,6 +21,7 @@ router.get("/:slug", optionalAuth, postController.get);
 
 // Share a post
 router.post("/:id/share", postController.share);
+router.post("/:id/follow", requireAuth, postController.toggleFollowUser);
 
 // ----------------------
 // AUTHENTICATED ENDPOINTS

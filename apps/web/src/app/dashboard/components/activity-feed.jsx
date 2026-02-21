@@ -1,4 +1,4 @@
-import { useState } from "react"; // Added useState
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -12,11 +12,16 @@ import {
   MessageCircle,
   Linkedin,
   Copy,
-  Zap, // Icon for Relevant
-  Flame, // Icon for Top
-  Calendar, // Icon for Latest
+  Zap,
+  Flame,
 } from "lucide-react";
-import { usePosts, useToggleLikePost, useSharePost } from "@/hooks/usePosts";
+import {
+  usePosts,
+  useToggleLikePost,
+  useSharePost,
+  useToggleFollow,
+} from "@/hooks/usePosts";
+import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,20 +37,31 @@ import { cn } from "@/lib/utils";
 import { toast } from "react-toastify";
 
 export default function ActivityFeed() {
-  // 1. Manage the current filter state
+  const { user: currentUser } = useAuth();
   const [sortBy, setSortBy] = useState("relevant");
 
-  // 2. Pass sortBy to your hook (Backend listPosts uses this)
-  const { data: posts, isLoading } = usePosts({ limit: 10, sortBy });
-  console.log("post:", posts);
+  /**
+   * FIX: Added userId to the hook parameters.
+   * This ensures the backend can calculate 'is_following_author'
+   * specifically for the logged-in user.
+   */
+  const { data: postsData, isLoading } = usePosts({
+    limit: 10,
+    sortBy,
+    userId: currentUser?.id,
+  });
+
+  const posts = Array.isArray(postsData) ? postsData : postsData?.data || [];
 
   const toggleLike = useToggleLikePost();
-  const { mutate: recordShareInDb } = useSharePost();
+  const toggleFollow = useToggleFollow();
+  const shareMutation = useSharePost();
 
   const handleShare = async (post, platform = "native") => {
     const shareUrl = `${window.location.origin}/posts/${post.slug}`;
     const shareTitle = post.title;
-    recordShareInDb(post.id);
+
+    shareMutation.mutate(post.id);
 
     try {
       if (platform === "native" && navigator.share) {
@@ -62,23 +78,15 @@ export default function ActivityFeed() {
         return;
       }
 
-      let targetUrl = "";
-      if (platform === "telegram") {
-        const tg = new URL("https://t.me");
-        tg.searchParams.set("url", shareUrl);
-        tg.searchParams.set("text", shareTitle);
-        targetUrl = tg.toString();
-      } else if (platform === "whatsapp") {
-        const wa = new URL("https://wa.me");
-        wa.searchParams.set("text", `${shareTitle} ${shareUrl}`);
-        targetUrl = wa.toString();
-      } else if (platform === "linkedin") {
-        const li = new URL("https://www.linkedin.com");
-        li.searchParams.set("url", shareUrl);
-        targetUrl = li.toString();
-      }
+      const shareLinks = {
+        telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
+        whatsapp: `https://wa.me/?text=${encodeURIComponent(shareTitle + " " + shareUrl)}`,
+        linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
+      };
 
-      if (targetUrl) window.open(targetUrl, "_blank", "noopener,noreferrer");
+      if (shareLinks[platform]) {
+        window.open(shareLinks[platform], "_blank", "noopener,noreferrer");
+      }
     } catch (err) {
       if (err.name !== "AbortError") toast.error("Failed to share");
     }
@@ -86,7 +94,6 @@ export default function ActivityFeed() {
 
   return (
     <div className="space-y-6">
-      {/* ================= TABS NAVIGATION (Dev.to Style) ================= */}
       <div className="flex items-center gap-2 mb-4 border-b pb-1">
         {[
           { id: "relevant", label: "Relevant", icon: Zap },
@@ -112,21 +119,21 @@ export default function ActivityFeed() {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-40 w-full" />
+            <Skeleton key={i} className="h-64 w-full rounded-md" />
           ))}
         </div>
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
-            key={sortBy} // Animates whenever the tab changes
+            key={sortBy}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="space-y-6"
+            className="flex flex-col gap-6"
           >
-            {posts?.map((post, index) => {
+            {posts.map((post, index) => {
               const coverImageUrl = resolveMediaUrl(post.cover_image);
-              const hasImage = Boolean(coverImageUrl);
+              const isOwnPost = currentUser?.id === post.author_id;
 
               return (
                 <motion.div
@@ -135,159 +142,162 @@ export default function ActivityFeed() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className="rounded-none border-none hover:shadow-md transition overflow-hidden bg-card">
-                    {hasImage && (
-                      <Link to={`/posts/${post.slug}`}>
+                  <Card className="rounded-md border border-border overflow-hidden bg-card hover:shadow-md transition-shadow">
+                    {coverImageUrl && (
+                      <Link
+                        to={`/posts/${post.slug}`}
+                        className="block overflow-hidden"
+                      >
                         <img
                           src={coverImageUrl}
                           alt={post.title}
-                          className="w-full h-56 object-cover"
-                          loading="lazy"
+                          className="w-full h-56 object-cover hover:scale-105 transition-transform duration-500"
                         />
                       </Link>
                     )}
 
-                    <div
-                      className={cn(
-                        "p-5",
-                        hasImage
-                          ? "space-y-4"
-                          : "flex flex-col md:flex-row gap-4",
-                      )}
-                    >
-                      {/* USER INFO */}
-                      <div
-                        className={cn(
-                          "flex gap-3",
-                          hasImage
-                            ? "items-center text-sm"
-                            : "md:w-40 shrink-0 md:block",
-                        )}
-                      >
-                        <Link to={`/profile/${post.author_username}`}>
-                          <Avatar
-                            className={cn(hasImage ? "h-8 w-8" : "h-11 w-11")}
-                          >
-                            <AvatarImage src={post.author_avatar} />
-                            <AvatarFallback>
-                              {post.author_name?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                        </Link>
-                        <div className="leading-tight">
-                          <Link
-                            to={`/profile/${post.author_username}`}
-                            className="font-bold hover:text-primary"
-                          >
-                            {post.author_name}
+                    <div className="p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Link to={`/profile/${post.author_username}`}>
+                            <Avatar className="h-9 w-9 border">
+                              <AvatarImage src={post.author_avatar} />
+                              <AvatarFallback>
+                                {post.author_name?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
                           </Link>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(post.created_at), {
-                              addSuffix: true,
-                            })}
+                          <div className="leading-tight">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                to={`/profile/${post.author_username}`}
+                                className="font-bold text-sm hover:text-primary transition-colors"
+                              >
+                                {post.author_name}
+                              </Link>
+
+                              {!isOwnPost && (
+                                <>
+                                  <span className="text-muted-foreground text-[10px]">
+                                    •
+                                  </span>
+                                  <button
+                                    onClick={() =>
+                                      toggleFollow.mutate(post.author_id)
+                                    }
+                                    disabled={toggleFollow.isLoading}
+                                    className={cn(
+                                      "text-xs font-bold transition-colors disabled:opacity-50",
+                                      post.is_following_author
+                                        ? "text-muted-foreground"
+                                        : "text-emerald-600 hover:text-emerald-700",
+                                    )}
+                                  >
+                                    {post.is_following_author
+                                      ? "Following"
+                                      : "Follow"}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {formatDistanceToNow(new Date(post.created_at), {
+                                addSuffix: true,
+                              })}
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* CONTENT */}
-                      <div className={cn(hasImage ? "" : "flex-1 space-y-4")}>
+                      <div className="space-y-2">
                         <Link to={`/posts/${post.slug}`}>
-                          <h3
-                            className={cn(
-                              "font-bold hover:text-primary transition-colors",
-                              hasImage ? "text-lg" : "text-base sm:text-lg",
-                            )}
-                          >
+                          <h3 className="font-bold text-xl md:text-2xl hover:text-primary transition-colors leading-tight">
                             {post.title}
                           </h3>
                         </Link>
-                        <p className="text-sm text-muted-foreground line-clamp-3">
+                        <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
                           {post.markdown?.substring(0, 240)}...
                         </p>
+                      </div>
 
-                        {/* ACTIONS */}
-                        <div className="flex items-center justify-between pt-3 border-t">
-                          <div className="flex items-center gap-4 text-xs font-bold">
-                            <button
-                              onClick={() =>
-                                toggleLike.mutate({
-                                  id: post.id,
-                                  isLiked: post.is_liked,
-                                })
-                              }
+                      <div className="flex items-center justify-between pt-4 border-t">
+                        <div className="flex items-center gap-5 text-xs font-bold">
+                          <button
+                            onClick={() =>
+                              toggleLike.mutate({
+                                id: post.id,
+                                isLiked: post.is_liked,
+                              })
+                            }
+                            className={cn(
+                              "flex items-center gap-1.5 transition",
+                              post.is_liked
+                                ? "text-red-500"
+                                : "text-muted-foreground hover:text-primary",
+                            )}
+                          >
+                            <Heart
                               className={cn(
-                                "flex items-center gap-1 transition",
-                                post.is_liked
-                                  ? "text-red-500"
-                                  : "text-muted-foreground hover:text-primary",
+                                "h-4 w-4",
+                                post.is_liked && "fill-current",
                               )}
-                            >
-                              <Heart
-                                className={cn(
-                                  "h-3.5 w-3.5",
-                                  post.is_liked && "fill-current",
-                                )}
-                              />
-                              {post.likes_count || 0}
-                            </button>
+                            />
+                            {post.likes_count || 0}
+                          </button>
 
-                            <Link
-                              to={`/posts/${post.slug}#comments`}
-                              className="flex items-center gap-1 text-muted-foreground hover:text-primary"
-                            >
-                              <MessageSquare className="h-3.5 w-3.5" />
-                              {post.comments_count || 0}
-                            </Link>
-
-                            <DropdownMenu modal={false}>
-                              <DropdownMenuTrigger asChild>
-                                <button className="flex items-center gap-1 text-muted-foreground hover:text-primary transition">
-                                  <Share2 className="h-3.5 w-3.5" />
-                                  <span>{post.shares_count || 0}</span>
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="start"
-                                className="w-48"
-                              >
-                                <DropdownMenuItem
-                                  onClick={() => handleShare(post, "copy")}
-                                >
-                                  <Copy className="mr-2 h-4 w-4" /> Copy Link
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleShare(post, "telegram")}
-                                >
-                                  <Send className="mr-2 h-4 w-4 text-blue-500" />{" "}
-                                  Telegram
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleShare(post, "whatsapp")}
-                                >
-                                  <MessageCircle className="mr-2 h-4 w-4 text-green-500" />{" "}
-                                  WhatsApp
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleShare(post, "linkedin")}
-                                >
-                                  <Linkedin className="mr-2 h-4 w-4 text-blue-700" />{" "}
-                                  LinkedIn
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-
-                          <Link to={`/posts/${post.slug}`}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-2 text-xs uppercase"
-                            >
-                              Read <ArrowRight className="h-3 w-3" />
-                            </Button>
+                          <Link
+                            to={`/posts/${post.slug}#comments`}
+                            className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            {post.comments_count || 0}
                           </Link>
+
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
+                              <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition">
+                                <Share2 className="h-4 w-4" />
+                                <span>{post.shares_count || 0}</span>
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => handleShare(post, "copy")}
+                              >
+                                <Copy className="mr-2 h-4 w-4" /> Copy Link
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleShare(post, "telegram")}
+                              >
+                                <Send className="mr-2 h-4 w-4 text-blue-500" />{" "}
+                                Telegram
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleShare(post, "whatsapp")}
+                              >
+                                <MessageCircle className="mr-2 h-4 w-4 text-green-500" />{" "}
+                                WhatsApp
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleShare(post, "linkedin")}
+                              >
+                                <Linkedin className="mr-2 h-4 w-4 text-blue-700" />{" "}
+                                LinkedIn
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
+
+                        <Link to={`/posts/${post.slug}`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-2 text-xs font-bold uppercase tracking-wider"
+                          >
+                            Read More <ArrowRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </Card>

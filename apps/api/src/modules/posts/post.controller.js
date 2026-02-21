@@ -32,26 +32,67 @@ export const create = catchAsync(async (req, res) => {
   res.status(201).json(post);
 });
 
-export const list = catchAsync(async (req, res) => {
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 10;
-  const tag = req.query.tag;
-  const authorId = req.query.authorId;
+// export const list = catchAsync(async (req, res) => {
+//   const page = Number(req.query.page) || 1;
+//   const limit = Number(req.query.limit) || 10;
+//   const tag = req.query.tag;
+//   const authorId = req.query.authorId;
 
-  // 1. ✅ Extract the sortBy parameter from the URL query
-  const sortBy = req.query.sortBy;
+//   // 1. ✅ Extract the sortBy parameter from the URL query
+//   const sortBy = req.query.sortBy;
+
+//   const posts = await postService.listPosts({
+//     page,
+//     limit,
+//     tag,
+//     authorId,
+//     sortBy, // 2. ✅ Pass it to the service!
+//     userId: req.user?.id,
+//   });
+
+//   res.json(posts);
+// });
+export const list = catchAsync(async (req, res) => {
+  const { page, limit, tag, authorId, sortBy } = req.query;
 
   const posts = await postService.listPosts({
-    page,
-    limit,
+    page: Number(page) || 1,
+    limit: Number(limit) || 10,
     tag,
     authorId,
-    sortBy, // 2. ✅ Pass it to the service!
+    sortBy: sortBy || "relevant", // Default to relevant
     userId: req.user?.id,
   });
 
   res.json(posts);
 });
+
+export const toggleFollowUser = catchAsync(async (req, res) => {
+  const followerId = req.user.id;
+  const followingId = req.params.id;
+
+  if (!followingId) {
+    throw new ApiError(400, "Target user ID is required");
+  }
+
+  const result = await postService.toggleFollow(followerId, followingId);
+
+  // FIX: Return the property name the frontend expects
+  res.status(200).json({
+    status: "success",
+    is_following_author: result.following, // Map 'following' to 'is_following_author'
+    authorId: followingId,
+  });
+});
+
+export const toggleFollow = catchAsync(async (req, res) => {
+  const { followingId } = req.body;
+  const followerId = req.user.id;
+
+  const result = await userService.toggleFollow(followerId, followingId);
+  res.json(result);
+});
+
 export const get = catchAsync(async (req, res) => {
   // 1. Fetch the post data from the service
   const post = await postService.getPost(req.params.slug, req.user?.id);

@@ -40,11 +40,7 @@ export default function ActivityFeed() {
   const { user: currentUser } = useAuth();
   const [sortBy, setSortBy] = useState("relevant");
 
-  /**
-   * FIX: Added userId to the hook parameters.
-   * This ensures the backend can calculate 'is_following_author'
-   * specifically for the logged-in user.
-   */
+  // Fetch posts with the sortBy dependency
   const { data: postsData, isLoading } = usePosts({
     limit: 10,
     sortBy,
@@ -53,23 +49,34 @@ export default function ActivityFeed() {
 
   const posts = Array.isArray(postsData) ? postsData : postsData?.data || [];
 
-  const toggleLike = useToggleLikePost();
+  // Mutations
+  const toggleLikeMutation = useToggleLikePost();
   const toggleFollow = useToggleFollow();
   const shareMutation = useSharePost();
+  console.log("follow mutation", toggleFollow.data);
+
+  /* --- Handlers --- */
+
+  const handleToggleLike = (post) => {
+    if (!currentUser) return toast.info("Please login to like posts");
+
+    // Exact same logic as PostDetailPage: passing { id, isLiked }
+    toggleLikeMutation.mutate(
+      { id: post.id, isLiked: post.is_liked },
+      {
+        onError: () => toast.error("Failed to update reaction"),
+      },
+    );
+  };
 
   const handleShare = async (post, platform = "native") => {
     const shareUrl = `${window.location.origin}/posts/${post.slug}`;
     const shareTitle = post.title;
-
     shareMutation.mutate(post.id);
 
     try {
       if (platform === "native" && navigator.share) {
-        await navigator.share({
-          title: shareTitle,
-          text: shareTitle,
-          url: shareUrl,
-        });
+        await navigator.share({ title: shareTitle, url: shareUrl });
         return;
       }
       if (platform === "copy") {
@@ -77,16 +84,12 @@ export default function ActivityFeed() {
         toast.success("Link copied!");
         return;
       }
-
       const shareLinks = {
         telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
         whatsapp: `https://wa.me/?text=${encodeURIComponent(shareTitle + " " + shareUrl)}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
       };
-
-      if (shareLinks[platform]) {
-        window.open(shareLinks[platform], "_blank", "noopener,noreferrer");
-      }
+      if (shareLinks[platform]) window.open(shareLinks[platform], "_blank");
     } catch (err) {
       if (err.name !== "AbortError") toast.error("Failed to share");
     }
@@ -94,6 +97,7 @@ export default function ActivityFeed() {
 
   return (
     <div className="space-y-6">
+      {/* Tabs / Sorting */}
       <div className="flex items-center gap-2 mb-4 border-b pb-1">
         {[
           { id: "relevant", label: "Relevant", icon: Zap },
@@ -132,6 +136,7 @@ export default function ActivityFeed() {
             className="flex flex-col gap-6"
           >
             {posts.map((post, index) => {
+              console.log("post", post);
               const coverImageUrl = resolveMediaUrl(post.cover_image);
               const isOwnPost = currentUser?.id === post.author_id;
 
@@ -157,6 +162,7 @@ export default function ActivityFeed() {
                     )}
 
                     <div className="p-5 space-y-4">
+                      {/* Author Info */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Link to={`/profile/${post.author_username}`}>
@@ -175,29 +181,27 @@ export default function ActivityFeed() {
                               >
                                 {post.author_name}
                               </Link>
-
                               {!isOwnPost && (
-                                <>
-                                  <span className="text-muted-foreground text-[10px]">
-                                    •
-                                  </span>
-                                  <button
-                                    onClick={() =>
-                                      toggleFollow.mutate(post.author_id)
-                                    }
-                                    disabled={toggleFollow.isLoading}
-                                    className={cn(
-                                      "text-xs font-bold transition-colors disabled:opacity-50",
-                                      post.is_following_author
-                                        ? "text-muted-foreground"
-                                        : "text-emerald-600 hover:text-emerald-700",
-                                    )}
-                                  >
-                                    {post.is_following_author
-                                      ? "Following"
-                                      : "Follow"}
-                                  </button>
-                                </>
+                                <button
+                                  onClick={() => {
+                                    toggleFollow.mutate(post.author_id);
+                                    console.log(
+                                      "Toggling follow for",
+                                      post.author_id,
+                                    );
+                                  }}
+                                  disabled={toggleFollow.isLoading}
+                                  className={cn(
+                                    "text-xs font-bold transition-colors ml-2",
+                                    post.is_following_author
+                                      ? "text-muted-foreground"
+                                      : "text-emerald-600 hover:text-emerald-700",
+                                  )}
+                                >
+                                  {post.is_following_author
+                                    ? "Following"
+                                    : "Follow"}
+                                </button>
                               )}
                             </div>
                             <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -210,6 +214,7 @@ export default function ActivityFeed() {
                         </div>
                       </div>
 
+                      {/* Post Body */}
                       <div className="space-y-2">
                         <Link to={`/posts/${post.slug}`}>
                           <h3 className="font-bold text-xl md:text-2xl hover:text-primary transition-colors leading-tight">
@@ -221,17 +226,15 @@ export default function ActivityFeed() {
                         </p>
                       </div>
 
+                      {/* Actions */}
                       <div className="flex items-center justify-between pt-4 border-t">
                         <div className="flex items-center gap-5 text-xs font-bold">
+                          {/* FIXED LIKE BUTTON */}
                           <button
-                            onClick={() =>
-                              toggleLike.mutate({
-                                id: post.id,
-                                isLiked: post.is_liked,
-                              })
-                            }
+                            disabled={toggleLikeMutation.isPending}
+                            onClick={() => handleToggleLike(post)}
                             className={cn(
-                              "flex items-center gap-1.5 transition",
+                              "flex items-center gap-1.5 transition disabled:opacity-50",
                               post.is_liked
                                 ? "text-red-500"
                                 : "text-muted-foreground hover:text-primary",
@@ -254,6 +257,7 @@ export default function ActivityFeed() {
                             {post.comments_count || 0}
                           </Link>
 
+                          {/* Share Menu */}
                           <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                               <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition">
@@ -278,12 +282,6 @@ export default function ActivityFeed() {
                               >
                                 <MessageCircle className="mr-2 h-4 w-4 text-green-500" />{" "}
                                 WhatsApp
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleShare(post, "linkedin")}
-                              >
-                                <Linkedin className="mr-2 h-4 w-4 text-blue-700" />{" "}
-                                LinkedIn
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

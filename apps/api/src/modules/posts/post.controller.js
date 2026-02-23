@@ -77,11 +77,11 @@ export const toggleFollowUser = catchAsync(async (req, res) => {
 
   const result = await postService.toggleFollow(followerId, followingId);
 
-  // FIX: Return the property name the frontend expects
+  // Return the followed USER ID (matches posts.author_id)
   res.status(200).json({
     status: "success",
-    is_following_author: result.following, // Map 'following' to 'is_following_author'
-    authorId: followingId,
+    is_following_author: result.following,
+    authorId: result.authorId,
   });
 });
 

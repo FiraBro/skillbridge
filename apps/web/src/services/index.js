@@ -109,8 +109,10 @@ export const profileService = {
     extractData(apiClient.get(`/profiles/${username}`)),
   getReputationBreakdown: (userId) =>
     extractData(apiClient.get(`/reputation/${userId}/breakdown`)),
-  getReputationHistory: (userId) =>
-    extractData(apiClient.get(`/reputation/${userId}/history`)),
+  getReputationHistory: (userId) => {
+    const res = extractData(apiClient.get(`/reputation/${userId}/history`));
+    return res;
+  },
   discover: (params) =>
     extractData(apiClient.get("/company/discovery", { params })),
 };

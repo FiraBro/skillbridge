@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { HiOutlineStar, HiOutlineInformationCircle } from "react-icons/hi2";
 
 export default function ReputationBar({ reputation }) {
+  console.log("Reputation Data:", reputation);
   // Convert 5-point scale to percentage for the progress bar
   const percentage = (reputation.score / 5) * 100;
   if (reputation.count === 0) {

@@ -19,7 +19,7 @@ export const useReputation = (userId) => {
       // 1. Use the correct name: getReputationBreakdown
       // 2. Extract .data from the axios response
       const res = await profileService.getReputationBreakdown(userId);
-      return res.data;
+      return res;
     },
     enabled: !!userId,
   });

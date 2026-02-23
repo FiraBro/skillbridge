@@ -56,6 +56,8 @@ export default function ProfilePage() {
   const { data: reputation } = useReputation(userId);
   const { data: history } = useReputationHistory(userId);
 
+  console.log("repfrom", reputation);
+
   const { data: posts = [], isLoading: loadingPosts } = usePosts({
     authorId: userId,
     limit: 10,

@@ -8,7 +8,11 @@ const extractData = (promise) => promise.then((res) => res.data || res);
    JOBS
 ========================= */
 export const jobService = {
-  getAll: (params) => extractData(apiClient.get("/jobs", { params })),
+  getAll: (params) => {
+    const res = extractData(apiClient.get("/jobs", { params }));
+    console.log("Fetched Jobs:", res);
+    return res;
+  },
   getRecommended: () => extractData(apiClient.get("/jobs/recommended")),
   getById: (id) => extractData(apiClient.get(`/jobs/${id}`)),
   create: (data) => extractData(apiClient.post("/jobs", data)),
@@ -105,8 +109,10 @@ export const profileService = {
     extractData(apiClient.get(`/profiles/${username}`)),
   getReputationBreakdown: (userId) =>
     extractData(apiClient.get(`/reputation/${userId}/breakdown`)),
-  getReputationHistory: (userId) =>
-    extractData(apiClient.get(`/reputation/${userId}/history`)),
+  getReputationHistory: (userId) => {
+    const res = extractData(apiClient.get(`/reputation/${userId}/history`));
+    return res;
+  },
   discover: (params) =>
     extractData(apiClient.get("/company/discovery", { params })),
 };

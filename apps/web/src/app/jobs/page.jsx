@@ -21,7 +21,7 @@ export default function JobFeed() {
   }, [searchInput]);
 
   const { data, isLoading, isFetching } = useJobs(filters);
-  const jobs = data?.data || [];
+  const jobs = data || [];
 
   const handleManualSearch = () => {
     setFilters((prev) => ({ ...prev, search: searchInput.trim() }));

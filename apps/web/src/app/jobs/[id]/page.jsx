@@ -28,7 +28,7 @@ export default function JobDetail() {
   const { data: response, isLoading, isError } = useJobDetail(id);
 
   // Extract the actual job object from the "data" property of the response
-  const job = response?.data;
+  const job = response;
 
   if (isLoading) return <DetailSkeleton />;
   if (isError || !job) return <ErrorState navigate={navigate} />;
@@ -94,8 +94,8 @@ export default function JobDetail() {
                 ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
                 : "bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800"
             }`}
-            onClick={() => setIsApplyModalOpen(true)}
             disabled={job.application_status !== null}
+            onClick={() => navigate(`/jobs/${job.id}/apply`)}
           >
             {job.application_status !== null ? (
               <span className="flex items-center gap-2">

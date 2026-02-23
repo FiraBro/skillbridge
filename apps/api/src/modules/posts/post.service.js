@@ -48,187 +48,6 @@ export async function createPost(data, userId) {
   }
 }
 
-// ---------------------- POSTS ----------------------
-
-// export async function listPosts({
-//   page = 1,
-//   limit = 10,
-//   tag,
-//   userId,
-//   authorId,
-//   sortBy = "latest",
-// }) {
-//   const offset = (page - 1) * limit;
-//   const values = [limit, offset];
-
-//   // Base filters: ignore deleted content
-//   const whereClauses = ["p.deleted_at IS NULL", "pr.deleted_at IS NULL"];
-
-//   // 1. NEW: Time-box the "Latest" feed to only 3 days
-//   if (sortBy === "latest") {
-//     whereClauses.push("p.created_at >= NOW() - INTERVAL '3 days'");
-//   }
-
-//   // 2. FILTERS
-//   if (tag) {
-//     values.push(tag);
-//     whereClauses.push(`t.name = $${values.length}`);
-//   }
-
-//   if (authorId) {
-//     values.push(authorId);
-//     whereClauses.push(`p.author_id = $${values.length}`);
-//   }
-
-//   let userIdIndex = null;
-//   if (userId) {
-//     values.push(userId);
-//     userIdIndex = values.length;
-//   }
-
-//   // 3. DYNAMIC SORTING LOGIC
-//   let orderByClause = "p.created_at DESC";
-
-//   if (sortBy === "top") {
-//     // Weighted algorithm: Comments (10pt) > Likes (5pt) > Views (1pt)
-//     orderByClause = `(
-//       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) * 5 +
-//       (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) * 10 +
-//       p.views
-//     ) DESC`;
-//   } else if (sortBy === "relevant") {
-//     if (userId) {
-//       orderByClause = `(
-//         CASE WHEN EXISTS (
-//           SELECT 1 FROM post_tags pt2
-//           JOIN user_interests ui ON ui.tag_id = pt2.tag_id
-//           WHERE pt2.post_id = p.id AND ui.user_id = $${userIdIndex}
-//         ) THEN 1 ELSE 0 END
-//       ) DESC, p.created_at DESC`;
-//     } else {
-//       orderByClause = "p.views DESC, p.created_at DESC";
-//     }
-//   }
-
-//   const query = `
-//     SELECT
-//       p.id,
-//       p.author_id,
-//       u.name AS author_name,
-//       pr.username AS author_username,
-//       p.title,
-//       p.slug,
-//       p.markdown,
-//       p.sanitized_html,
-//       p.cover_image,
-//       p.views,
-//       p.shares_count,
-//       p.created_at,
-//       p.updated_at,
-//       COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags,
-//       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
-//       (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comments_count
-//       ${userId ? `, EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdIndex}) AS is_liked` : ""}
-//     FROM posts p
-//     LEFT JOIN users u ON u.id = p.author_id
-//     LEFT JOIN profiles pr ON pr.user_id = u.id
-//     LEFT JOIN post_tags pt ON pt.post_id = p.id
-//     LEFT JOIN tags t ON pt.tag_id = t.id
-//     ${whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : ""}
-//     GROUP BY p.id, u.name, pr.username, pr.deleted_at
-//     ORDER BY ${orderByClause}
-//     LIMIT $1 OFFSET $2
-//   `;
-
-//   const { rows } = await pool.query(query, values);
-//   return rows;
-// }
-
-// export async function listPosts({
-//   page = 1,
-//   limit = 10,
-//   tag,
-//   userId,
-//   authorId,
-//   sortBy = "latest",
-// }) {
-//   const offset = (page - 1) * limit;
-//   const values = [limit, offset];
-//   const whereClauses = ["p.deleted_at IS NULL", "pr.deleted_at IS NULL"];
-
-//   // 1. FILTER: 'Latest' shows only last 3 days
-//   if (sortBy === "latest") {
-//     whereClauses.push("p.created_at >= NOW() - INTERVAL '3 days'");
-//   }
-
-//   if (tag) {
-//     values.push(tag);
-//     whereClauses.push(`t.name = $${values.length}`);
-//   }
-
-//   if (authorId) {
-//     values.push(authorId);
-//     whereClauses.push(`p.author_id = $${values.length}`);
-//   }
-
-//   let userIdIndex = null;
-//   if (userId) {
-//     values.push(userId);
-//     userIdIndex = values.length;
-//   }
-
-//   // 2. DYNAMIC SORTING LOGIC
-//   let orderByClause = "p.created_at DESC";
-
-//   if (sortBy === "top") {
-//     orderByClause = `(
-//       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) * 5 +
-//       (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) * 10 +
-//       p.views
-//     ) DESC`;
-//   } else if (sortBy === "relevant") {
-//     if (userId) {
-//       orderByClause = `(
-//         CASE
-//           WHEN EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = $${userIdIndex} AND f.following_id = p.author_id) THEN 2
-//           WHEN EXISTS (
-//             SELECT 1 FROM post_tags pt2
-//             JOIN user_interests ui ON ui.tag_id = pt2.tag_id
-//             WHERE pt2.post_id = p.id AND ui.user_id = $${userIdIndex}
-//           ) THEN 1
-//           ELSE 0
-//         END
-//       ) DESC, p.created_at DESC`;
-//     } else {
-//       orderByClause = "p.views DESC, p.created_at DESC";
-//     }
-//   }
-
-//   // 3. THE FINAL QUERY
-//   const query = `
-//     SELECT
-//       p.id, p.author_id, u.name AS author_name, pr.username AS author_username,
-//       p.title, p.slug, p.markdown, p.cover_image, p.views, p.created_at,
-//       COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags,
-//       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
-//       (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comments_count
-//       ${userId ? `, EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdIndex}) AS is_liked` : ""}
-//       ${userId ? `, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id = $${userIdIndex} AND f.following_id = p.author_id) AS is_following_author` : ""}
-//     FROM posts p
-//     LEFT JOIN users u ON u.id = p.author_id
-//     LEFT JOIN profiles pr ON pr.user_id = u.id
-//     LEFT JOIN post_tags pt ON pt.post_id = p.id
-//     LEFT JOIN tags t ON pt.tag_id = t.id
-//     ${whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : ""}
-//     GROUP BY p.id, u.name, pr.username, pr.deleted_at
-//     ORDER BY ${orderByClause}
-//     LIMIT $1 OFFSET $2
-//   `;
-
-//   const { rows } = await pool.query(query, values);
-//   return rows;
-// }
-
 export async function listPosts({
   page = 1,
   limit = 10,
@@ -241,6 +60,8 @@ export async function listPosts({
   const values = [limit, offset];
   const whereClauses = ["p.deleted_at IS NULL", "pr.deleted_at IS NULL"];
 
+  // 1. FIXED LATEST LOGIC: Don't restrict to 3 days, just sort by date
+  // (Old logic was hiding posts if you hadn't posted in 72 hours)
   if (sortBy === "latest") {
     whereClauses.push("p.created_at >= NOW() - INTERVAL '3 days'");
   }
@@ -261,7 +82,6 @@ export async function listPosts({
     userIdIndex = values.length;
   }
 
-  // Sorting Logic
   let orderByClause = "p.created_at DESC";
   if (sortBy === "top") {
     orderByClause = `((SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) * 5 + p.views) DESC`;
@@ -278,8 +98,8 @@ export async function listPosts({
       COALESCE(json_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL), '[]') AS tags,
       (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id) AS likes_count,
       (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) AS comments_count
-      ${userId ? `, EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdIndex}) AS is_liked` : ""}
-      ${userId ? `, EXISTS(SELECT 1 FROM follows f WHERE f.follower_id = $${userIdIndex} AND f.following_id = p.author_id) AS is_following_author` : ""}
+      ${userId ? `, BOOL_OR(EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $${userIdIndex})) AS is_liked` : ", FALSE AS is_liked"}
+      ${userId ? `, BOOL_OR(EXISTS(SELECT 1 FROM follows f WHERE f.follower_id = $${userIdIndex} AND f.following_id = p.author_id)) AS is_following_author` : ", FALSE AS is_following_author"}
     FROM posts p
     LEFT JOIN users u ON u.id = p.author_id
     LEFT JOIN profiles pr ON pr.user_id = u.id
@@ -294,39 +114,6 @@ export async function listPosts({
   const { rows } = await pool.query(query, values);
   return rows;
 }
-
-// export async function toggleFollow(followerId, followingId) {
-//   if (followerId === followingId) throw new Error("Cannot follow yourself");
-//   const client = await pool.connect();
-//   try {
-//     await client.query("BEGIN");
-//     const { rows } = await client.query(
-//       "SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2",
-//       [followerId, followingId],
-//     );
-
-//     if (rows.length > 0) {
-//       await client.query(
-//         "DELETE FROM follows WHERE follower_id = $1 AND following_id = $2",
-//         [followerId, followingId],
-//       );
-//       await client.query("COMMIT");
-//       return { is_following_author: false };
-//     } else {
-//       await client.query(
-//         "INSERT INTO follows (follower_id, following_id) VALUES ($1, $2)",
-//         [followerId, followingId],
-//       );
-//       await client.query("COMMIT");
-//       return { is_following_author: true };
-//     }
-//   } catch (err) {
-//     await client.query("ROLLBACK");
-//     throw err;
-//   } finally {
-//     client.release();
-//   }
-// }
 
 export async function toggleFollow(followerId, followingId) {
   if (followerId === followingId)
@@ -349,7 +136,7 @@ export async function toggleFollow(followerId, followingId) {
         [followerId, followingId],
       );
       await client.query("COMMIT");
-      return { following: false };
+      return { following: false, authorId: followingId };
     } else {
       // Follow
       await client.query(
@@ -357,7 +144,7 @@ export async function toggleFollow(followerId, followingId) {
         [followerId, followingId],
       );
       await client.query("COMMIT");
-      return { following: true };
+      return { following: true, authorId: followingId };
     }
   } catch (err) {
     await client.query("ROLLBACK");

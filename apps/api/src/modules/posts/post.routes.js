@@ -14,7 +14,7 @@ const router = express.Router();
 // ----------------------
 
 // List posts (pagination + optional tag filter)
-router.get("/", postController.list);
+router.get("/", optionalAuth, postController.list);
 
 // Get single post by slug
 router.get("/:slug", optionalAuth, postController.get);

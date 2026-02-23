@@ -13,8 +13,7 @@ import {
 
 import {
   usePostDetail,
-  useLikePost,
-  useUnlikePost,
+  useToggleLikePost, // Changed: Integrated the toggle hook
   useAddComment,
   useDeleteComment,
   useSharePost,
@@ -37,8 +36,8 @@ export default function PostDetailPage() {
 
   const { data: post, isLoading, isError, error } = usePostDetail(slug);
 
-  const likeMutation = useLikePost();
-  const unlikeMutation = useUnlikePost();
+  // Integrated Hooks
+  const toggleLikeMutation = useToggleLikePost();
   const commentMutation = useAddComment();
   const deleteCommentMutation = useDeleteComment();
   const shareMutation = useSharePost();
@@ -46,15 +45,22 @@ export default function PostDetailPage() {
   /* --- Handlers --- */
   const handleLike = useCallback(() => {
     if (!post) return;
-    const mutation = post.is_liked ? unlikeMutation : likeMutation;
-    mutation.mutate(post.id, {
-      onError: () => showToast("Failed to update reaction"),
-    });
-  }, [post, likeMutation, unlikeMutation]);
+
+    // The hook expects an object { id, isLiked }
+    toggleLikeMutation.mutate(
+      { id: post.id, isLiked: post.is_liked },
+      {
+        onError: () => showToast("Failed to update reaction"),
+      },
+    );
+  }, [post, toggleLikeMutation]);
 
   const handleShare = useCallback(async () => {
+    if (!post) return;
     const url = window.location.href;
+
     shareMutation.mutate(post.id);
+
     try {
       if (navigator.share) {
         await navigator.share({ title: post.title, url });
@@ -69,7 +75,7 @@ export default function PostDetailPage() {
 
   const handleCommentSubmit = (e) => {
     e.preventDefault();
-    if (!commentText.trim()) return;
+    if (!commentText.trim() || !post) return;
 
     commentMutation.mutate(
       { id: post.id, text: commentText },
@@ -84,7 +90,7 @@ export default function PostDetailPage() {
   };
 
   /* --- UI States --- */
-  if (isLoading) return <LoadingSkeleton />;
+  if (isLoading) return <Skeleton />;
   if (isError || !post) return <ErrorState message={error?.message} />;
 
   return (
@@ -158,6 +164,7 @@ export default function PostDetailPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLike}
+                disabled={toggleLikeMutation.isPending}
                 className={`transition-colors ${post.is_liked ? "text-red-500 hover:text-red-600 hover:bg-red-50" : ""}`}
               >
                 <Heart
@@ -247,6 +254,7 @@ export default function PostDetailPage() {
                           commentId: comment.id,
                         })
                       }
+                      disabled={deleteCommentMutation.isPending}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -261,43 +269,5 @@ export default function PostDetailPage() {
         </div>
       </footer>
     </article>
-  );
-}
-
-/* --- Helpers --- */
-
-function LoadingSkeleton() {
-  return (
-    <div className="max-w-3xl mx-auto py-12 px-6 space-y-8">
-      <Skeleton className="h-10 w-32 rounded-lg" />
-      <div className="space-y-4">
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-3/4" />
-      </div>
-      <div className="flex gap-4">
-        <Skeleton className="h-12 w-12 rounded-full" />
-        <Skeleton className="h-12 w-32" />
-      </div>
-      <Skeleton className="h-80 w-full rounded-2xl" />
-    </div>
-  );
-}
-
-function ErrorState({ message }) {
-  return (
-    <div className="max-w-md mx-auto my-32 text-center space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-3xl font-serif font-bold">Post unavailable</h2>
-        <p className="text-muted-foreground">
-          {message ||
-            "The insight you are looking for has been moved or deleted."}
-        </p>
-      </div>
-      <Link to="/dashboard">
-        <Button variant="outline" className="rounded-full px-8">
-          Return to feed
-        </Button>
-      </Link>
-    </div>
   );
 }

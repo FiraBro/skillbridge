@@ -33,9 +33,9 @@ export default function JobFeed() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FBFBFC] dark:bg-zinc-950">
-      {/* HEADER - Minimalist Style */}
-      <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+    <div className="min-h-screen bg-white text-black">
+      {/* HEADER */}
+      <div className="border-b border-gray-300">
         <div className="max-w-5xl mx-auto px-6 py-12">
           <motion.h1
             initial={{ opacity: 0, x: -10 }}
@@ -45,13 +45,13 @@ export default function JobFeed() {
             Find Work
           </motion.h1>
 
-          <div className="flex items-center rounded-xl overflow-hidden border bg-white dark:bg-zinc-800 focus-within:ring-2 focus-within:ring-indigo-500 transition-all shadow-sm">
+          <div className="flex items-center rounded-xl overflow-hidden border bg-white transition-all shadow-sm">
             <div className="relative flex-1">
               <div className="absolute left-4 top-1/2 -translate-y-1/2">
                 {isFetching ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+                  <Loader2 className="h-5 w-5 animate-spin text-black" />
                 ) : (
-                  <Search className="h-5 w-5 text-zinc-400" />
+                  <Search className="h-5 w-5 text-gray-500" />
                 )}
               </div>
               <Input
@@ -64,7 +64,7 @@ export default function JobFeed() {
             </div>
             <Button
               onClick={handleManualSearch}
-              className="h-14 px-10 rounded-none bg-zinc-900 hover:bg-zinc-800 text-white font-bold transition-colors"
+              className="h-14 px-10 rounded-none bg-black text-white font-bold transition-colors"
             >
               Search
             </Button>
@@ -72,9 +72,9 @@ export default function JobFeed() {
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto bg-white dark:bg-zinc-900 border-x min-h-[60vh]">
+      <main className="max-w-5xl mx-auto bg-white border-x min-h-[60vh]">
         {/* TABS */}
-        <div className="flex border-b sticky top-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md z-10 px-6">
+        <div className="flex border-b sticky top-0 bg-white z-10 px-6">
           {["matches", "recent", "saved"].map((tab) => (
             <TabButton
               key={tab}
@@ -85,7 +85,7 @@ export default function JobFeed() {
           ))}
         </div>
 
-        {/* JOB LIST WITH SMOOTH TRANSITIONS */}
+        {/* JOB LIST */}
         <div className="relative">
           <AnimatePresence mode="wait">
             {isLoading ? (
@@ -147,7 +147,7 @@ export default function JobFeed() {
 }
 
 /* =========================
-    REFINED SUB COMPONENTS
+    SUB COMPONENTS
 ========================= */
 
 function TabButton({ label, active, onClick }) {
@@ -155,14 +155,14 @@ function TabButton({ label, active, onClick }) {
     <button
       onClick={onClick}
       className={`px-2 py-5 mr-8 font-bold capitalize relative transition-colors ${
-        active ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"
+        active ? "text-black" : "text-gray-500 hover:text-black"
       }`}
     >
       {label}
       {active && (
         <motion.div
           layoutId="activeTab"
-          className="absolute bottom-0 left-0 right-0 h-[2px] bg-indigo-600"
+          className="absolute bottom-0 left-0 right-0 h-[2px] bg-black"
           transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
         />
       )}
@@ -182,21 +182,21 @@ function JobCard({ job, onApply }) {
         visible: { opacity: 1, y: 0 },
         exit: { opacity: 0, x: -10 },
       }}
-      className="p-8 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors group"
+      className="p-8 hover:bg-gray-100 transition-colors group"
     >
       <Link to={`/jobs/${job.id}`}>
-        <h3 className="text-xl font-bold mb-2 group-hover:text-indigo-600 transition-colors">
+        <h3 className="text-xl font-bold mb-2 group-hover:text-black transition-colors">
           {job.title}
         </h3>
       </Link>
-      <p className="text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-2 leading-relaxed">
+      <p className="text-gray-700 mb-4 line-clamp-2 leading-relaxed">
         {job.description}
       </p>
       <div className="flex flex-wrap gap-2 mb-6">
         {skills.slice(0, 5).map((s, i) => (
           <span
             key={i}
-            className="text-xs px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 font-medium"
+            className="text-xs px-3 py-1 rounded-full bg-gray-200 font-medium"
           >
             {s}
           </span>
@@ -204,7 +204,7 @@ function JobCard({ job, onApply }) {
       </div>
       <Button
         onClick={onApply}
-        className="rounded-full px-8 h-10 font-semibold shadow-sm"
+        className=" px-8 h-10 font-semibold shadow-sm bg-black text-white"
       >
         Apply Now
       </Button>
@@ -217,12 +217,12 @@ function LoadingState() {
     <div className="p-8 space-y-8">
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="space-y-3">
-          <Skeleton className="h-6 w-1/3" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-6 w-1/3 bg-gray-300" />
+          <Skeleton className="h-4 w-full bg-gray-300" />
+          <Skeleton className="h-4 w-2/3 bg-gray-300" />
           <div className="flex gap-2">
-            <Skeleton className="h-6 w-16 rounded-full" />
-            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-16 rounded-full bg-gray-300" />
+            <Skeleton className="h-6 w-16 rounded-full bg-gray-300" />
           </div>
         </div>
       ))}
@@ -233,11 +233,11 @@ function LoadingState() {
 function EmptyState({ searchTerm, onReset }) {
   return (
     <div className="py-32 text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-zinc-100 mb-4">
-        <Search className="h-8 w-8 text-zinc-400" />
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-200 mb-4">
+        <Search className="h-8 w-8 text-gray-500" />
       </div>
-      <h3 className="text-xl font-bold">No results found</h3>
-      <p className="text-zinc-500 mt-2 max-w-xs mx-auto">
+      <h3 className="text-xl font-bold text-black">No results found</h3>
+      <p className="text-gray-700 mt-2 max-w-xs mx-auto">
         {searchTerm
           ? `We couldn't find any jobs matching "${searchTerm}"`
           : "Try adjusting your filters"}
@@ -246,7 +246,7 @@ function EmptyState({ searchTerm, onReset }) {
         <Button
           variant="outline"
           onClick={onReset}
-          className="mt-6 rounded-full px-8"
+          className="mt-6 rounded-full px-8 text-black border-black"
         >
           Clear search
         </Button>

@@ -21,7 +21,7 @@ const TalentDiscovery = lazy(() => import("./companies/discovery/page.jsx"));
 const CreateJob = lazy(() => import("./jobs/create/page.jsx"));
 const ApplicantReview = lazy(() => import("./companies/applicants/page.jsx"));
 
-const Search = lazy(() => import("./search/page.jsx"));
+// const Search = lazy(() => import("./search/page.jsx"));
 const Admin = lazy(() => import("./admin/page.jsx"));
 
 const Jobs = lazy(() => import("./jobs/page.jsx"));
@@ -88,7 +88,7 @@ export const router = createBrowserRouter([
           },
           { path: "/jobs", element: <Jobs /> },
           { path: "/jobs/:id", element: <JobDetail /> },
-          { path: "/search", element: <Search /> },
+          // { path: "/search", element: <Search /> },
           { path: "/posts/create", element: <PostCreate /> },
           { path: "/posts/:slug", element: <PostDetail /> },
           { path: "/posts/:slug/edit", element: <PostEdit /> },

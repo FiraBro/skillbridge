@@ -1,11 +1,9 @@
-import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { useJobDetail, useApplyJob } from "@/hooks/useJobs";
+import { motion } from "framer-motion";
+import { useJobDetail } from "@/hooks/useJobs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
@@ -22,13 +20,8 @@ import {
 export default function JobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
-  // Destructure data from the response structure you provided
-  const { data: response, isLoading, isError } = useJobDetail(id);
-
-  // Extract the actual job object from the "data" property of the response
-  const job = response;
+  const { data: job, isLoading, isError } = useJobDetail(id);
 
   if (isLoading) return <DetailSkeleton />;
   if (isError || !job) return <ErrorState navigate={navigate} />;
@@ -37,62 +30,59 @@ export default function JobDetail() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-5xl mx-auto p-6 md:p-12 space-y-10"
+      className="max-w-5xl mx-auto p-6 md:p-12 space-y-10 text-gray-900 bg-gray-100"
     >
-      {/* Navigation */}
+      {/* Back Button */}
       <Button
         variant="ghost"
-        className="group gap-2 pl-0 text-zinc-500 hover:text-zinc-900 transition-colors"
+        className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
         onClick={() => navigate("/jobs")}
       >
         <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-        Back to Dashboard
+        Back to Jobs
       </Button>
 
       {/* Hero Section */}
-      <div className="flex flex-col lg:flex-row justify-between items-start gap-8 border-b border-zinc-100 dark:border-zinc-800 pb-10">
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-8 border-b border-gray-300 pb-10">
         <div className="space-y-6 flex-1">
-          <div className="space-y-3">
-            <h1 className="text-4xl md:text-6xl font-serif font-bold tracking-tight text-zinc-900 dark:text-zinc-50 leading-[1.1]">
-              {job.title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-zinc-500">
-              <span className="flex items-center gap-2 text-zinc-900 dark:text-zinc-100 uppercase tracking-wider text-xs">
-                <Briefcase className="w-4 h-4 text-indigo-600" />{" "}
-                {job.client_name}
-              </span>
-              <span className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" /> ${job.budget_range}
-              </span>
-              <span className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />{" "}
-                {new Date(job.created_at).toLocaleDateString()}
-              </span>
-            </div>
+          <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tight leading-[1.1] text-gray-900">
+            {job.title}
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-gray-700">
+            <span className="flex items-center gap-2 text-xs uppercase tracking-wider">
+              <Briefcase className="w-4 h-4" />
+              {job.client_name}
+            </span>
+            <span className="flex items-center gap-2 text-xs">
+              <DollarSign className="w-4 h-4" /> ${job.budget_range}
+            </span>
+            <span className="flex items-center gap-2 text-xs">
+              <Calendar className="w-4 h-4" />{" "}
+              {new Date(job.created_at).toLocaleDateString()}
+            </span>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant="outline"
-              className="rounded-full px-4 py-1 border-zinc-200 text-zinc-600 font-bold"
-            >
-              <Globe className="w-3.5 h-3.5 mr-2" /> Remote
+          <div className="flex flex-wrap gap-2 mt-3">
+            <Badge className="rounded-full px-4 py-1 border border-gray-400 text-gray-800 font-bold flex items-center gap-1 bg-gray-200">
+              <Globe className="w-3 h-3" /> Remote
             </Badge>
             {job.trial_friendly && (
-              <Badge className="rounded-full px-4 py-1 bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-100 transition-colors">
-                <Zap className="w-3.5 h-3.5 mr-2 fill-current" /> Trial Friendly
+              <Badge className="rounded-full px-4 py-1 border border-gray-400 text-gray-800 font-bold flex items-center gap-1 bg-gray-200">
+                <Zap className="w-3 h-3" /> Trial Friendly
               </Badge>
             )}
           </div>
         </div>
 
-        <div className="shrink-0 w-full lg:w-auto">
+        {/* Apply Button */}
+        <div className="shrink-0 w-full lg:w-auto mt-4 lg:mt-0">
           <Button
             size="lg"
-            className={`w-full lg:w-80 h-16 rounded-2xl font-bold text-xl transition-all active:scale-95 shadow-2xl shadow-zinc-200 dark:shadow-none ${
+            className={`w-full lg:w-60 h-12 rounded-2xl font-bold text-lg transition-all active:scale-95 ${
               job.application_status
-                ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-                : "bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 hover:bg-zinc-800"
+                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                : "bg-gray-800 text-white hover:bg-gray-700"
             }`}
             disabled={job.application_status !== null}
             onClick={() => navigate(`/jobs/${job.id}/apply`)}
@@ -105,33 +95,34 @@ export default function JobDetail() {
               "Submit Proposal"
             )}
           </Button>
-          <p className="text-[11px] text-center mt-3 text-zinc-400 font-medium uppercase tracking-widest">
+          <p className="text-[11px] text-center mt-3 text-gray-600 font-medium uppercase tracking-widest">
             Requires 2 Connects
           </p>
         </div>
       </div>
 
-      {/* Main Content Grid */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+        {/* Left Content */}
         <div className="lg:col-span-8 space-y-12">
           {/* Description */}
           <section className="space-y-4">
-            <h2 className="text-xs uppercase tracking-[0.2em] font-black text-zinc-400 flex items-center gap-2">
+            <h2 className="text-xs uppercase tracking-[0.2em] font-black text-gray-600 flex items-center gap-2">
               <Info className="w-4 h-4" /> Project Overview
             </h2>
-            <div className="prose prose-zinc dark:prose-invert max-w-none text-zinc-700 dark:text-zinc-300 leading-relaxed text-xl font-light">
+            <div className="prose prose-gray max-w-none text-gray-800 leading-relaxed text-lg font-light">
               {job.description}
             </div>
           </section>
 
-          {/* Outcome */}
+          {/* Expected Outcome */}
           {job.expected_outcome && (
             <section className="space-y-4">
-              <h2 className="text-xs uppercase tracking-[0.2em] font-black text-zinc-400">
+              <h2 className="text-xs uppercase tracking-[0.2em] font-black text-gray-600">
                 Goals & Outcomes
               </h2>
-              <div className="p-8 bg-zinc-50 dark:bg-zinc-900/40 rounded-3xl border border-zinc-100 dark:border-zinc-800">
-                <p className="text-zinc-900 dark:text-zinc-100 font-serif italic text-lg leading-relaxed">
+              <div className="p-6 bg-gray-200 rounded-2xl border border-gray-300">
+                <p className="text-gray-900 font-serif italic text-lg leading-relaxed">
                   "{job.expected_outcome}"
                 </p>
               </div>
@@ -141,18 +132,16 @@ export default function JobDetail() {
 
         {/* Sidebar */}
         <aside className="lg:col-span-4 space-y-8">
-          <Card className="p-8 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm rounded-3xl space-y-8">
+          <Card className="p-6 border border-gray-300 rounded-2xl shadow-sm space-y-8 bg-gray-200">
             <div className="space-y-4">
-              <h3 className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">
+              <h3 className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-600">
                 Tech Stack
               </h3>
               <div className="flex flex-wrap gap-2">
-                {/* Fixed skill parsing for your array structure */}
                 {job.required_skills?.[0]?.split(",").map((skill) => (
                   <Badge
                     key={skill}
-                    variant="secondary"
-                    className="rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-none font-bold text-[11px] py-1.5 px-3"
+                    className="rounded-lg bg-gray-300 text-gray-800 border-none font-bold text-[11px] py-1.5 px-3"
                   >
                     {skill.trim()}
                   </Badge>
@@ -160,30 +149,31 @@ export default function JobDetail() {
               </div>
             </div>
 
-            <div className="pt-8 border-t border-zinc-100 dark:border-zinc-800 space-y-6">
-              <h3 className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">
+            <div className="pt-6 border-t border-gray-300 space-y-4">
+              <h3 className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-600">
                 Client Verification
               </h3>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 text-sm text-zinc-600">
-                  <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                  <span className="font-medium">Payment Method Verified</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <ShieldCheck className="w-5 h-5" />
+                  <span className="font-medium">Payment Verified</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-zinc-600">
-                  <Globe className="w-5 h-5 text-indigo-600" />
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <Globe className="w-5 h-5" />
                   <span className="font-medium">Global Recruitment</span>
                 </div>
               </div>
             </div>
           </Card>
 
-          <div className="p-6 bg-indigo-50/50 dark:bg-indigo-950/10 rounded-3xl border border-indigo-100/50">
-            <h4 className="text-xs font-bold text-indigo-900 dark:text-indigo-300 mb-2 flex items-center gap-2">
-              <Zap className="w-3 h-3 fill-current" /> Pro Tip
+          {/* Pro Tip */}
+          <div className="p-6 bg-gray-200 rounded-2xl border border-gray-300">
+            <h4 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-2">
+              <Zap className="w-3 h-3" /> Pro Tip
             </h4>
-            <p className="text-[13px] text-indigo-800/80 dark:text-indigo-400/80 leading-relaxed">
-              Tailor your proposal to nexmart tech's specific landing page needs
-              to increase your chance of selection.
+            <p className="text-sm text-gray-800 leading-relaxed">
+              Tailor your proposal to the client's specific needs to increase
+              your chance of selection.
             </p>
           </div>
         </aside>
@@ -192,40 +182,43 @@ export default function JobDetail() {
   );
 }
 
+/* Skeleton Loader */
 function DetailSkeleton() {
   return (
     <div className="max-w-5xl mx-auto p-12 space-y-12 animate-pulse">
-      <Skeleton className="h-6 w-32 rounded-full" />
+      <Skeleton className="h-6 w-32 rounded-full bg-gray-300" />
       <div className="flex justify-between">
         <div className="space-y-4 w-2/3">
-          <Skeleton className="h-20 w-full rounded-2xl" />
-          <Skeleton className="h-6 w-1/2 rounded-full" />
+          <Skeleton className="h-20 w-full rounded-2xl bg-gray-300" />
+          <Skeleton className="h-6 w-1/2 rounded-full bg-gray-300" />
         </div>
-        <Skeleton className="h-16 w-64 rounded-2xl" />
+        <Skeleton className="h-16 w-64 rounded-2xl bg-gray-300" />
       </div>
       <div className="grid grid-cols-12 gap-12">
         <div className="col-span-8 space-y-6">
-          <Skeleton className="h-64 w-full rounded-3xl" />
+          <Skeleton className="h-64 w-full rounded-3xl bg-gray-300" />
         </div>
         <div className="col-span-4">
-          <Skeleton className="h-80 w-full rounded-3xl" />
+          <Skeleton className="h-80 w-full rounded-3xl bg-gray-300" />
         </div>
       </div>
     </div>
   );
 }
 
+/* Error State */
 function ErrorState({ navigate }) {
   return (
     <div className="max-w-4xl mx-auto py-32 text-center space-y-6">
-      <h2 className="text-3xl font-serif font-bold">Project Expired</h2>
-      <p className="text-zinc-500">
+      <h2 className="text-3xl font-serif font-bold text-gray-900">
+        Project Expired
+      </h2>
+      <p className="text-gray-700">
         This listing is no longer available or has been moved.
       </p>
       <Button
         onClick={() => navigate("/jobs")}
-        variant="outline"
-        className="rounded-full px-8"
+        className="rounded-full px-8 bg-gray-800 text-white hover:bg-gray-700"
       >
         Return to Jobs
       </Button>

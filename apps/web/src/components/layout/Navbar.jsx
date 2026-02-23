@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,43 +23,40 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useJobs } from "@/hooks/useJobs";
 import { useDeveloperDiscovery } from "@/hooks/useDeveloper";
-// --- NEW IMPORT ---
 import { NotificationDropdown } from "../NotificationCenter";
+
 export default function Navbar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
   const trimmedQuery = searchQuery.trim();
-
-  const handleSelection = (path) => {
-    navigate(path);
-    setSearchQuery("");
-    setIsNotificationsOpen(false); // Close dropdowns on nav
-  };
-
-  /* =========================
-     SEARCH & CMD+K LOGIC
-  ========================= */
   const isQueryValid = trimmedQuery.length >= 2;
+
   const { developers: devResponse, isLoading: devLoading } =
     useDeveloperDiscovery(
       isQueryValid ? { search: trimmedQuery } : { search: "" },
     );
+
   const { data: jobsData, isLoading: jobLoading } = useJobs(
     isQueryValid ? { search: trimmedQuery } : null,
   );
+
   const developers = devResponse || [];
   const jobs = jobsData || [];
 
-  const handleSearchSubmit = useCallback(
-    (e) => {
-      e.preventDefault();
-      if (!trimmedQuery) return;
-      handleSelection(`/search?q=${encodeURIComponent(trimmedQuery)}`);
-    },
-    [trimmedQuery],
-  );
+  const handleSelection = (path) => {
+    navigate(path);
+    setSearchQuery("");
+    setIsNotificationsOpen(false);
+  };
+
+  // ⛔ REMOVE SEARCH PAGE NAVIGATION
+  const handleSearchSubmit = useCallback((e) => {
+    e.preventDefault();
+    // intentionally empty → no /search navigation
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -84,17 +81,13 @@ export default function Navbar() {
     <>
       <nav className="fixed top-0 left-0 w-full z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center px-4 md:px-6">
-          <Link
-            to="/"
-            onClick={() => setSearchQuery("")}
-            className="flex items-center space-x-2"
-          >
+          <Link to="/" onClick={() => setSearchQuery("")}>
             <span className="text-lg font-bold tracking-tight">
               SKILL<span className="text-emerald-600">BRIDGE</span>
             </span>
           </Link>
 
-          {/* Search Bar (Hidden on Mobile) */}
+          {/* SEARCH */}
           <div className="hidden md:flex flex-1 justify-center px-8">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -113,6 +106,7 @@ export default function Navbar() {
                   {(devLoading || jobLoading) && (
                     <p className="p-3 text-sm animate-pulse">Searching...</p>
                   )}
+
                   {!devLoading && developers.length > 0 && (
                     <div className="pb-2">
                       <p className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase">
@@ -136,7 +130,7 @@ export default function Navbar() {
                       ))}
                     </div>
                   )}
-                  {/* Jobs Section */}
+
                   {!jobLoading && jobs.length > 0 && (
                     <div className="pb-2 border-t mt-2 pt-2">
                       <p className="px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase">
@@ -146,16 +140,17 @@ export default function Navbar() {
                         <button
                           key={job.id}
                           onClick={() => handleSelection(`/jobs/${job.id}`)}
-                          className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-sm flex flex-col"
+                          className="w-full text-left px-4 py-2 hover:bg-emerald-50 text-sm"
                         >
                           <span className="font-medium">{job.title}</span>
-                          <span className="text-muted-foreground text-xs">
+                          <span className="text-xs text-muted-foreground">
                             {job.company_name || "Company"}
                           </span>
                         </button>
                       ))}
                     </div>
                   )}
+
                   {!devLoading &&
                     !jobLoading &&
                     developers.length === 0 &&
@@ -170,6 +165,7 @@ export default function Navbar() {
             </div>
           </div>
 
+          {/* RIGHT SIDE */}
           <div className="flex items-center space-x-3">
             <Link to="/jobs">
               <Button variant="ghost" size="sm" className="hidden lg:flex">
@@ -177,13 +173,11 @@ export default function Navbar() {
               </Button>
             </Link>
 
-            {/* --- NOTIFICATION BUTTON & DROPDOWN --- */}
             <div className="relative">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className={isNotificationsOpen ? "bg-accent" : ""}
               >
                 <Bell className="h-5 w-5" />
               </Button>
@@ -191,53 +185,13 @@ export default function Navbar() {
               <NotificationDropdown
                 isOpen={isNotificationsOpen}
                 onClose={() => setIsNotificationsOpen(false)}
-                onSeeAll={() => {
-                  setIsNotificationsOpen(false);
-                  navigate("/notifications");
-                }}
+                onSeeAll={() => navigate("/notifications")}
               />
             </div>
 
-            {/* <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-9 w-9 rounded-full p-0 border"
-                >
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={user?.avatar} />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-60">
-                <DropdownMenuLabel>
-                  <p className="text-sm font-semibold">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                  <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigate(`/profile/${user?.username || "me"}`)}
-                >
-                  <User className="mr-2 h-4 w-4" /> Profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" /> Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu> */}
-
-            {/* Change the DropdownMenu root to be non-modal to prevent scrollbar hiding */}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-9 w-9 rounded-full p-0 border focus-visible:ring-0 focus-visible:ring-offset-0"
-                >
+                <Button variant="ghost" className="h-9 w-9 rounded-full p-0">
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={user?.avatar} />
                     <AvatarFallback>{initials}</AvatarFallback>
@@ -245,12 +199,7 @@ export default function Navbar() {
                 </Button>
               </DropdownMenuTrigger>
 
-              {/* Add a slight slide-up animation and ensure it doesn't shift layout */}
-              <DropdownMenuContent
-                align="end"
-                className="w-60 mt-1"
-                onCloseAutoFocus={(e) => e.preventDefault()} // Prevents page jumping back to trigger
-              >
+              <DropdownMenuContent align="end" className="w-60 mt-1">
                 <DropdownMenuLabel>
                   <p className="text-sm font-semibold">{user?.name}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
@@ -276,7 +225,7 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
-      {/* Spacer to prevent content from hiding under fixed navbar */}
+
       <div className="h-16" />
     </>
   );

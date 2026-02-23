@@ -11,10 +11,18 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useReputation } from "@/hooks/useProfiles";
+import { use } from "react";
 
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
+  const { data: reputation } = useReputation(user.id);
+  console.log("repfromsidebar", reputation);
+
+  const MAX_REPUTATION = 100;
+
+  const repPercentage = ((reputation?.total ?? 0) / MAX_REPUTATION) * 100;
 
   const profilePath = user?.username
     ? `/profile/${user.username}`
@@ -126,11 +134,8 @@ export default function Sidebar() {
             <TrendingUp className="h-3.5 w-3.5 text-green-500" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight">
-              {user?.reputation || 0}
-            </span>
             <span className="text-[10px] bg-green-500/10 text-green-600 px-1.5 py-0.5 rounded font-bold">
-              +2.4%
+              {repPercentage.toFixed(1)}%
             </span>
           </div>
         </div>

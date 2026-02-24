@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { authApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
+import { BrandLogo } from "../comman/BrandLogo";
 
 const regSchema = z
   .object({
@@ -51,9 +52,7 @@ export const RegisterForm = () => {
   return (
     <div className="auth-card">
       <div className="auth-header">
-        <a href="/" className="brand-logo">
-          SKILL<span>BRIDGE</span>
-        </a>
+        <BrandLogo className="brand-logo" />
         <h1>Create account</h1>
         <p>Join the next generation of verified talent.</p>
       </div>

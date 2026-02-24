@@ -84,18 +84,6 @@
   }
 }
 
-.auth-page-wrapper .brand-logo {
-  font-size: 24px;
-  font-weight: 900;
-  letter-spacing: -1px;
-  color: var(--primary);
-  text-decoration: none;
-  margin-bottom: 12px;
-  display: block;
-  font-style: italic;
-  animation: pulseLogo 2s infinite ease-in-out;
-}
-
 @keyframes pulseLogo {
   0%,
   100% {
@@ -104,10 +92,6 @@
   50% {
     opacity: 0.8;
   }
-}
-
-.auth-page-wrapper .brand-logo span {
-  color: var(--accent);
 }
 
 .auth-page-wrapper .auth-header h1 {

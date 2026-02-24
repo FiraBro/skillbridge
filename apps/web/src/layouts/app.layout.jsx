@@ -1,7 +1,9 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
+import { PageTransition } from "@/components/comman/PageTransition";
 import { motion } from "framer-motion";
+import "@/styles/auth.css";
 
 export default function AppLayout() {
   return (
@@ -15,7 +17,9 @@ export default function AppLayout() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
-            <Outlet />
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
           </motion.div>
         </main>
       </div>

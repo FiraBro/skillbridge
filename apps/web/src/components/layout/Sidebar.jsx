@@ -17,8 +17,7 @@ import { use } from "react";
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
-  const { data: reputation } = useReputation(user.id);
-  console.log("repfromsidebar", reputation);
+  const { data: reputation } = useReputation(user?.id);
 
   const MAX_REPUTATION = 100;
 

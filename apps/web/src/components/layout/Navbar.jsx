@@ -24,6 +24,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useJobs } from "@/hooks/useJobs";
 import { useDeveloperDiscovery } from "@/hooks/useDeveloper";
 import { NotificationDropdown } from "../NotificationCenter";
+import { BrandLogo } from "../comman/BrandLogo";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -82,9 +83,7 @@ export default function Navbar() {
       <nav className="fixed top-0 left-0 w-full z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center px-4 md:px-6">
           <Link to="/" onClick={() => setSearchQuery("")}>
-            <span className="text-lg font-bold tracking-tight">
-              SKILL<span className="text-emerald-600">BRIDGE</span>
-            </span>
+            <BrandLogo className="navbar" />
           </Link>
 
           {/* SEARCH */}

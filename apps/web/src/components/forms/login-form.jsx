@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { authApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { BrandLogo } from "../comman/BrandLogo";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
@@ -47,9 +48,7 @@ export const LoginForm = () => {
   return (
     <div className="auth-card">
       <div className="auth-header">
-        <a href="/" className="brand-logo">
-          SKILL<span>BRIDGE</span>
-        </a>
+        <BrandLogo className="brand-logo" />
         <h1>Welcome back</h1>
         <p>Elevate your career with verified expertise.</p>
       </div>
@@ -98,6 +97,9 @@ export const LoginForm = () => {
           {mutation.isLoading ? "Signing in..." : "Sign In"}
         </button>
       </form>
+      <div className="auth-footer">
+        Don't have an account? <a href="/auth/register">Sign Up</a>
+      </div>
     </div>
   );
 };

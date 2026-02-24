@@ -12,6 +12,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
     --primary: 222.2 47.4% 11.2%;
+    --brand-primary: 222 47.4% 11.2%; /* same as primary */
+    --brand-accent: 217 91% 60%; /* SAME BLUE as auth (#3b82f6) */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -138,4 +140,23 @@
 /* Prevent layout shift due to scrollbar appearing/disappearing */
 html {
   overflow-y: scroll; /* Always show scrollbar to prevent layout shift */
+}
+
+/* =========================
+   GLOBAL BRAND LOGO
+   ========================= */
+
+.brand-logo {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  font-style: italic;
+  color: hsl(var(--brand-primary));
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.brand-logo span {
+  color: hsl(var(--brand-accent));
 }

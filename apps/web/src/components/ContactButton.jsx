@@ -1,57 +1,56 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { UserPlus, Check, Clock, MessageSquare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { useContactRequest } from '@/hooks/useNotifications';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { UserPlus, Check, Clock, MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useContactRequest } from "@/hooks/useNotifications";
 
-const ContactButton = ({ 
-  targetUserId, 
-  currentStatus = null, 
-  onStatusChange,
-  disabled = false 
+const ContactButton = ({
+  targetUserId,
+  currentStatus = null,
+  disabled = false,
 }) => {
   const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const { sendContactRequest, isPending } = useContactRequest();
-  
+
   const getStatusConfig = (status) => {
     switch (status) {
-      case 'accepted':
+      case "accepted":
         return {
-          label: 'Connected',
+          label: "Connected",
           icon: <Check className="h-4 w-4" />,
-          variant: 'default',
+          variant: "default",
           disabled: true,
         };
-      case 'pending':
+      case "pending":
         return {
-          label: 'Pending',
+          label: "Pending",
           icon: <Clock className="h-4 w-4" />,
-          variant: 'secondary',
+          variant: "secondary",
           disabled: true,
         };
-      case 'rejected':
+      case "rejected":
         return {
-          label: 'Connect',
+          label: "Connect",
           icon: <UserPlus className="h-4 w-4" />,
-          variant: 'default',
+          variant: "default",
           disabled: false,
         };
       default:
         return {
-          label: 'Connect',
+          label: "Connect",
           icon: <UserPlus className="h-4 w-4" />,
-          variant: 'default',
+          variant: "default",
           disabled: false,
         };
     }
@@ -61,19 +60,19 @@ const ContactButton = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (!message.trim()) {
-      alert('Please enter a message');
+      alert("Please enter a message");
       return;
     }
-    
+
     sendContactRequest({
       targetUserId: targetUserId, // This will be mapped to receiverId in the service
       message: message.trim(),
     });
-    
+
     setOpen(false);
-    setMessage('');
+    setMessage("");
   };
 
   return (
@@ -93,10 +92,10 @@ const ContactButton = ({
           className="flex items-center gap-2"
         >
           {statusConfig.icon}
-          {isPending ? 'Sending...' : statusConfig.label}
+          {isPending ? "Sending..." : statusConfig.label}
         </Button>
       </motion.div>
-      
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -105,7 +104,7 @@ const ContactButton = ({
               Introduce yourself and let them know why you'd like to connect
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleSubmit} id="contact-form" className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="message">Message</Label>
@@ -119,17 +118,17 @@ const ContactButton = ({
               />
             </div>
           </form>
-          
+
           <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => setOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               form="contact-form"
               disabled={!message.trim()}
             >

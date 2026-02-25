@@ -26,34 +26,51 @@ const __dirname = path.dirname(__filename);
 
 export const app = express();
 
-// ✅ Global middlewares
+// =============================================
+// 1. GLOBAL MIDDLEWARES
+// =============================================
 app.use(
   helmet({
-    crossOriginResourcePolicy: false, // Allows images to be loaded by frontend
+    crossOriginResourcePolicy: false, // Allows images/uploads to be accessed by frontend
   }),
 );
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Dynamic CORS and Static Files Fix
+// =============================================
+// 2. DYNAMIC CORS CONFIGURATION
+// =============================================
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://skillbridge-nwz6dhjhx-firagos-projects.vercel.app", // Your Vercel URL
+  "https://skillbridge-web-sooty.vercel.app",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests with no origin (Postman/Mobile)
+      // Allow localhost
+      // Allow any Vercel deployment URL (including previews)
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app")
+      ) {
         callback(null, true);
       } else {
+        console.error("🚨 CORS Blocked Origin:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   }),
 );
 
+// =============================================
+// 3. STATIC FILES & LOGGING
+// =============================================
 app.use(
   "/uploads",
   (req, res, next) => {
@@ -65,11 +82,13 @@ app.use(
 );
 
 app.use((req, res, next) => {
-  console.log("🌍 INCOMING REQUEST:", req.method, req.url);
+  console.log(`🌍 [${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
 
-// 🔹 Mount route modules
+// =============================================
+// 4. API ROUTES
+// =============================================
 app.use("/api/auth", authRoutes);
 app.use("/api/profiles", profileRoutes);
 app.use("/api/posts", postsRoutes);
@@ -85,16 +104,20 @@ app.use("/api/moderation", adminRoutes);
 app.use("/api/github", githubRoutes);
 app.use("/api/test", testRoutes);
 
-// 🔹 Global error handler
+// =============================================
+// 5. ERROR HANDLING
+// =============================================
 app.use(globalErrorHandler);
 
-// 🔥 THE GHOST FIX: Catch any Redis connection errors that aren't handled elsewhere
+// Catch unhandled Redis connection issues or Async crashes
 process.on("unhandledRejection", (reason) => {
   if (reason && reason.message && reason.message.includes("ECONNREFUSED")) {
     console.warn(
-      "⚠️ A background service (Redis) failed to connect. Skipping...",
+      "⚠️ Background service (Redis) connection failed. Skipping...",
     );
     return;
   }
-  console.error("Unhandled Rejection:", reason);
+  console.error("🔥 Unhandled Rejection:", reason);
 });
+
+export default app;

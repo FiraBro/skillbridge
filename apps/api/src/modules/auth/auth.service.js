@@ -16,36 +16,49 @@ export const register = async ({
   name,
   role = "developer",
 }) => {
+  // 1. Check if user already exists
   const existing = await query("SELECT id FROM users WHERE email=$1", [email]);
 
   if (existing.rowCount > 0) {
     throw new ApiError(409, "Email already registered");
   }
 
-  const passwordHash = await bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);
+  // 2. Generate the username BEFORE the database insert
+  // This ensures we satisfy the NOT NULL constraint in the users table
+  const username = await generateUniqueUsername(name);
 
+  // 3. Hash the password
+  // Adding a fallback to 10 in case env.BCRYPT_SALT_ROUNDS is undefined
+  const saltRounds = parseInt(env.BCRYPT_SALT_ROUNDS) || 10;
+  const passwordHash = await bcrypt.hash(password, saltRounds);
+
+  // 4. Update the SQL to include the username column ($5)
   const result = await query(
     `
-    INSERT INTO users(email, password_hash, name, role)
-    VALUES ($1,$2,$3,$4)
-    RETURNING id, email, name, role, created_at
+    INSERT INTO users(email, password_hash, name, role, username)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id, email, name, role, username, created_at
     `,
-    [email, passwordHash, name, role],
+    [email, passwordHash, name, role, username],
   );
 
   const user = result.rows[0];
 
-  // ⚡ Auto-create Profile
-  const username = await generateUniqueUsername(name);
+  // 5. ⚡ Auto-create Profile
+  // We pass the same username we just saved to the users table
   await profileService.createProfile({
     userId: user.id,
-    username,
+    username: user.username,
     fullName: name,
   });
 
+  // 6. Generate access token
   const token = generateAccessToken(user);
 
-  return { user: { ...user, username }, token };
+  return {
+    user,
+    token,
+  };
 };
 
 export const login = async ({ email, password }) => {

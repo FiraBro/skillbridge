@@ -1,7 +1,12 @@
-// apps/api/src/workers/github.worker.js
 import { Worker } from "bullmq";
+import Redis from "ioredis";
 import { fetchGithubStats } from "../services/github.service.js";
 import { query } from "../config/db.js";
+
+// Connection logic for Upstash/Render
+const connection = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null })
+  : new Redis({ host: "127.0.0.1", port: 6379, maxRetriesPerRequest: null });
 
 const worker = new Worker(
   "github-tasks",
@@ -9,10 +14,8 @@ const worker = new Worker(
     if (job.name === "sync-developer-stats") {
       const { userId, githubUsername, accessToken } = job.data;
 
-      // Fetch deep data from GitHub API
       const stats = await fetchGithubStats(githubUsername, accessToken);
 
-      // Cache the data in our PostgreSQL "profiles" or "users" table
       await query(
         `UPDATE users 
        SET github_stats = $1, 
@@ -22,5 +25,9 @@ const worker = new Worker(
       );
     }
   },
-  { connection: redisConfig },
+  { connection }, // Using the fixed connection
 );
+
+worker.on("failed", (job, err) => {
+  console.error(`GitHub sync ${job.id} failed: ${err.message}`);
+});

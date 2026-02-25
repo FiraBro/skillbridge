@@ -1,4 +1,5 @@
 import { Worker } from "bullmq";
+import Redis from "ioredis"; // Make sure ioredis is installed
 import {
   sendResetEmail,
   sendProfileViewEmail,
@@ -7,7 +8,10 @@ import {
   sendApplicationStatusEmail,
 } from "../modules/services/email.service.js";
 
-const connection = { host: "localhost", port: 6379 }; // Your Redis config
+// Use Upstash URL for Render, fallback to local for development
+const connection = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null })
+  : new Redis({ host: "127.0.0.1", port: 6379, maxRetriesPerRequest: null });
 
 const worker = new Worker(
   "email-tasks",
@@ -35,7 +39,7 @@ const worker = new Worker(
       );
     }
   },
-  { connection },
+  { connection }, // Using the fixed connection
 );
 
 worker.on("failed", (job, err) => {

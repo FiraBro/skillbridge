@@ -1,7 +1,7 @@
 import { Queue } from "bullmq";
 
-// Connection details for Redis (Real world: use environment variables)
-const redisConnection = {
+// Upstash uses a full URL (rediss://...), so we check for REDIS_URL first
+const redisConnection = process.env.REDIS_URL || {
   host: process.env.REDIS_HOST || "localhost",
   port: process.env.REDIS_PORT || 6379,
 };

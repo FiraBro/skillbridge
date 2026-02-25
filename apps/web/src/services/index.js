@@ -9,22 +9,19 @@ const extractData = (promise) => promise.then((res) => res.data || res);
 ========================= */
 export const jobService = {
   getAll: (params) => {
-    const res = extractData(apiClient.get("/api/jobs", { params }));
+    const res = extractData(apiClient.get("/jobs", { params }));
     console.log("Fetched Jobs:", res);
     return res;
   },
-  getRecommended: () => extractData(apiClient.get("/api/jobs/recommended")),
-  getById: (id) => extractData(apiClient.get(`/api/jobs/${id}`)),
-  create: (data) => extractData(apiClient.post("/api/jobs", data)),
-  apply: (id, data) =>
-    extractData(apiClient.post(`/api/jobs/${id}/apply`, data)),
-  getCompanyJobs: () => extractData(apiClient.get("/api/jobs/company")),
+  getRecommended: () => extractData(apiClient.get("/jobs/recommended")),
+  getById: (id) => extractData(apiClient.get(`/jobs/${id}`)),
+  create: (data) => extractData(apiClient.post("/jobs", data)),
+  apply: (id, data) => extractData(apiClient.post(`/jobs/${id}/apply`, data)),
+  getCompanyJobs: () => extractData(apiClient.get("/jobs/company")),
   getApplicants: (jobId) =>
-    extractData(apiClient.get(`/api/jobs/${jobId}/applicants`)),
+    extractData(apiClient.get(`/jobs/${jobId}/applicants`)),
   updateApplicationStatus: (applicationId, data) =>
-    extractData(
-      apiClient.patch(`/api/jobs/applications/${applicationId}`, data),
-    ),
+    extractData(apiClient.patch(`/jobs/applications/${applicationId}`, data)),
 };
 
 /* =========================
@@ -32,59 +29,57 @@ export const jobService = {
 ========================= */
 export const postService = {
   // Now consistently returns data, making your usePosts hook cleaner
-  getAll: (params) => extractData(apiClient.get("/api/posts", { params })),
+  getAll: (params) => extractData(apiClient.get("/posts", { params })),
 
-  getBySlug: (slug) => extractData(apiClient.get(`/api/posts/${slug}`)),
+  getBySlug: (slug) => extractData(apiClient.get(`/posts/${slug}`)),
 
   create: (formData) =>
     extractData(
-      apiClient.post("/api/posts", formData, {
+      apiClient.post("/posts", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       }),
     ),
 
-  like: (id) => extractData(apiClient.post(`/api/posts/${id}/like`)),
-  unlike: (id) => extractData(apiClient.delete(`/api/posts/${id}/like`)),
+  like: (id) => extractData(apiClient.post(`/posts/${id}/like`)),
+  unlike: (id) => extractData(apiClient.delete(`/posts/${id}/like`)),
 
   toggleFollow: (authorId) =>
-    extractData(apiClient.post(`/api/posts/${authorId}/follow`)),
+    extractData(apiClient.post(`/posts/${authorId}/follow`)),
 
-  share: (id) => extractData(apiClient.post(`/api/posts/${id}/share`)),
+  share: (id) => extractData(apiClient.post(`/posts/${id}/share`)),
 
   addComment: (id, text) =>
-    extractData(apiClient.post(`/api/posts/${id}/comments`, { text })),
-  getComments: (id) => extractData(apiClient.get(`/api/posts/${id}/comments`)),
+    extractData(apiClient.post(`/posts/${id}/comments`, { text })),
+  getComments: (id) => extractData(apiClient.get(`/posts/${id}/comments`)),
   deleteComment: (postId, commentId) =>
-    extractData(apiClient.delete(`/api/posts/${postId}/comments/${commentId}`)),
+    extractData(apiClient.delete(`/posts/${postId}/comments/${commentId}`)),
 
-  update: (id, data) => extractData(apiClient.patch(`/api/posts/${id}`, data)),
-  delete: (id) => extractData(apiClient.delete(`/api/posts/${id}`)),
+  update: (id, data) => extractData(apiClient.patch(`/posts/${id}`, data)),
+  delete: (id) => extractData(apiClient.delete(`/posts/${id}`)),
 };
 
 /* =========================
    COMPANY & DISCOVERY
 ========================= */
 export const companyService = {
-  getProfile: () => extractData(apiClient.get("/api/company/profile")),
+  getProfile: () => extractData(apiClient.get("/company/profile")),
   updateProfile: (profileData) =>
-    extractData(apiClient.post("/api/company/profile", profileData)),
+    extractData(apiClient.post("/company/profile", profileData)),
 
   // Talent Discovery
   discoverTalent: (params) =>
-    extractData(apiClient.get("/api/companies/discovery", { params })),
+    extractData(apiClient.get("/companies/discovery", { params })),
+
   // Bookmarks
-  getBookmarks: () => extractData(apiClient.get("/api/company/bookmarks")),
+  getBookmarks: () => extractData(apiClient.get("/company/bookmarks")),
   bookmarkDeveloper: (devId) =>
-    extractData(apiClient.post(`/api/company/bookmarks/${devId}`)),
+    extractData(apiClient.post(`/company/bookmarks/${devId}`)),
   removeBookmark: (devId) =>
-    extractData(apiClient.delete(`/api/company/bookmarks/${devId}`)),
+    extractData(apiClient.delete(`/company/bookmarks/${devId}`)),
 
   updateApplicationStatus: (appId, feedbackData) =>
     extractData(
-      apiClient.patch(
-        `/api/company/applications/${appId}/feedback`,
-        feedbackData,
-      ),
+      apiClient.patch(`/company/applications/${appId}/feedback`, feedbackData),
     ),
 };
 
@@ -92,32 +87,32 @@ export const companyService = {
    AUTH
 ========================= */
 export const authService = {
-  getCurrentUser: () => extractData(apiClient.get("/api/auth/me")),
+  getCurrentUser: () => extractData(apiClient.get("/auth/me")),
   login: (credentials) =>
-    extractData(apiClient.post("/api/auth/login", credentials)),
-  register: (data) => extractData(apiClient.post("/api/auth/register", data)),
+    extractData(apiClient.post("/auth/login", credentials)),
+  register: (data) => extractData(apiClient.post("/auth/register", data)),
 };
 
 /* =========================
    NOTIFICATIONS & OTHERS
 ========================= */
 export const notificationService = {
-  getNotifications: () => extractData(apiClient.get("/api/notifications")),
+  getNotifications: () => extractData(apiClient.get("/notifications")),
   sendRequest: (data) =>
-    extractData(apiClient.post("/api/notifications/contact", data)),
+    extractData(apiClient.post("/notifications/contact", data)),
   respondToRequest: (id, data) =>
-    extractData(apiClient.patch(`/api/notifications/contact/${id}`, data)),
+    extractData(apiClient.patch(`/notifications/contact/${id}`, data)),
 };
 
 export const profileService = {
   getByUsername: (username) =>
-    extractData(apiClient.get(`/api/profiles/${username}`)),
+    extractData(apiClient.get(`/profiles/${username}`)),
   getReputationBreakdown: (userId) =>
-    extractData(apiClient.get(`/api/reputation/${userId}/breakdown`)),
+    extractData(apiClient.get(`/reputation/${userId}/breakdown`)),
   getReputationHistory: (userId) => {
-    const res = extractData(apiClient.get(`/api/reputation/${userId}/history`));
+    const res = extractData(apiClient.get(`/reputation/${userId}/history`));
     return res;
   },
   discover: (params) =>
-    extractData(apiClient.get("/api/company/discovery", { params })),
+    extractData(apiClient.get("/company/discovery", { params })),
 };

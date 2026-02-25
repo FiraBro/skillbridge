@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://skillbridge-api-fhqt.onrender.com*"
+      "destination": "https://skillbridge-api-fhqt.onrender.com/api/:path*"
     },
     {
       "source": "/((?!api/).*)",

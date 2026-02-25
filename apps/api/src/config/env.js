@@ -10,6 +10,9 @@ export const env = {
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
   JWT_RESET_SECRET: process.env.JWT_RESET_SECRET,
 
+  // ⚡ ADD THIS LINE HERE
+  REDIS_URL: process.env.REDIS_URL,
+
   JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || "7d",
   JWT_RESET_EXPIRES_IN: process.env.JWT_RESET_EXPIRES_IN || "15m",
 
@@ -21,8 +24,10 @@ export const env = {
   GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
   // Callback URL we send to GitHub. Use FRONTEND URL in dev so GitHub redirects to 5173 and Vite proxy forwards to backend.
   // Set GITHUB_CALLBACK_URL in .env to override. No trailing slash.
-  GITHUB_CALLBACK_URL: (process.env.GITHUB_CALLBACK_URL ||
-    `${(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "")}/api/github/auth/github/callback`).replace(/\/+$/, ""),
+  GITHUB_CALLBACK_URL: (
+    process.env.GITHUB_CALLBACK_URL ||
+    `${(process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "")}/api/github/auth/github/callback`
+  ).replace(/\/+$/, ""),
 
   GITHUB_TOKEN:
     process.env.GITHUB_TOKEN || "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",

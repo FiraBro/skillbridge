@@ -2,7 +2,7 @@
 import axios from "axios";
 const BASE_URL =
   import.meta.env.VITE_REACT_APP_API_URL ||
-  "https://skillbridge-api-fhqt.onrender.com/api";
+  "https://skillbridge-api-fhqt.onrender.com";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

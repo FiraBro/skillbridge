@@ -1,23 +1,13 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "apps/web/package.json",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "apps/api/src/server.js",
-      "use": "@vercel/node"
-    }
-  ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "apps/api/src/server.js"
+      "source": "/api/:path*",
+      "destination": "https://skillbridge-api-fhqt.onrender.com*"
     },
     {
-      "source": "/(.*)",
-      "destination": "apps/web/$1"
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }

@@ -1,6 +1,8 @@
 // api.client.js
 import axios from "axios";
-const BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const BASE_URL =
+  import.meta.env.VITE_REACT_APP_API_URL ||
+  "https://skillbridge-api-fhqt.onrender.com/api";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

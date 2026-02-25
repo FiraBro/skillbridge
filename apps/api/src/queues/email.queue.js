@@ -1,11 +1,12 @@
 import { Queue } from "bullmq";
+import Redis from "ioredis";
 
-// Use the full Upstash URL if available, otherwise fallback to local object
-const redisConnection = process.env.REDIS_URL || {
-  host: process.env.REDIS_HOST || "127.0.0.1",
-  port: process.env.REDIS_PORT || 6379,
-};
+const connection = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null })
+  : new Redis({
+      host: "127.0.0.1",
+      port: 6379,
+      maxRetriesPerRequest: null,
+    });
 
-export const emailQueue = new Queue("email-tasks", {
-  connection: redisConnection,
-});
+export const emailQueue = new Queue("email-tasks", { connection });

@@ -97,12 +97,8 @@ class GitHubOAuthService {
         );
       }
 
-      // 7️⃣ Save stats and repos
-      await githubRepo.saveGitHubStats({
-        userId,
-        stats,
-        avatar: githubUser.avatar_url,
-      });
+      // 7️⃣ Save stats and repos — use userId (not profileId)
+      await githubRepo.saveGitHubStats({ userId, stats });
       await githubRepo.saveGitHubRepositories(userId, repos);
 
       console.log("=== CONNECT GITHUB ACCOUNT END ===");
@@ -112,9 +108,6 @@ class GitHubOAuthService {
     }
   }
 
-  /**
-   * Fetch enhanced stats safely with defaults
-   */
   async fetchEnhancedStatsSafe(token, username) {
     const stats = {
       publicRepos: 0,
@@ -134,6 +127,8 @@ class GitHubOAuthService {
       weeklyActivity: {},
       mostActiveDays: [],
       verificationStatus: "verified",
+      weeklyActivity: {},
+      mostActiveDays: [],
     };
 
     try {
@@ -147,7 +142,6 @@ class GitHubOAuthService {
           },
         },
       );
-
       stats.publicRepos = data.public_repos ?? 0;
       stats.followers = data.followers ?? 0;
       stats.githubBio = data.bio ?? "";
@@ -164,57 +158,47 @@ class GitHubOAuthService {
     }
 
     try {
-      // 2️⃣ Commits last 30 days
       stats.commits30d = await this.calculateContributionStreak(
         token,
         username,
       );
     } catch (err) {
-      console.warn("Failed to fetch commits last 30 days:", err.message);
+      console.warn("Failed commits last 30 days:", err.message);
       stats.commits30d = 0;
     }
 
     try {
-      // 3️⃣ Weekly activity
       stats.weeklyActivity = await this.getWeeklyActivity(token, username);
     } catch (err) {
-      console.warn("Failed to fetch weekly activity:", err.message);
+      console.warn("Failed weekly activity:", err.message);
       stats.weeklyActivity = {};
     }
 
     try {
-      // 4️⃣ Most active days
       stats.mostActiveDays = await this.getMostActiveDays(token, username);
     } catch (err) {
-      console.warn("Failed to fetch most active days:", err.message);
+      console.warn("Failed most active days:", err.message);
       stats.mostActiveDays = [];
     }
 
     try {
-      // 5️⃣ Total stars (sum of repo stars)
       const repos = await this.fetchRepositories(token, username);
       stats.totalStars = repos.reduce((sum, r) => sum + (r.stars || 0), 0);
       stats.totalCommits = repos.reduce((sum, r) => sum + (r.commits || 0), 0);
       stats.topLanguages = this.calculateTopLanguages(repos);
     } catch (err) {
-      console.warn("Failed to fetch total stars or repos:", err.message);
+      console.warn("Failed total stars/repos:", err.message);
       stats.totalStars = 0;
       stats.totalCommits = 0;
       stats.topLanguages = [];
     }
 
-    // 6️⃣ Consistency score
     stats.consistencyScore = this.calculateConsistencyScore(stats);
-
-    // 7️⃣ Active flag
     stats.isActive = stats.publicRepos > 0 || stats.commits30d > 0;
 
     return stats;
   }
 
-  /**
-   * Helper to get top languages from repos
-   */
   calculateTopLanguages(repos) {
     const langMap = {};
     repos.forEach((repo) => {
@@ -247,14 +231,12 @@ class GitHubOAuthService {
     console.log("Starting GitHub data sync for user:", userId);
     try {
       const profileResult = await githubRepo.getGitHubData(userId);
-      if (!profileResult) throw new Error("GitHub profile not found for user");
+      if (!profileResult) throw new Error("GitHub profile not found");
 
-      const githubUsername =
-        profileResult.stats?.github_username || profileResult.stats?.username;
-      if (!githubUsername)
-        throw new Error("GitHub username not found for user");
+      const githubUsername = profileResult.stats?.github_username;
+      if (!githubUsername) throw new Error("GitHub username not found");
 
-      const stats = await this.fetchEnhancedStats(
+      const stats = await this.fetchEnhancedStatsSafe(
         env.GITHUB_TOKEN,
         githubUsername,
       );
@@ -268,7 +250,7 @@ class GitHubOAuthService {
 
       console.log("GitHub data sync completed successfully");
     } catch (error) {
-      console.error("Error in GitHub data sync:", error.message);
+      console.error("GitHub data sync error:", error.message);
       throw error;
     }
   }
@@ -277,14 +259,8 @@ class GitHubOAuthService {
     console.log("Disconnecting GitHub account for user:", userId);
     try {
       await githubRepo.detachGitHubAccount(userId);
-      const profileResult = await githubRepo.getGitHubData(userId);
-      if (profileResult) {
-        const profileId = profileResult.stats?.profile_id;
-        if (profileId) {
-          await githubRepo.deleteGitHubStats(profileId);
-          await githubRepo.deleteGitHubRepositories(profileId);
-        }
-      }
+      await githubRepo.deleteGitHubStats(userId);
+      await githubRepo.deleteGitHubRepositories(userId);
       console.log("GitHub account disconnected successfully");
     } catch (error) {
       console.error("Error disconnecting GitHub account:", error.message);
@@ -311,7 +287,7 @@ class GitHubOAuthService {
       );
       return Math.min(response.data.length, 365);
     } catch (error) {
-      console.error("Error calculating contribution streak:", error.message);
+      console.error("Contribution streak error:", error.message);
       return 0;
     }
   }
@@ -362,7 +338,7 @@ class GitHubOAuthService {
 
       return weeklyActivity;
     } catch (error) {
-      console.error("Error getting weekly activity:", error.message);
+      console.error("Weekly activity error:", error.message);
       return {};
     }
   }
@@ -375,66 +351,8 @@ class GitHubOAuthService {
         .map(([day]) => ({ day, activity: weeklyActivity[day] }))
         .slice(0, 3);
     } catch (error) {
-      console.error("Error getting most active days:", error.message);
+      console.error("Most active days error:", error.message);
       return [];
-    }
-  }
-
-  // async fetchEnhancedStats(token, username) {
-  //   try {
-  //     const repos = await this.fetchRepositories(token, username);
-  //     const totalStars = repos.reduce((acc, r) => acc + (r.stars || 0), 0);
-  //     const publicRepos = repos.filter((r) => r.is_public).length;
-  //     const commits30d = await this.fetchCommitsLast30Days(token, username);
-  //     const pullRequests = await this.fetchPullRequests(token, username);
-
-  //     return { totalStars, publicRepos, commits30d, pullRequests };
-  //   } catch (err) {
-  //     console.error("Error fetching enhanced stats:", err.message);
-  //     return { totalStars: 0, publicRepos: 0, commits30d: 0, pullRequests: 0 };
-  //   }
-  // }
-
-  async fetchCommitsLast30Days(token, username) {
-    try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const response = await axios.get(
-        `https://api.github.com/users/${username}/events`,
-        {
-          headers: {
-            Authorization: `token ${token}`,
-            "User-Agent": "SkillBridge/1.0",
-          },
-        },
-      );
-
-      return response.data
-        .filter(
-          (e) =>
-            e.type === "PushEvent" && new Date(e.created_at) >= thirtyDaysAgo,
-        )
-        .reduce((acc, e) => acc + e.payload.commits.length, 0);
-    } catch (err) {
-      console.error("Error fetching commits last 30 days:", err.message);
-      return 0;
-    }
-  }
-
-  async fetchPullRequests(token, username) {
-    try {
-      const response = await axios.get(`https://api.github.com/search/issues`, {
-        headers: {
-          Authorization: `token ${token}`,
-          "User-Agent": "SkillBridge/1.0",
-        },
-        params: { q: `type:pr+author:${username}`, per_page: 100 },
-      });
-      return response.data.total_count || 0;
-    } catch (err) {
-      console.error("Error fetching pull requests:", err.message);
-      return 0;
     }
   }
 
@@ -468,7 +386,7 @@ class GitHubOAuthService {
         }))
         .filter((r) => !r.is_fork);
     } catch (error) {
-      console.error("Error fetching repositories:", error.message);
+      console.error("Fetch repositories error:", error.message);
       return [];
     }
   }

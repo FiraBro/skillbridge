@@ -32,8 +32,87 @@ class GitHubOAuthService {
     return decrypted;
   }
 
+  // async connectGitHubAccount(code, userId) {
+  //   console.log("=== CONNECT GITHUB ACCOUNT START ===");
+  //   try {
+  //     // 1️⃣ Exchange code for access token
+  //     const tokenRes = await axios.post(
+  //       "https://github.com/login/oauth/access_token",
+  //       {
+  //         client_id: env.GITHUB_CLIENT_ID,
+  //         client_secret: env.GITHUB_CLIENT_SECRET,
+  //         code,
+  //         redirect_uri: env.GITHUB_CALLBACK_URL,
+  //       },
+  //       {
+  //         headers: {
+  //           Accept: "application/json",
+  //           "User-Agent": "SkillBridge/1.0",
+  //         },
+  //       },
+  //     );
+
+  //     const accessToken = tokenRes.data.access_token;
+  //     if (!accessToken) throw new Error("GitHub access token missing");
+  //     console.log("Access token received successfully");
+
+  //     // 2️⃣ Validate token
+  //     await this.validateToken(accessToken);
+  //     console.log("Token validated successfully");
+
+  //     // 3️⃣ Fetch GitHub user profile
+  //     const { data: githubUser } = await axios.get(
+  //       "https://api.github.com/user",
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${accessToken}`,
+  //           "User-Agent": "SkillBridge/1.0",
+  //         },
+  //       },
+  //     );
+
+  //     // 4️⃣ Attach GitHub account to user
+  //     await githubRepo.attachGitHubAccount({
+  //       userId,
+  //       githubId: githubUser.id,
+  //       username: githubUser.login,
+  //       avatar: githubUser.avatar_url,
+  //     });
+  //     console.log("GitHub account attached successfully");
+
+  //     // 5️⃣ Fetch enhanced stats safely
+  //     const stats = await this.fetchEnhancedStatsSafe(
+  //       accessToken,
+  //       githubUser.login,
+  //     );
+
+  //     // 6️⃣ Fetch repositories safely
+  //     let repos = [];
+  //     try {
+  //       repos = await this.fetchRepositories(accessToken, githubUser.login);
+  //     } catch (err) {
+  //       console.warn(
+  //         "Skipping repositories due to GitHub API error:",
+  //         err.message,
+  //       );
+  //     }
+
+  //     // 7️⃣ Save stats and repos — use userId (not profileId)
+  //     await githubRepo.saveGitHubStats({ userId, stats });
+  //     await githubRepo.saveGitHubRepositories(userId, repos);
+
+  //     console.log("=== CONNECT GITHUB ACCOUNT END ===");
+  //   } catch (error) {
+  //     console.error("GitHub account connection error:", error.message);
+  //     throw error;
+  //   }
+  // }
+
+  // CONNECT GITHUB ACCOUNT (FIXED)
+  // ========================================================= */
   async connectGitHubAccount(code, userId) {
     console.log("=== CONNECT GITHUB ACCOUNT START ===");
+
     try {
       // 1️⃣ Exchange code for access token
       const tokenRes = await axios.post(
@@ -54,13 +133,11 @@ class GitHubOAuthService {
 
       const accessToken = tokenRes.data.access_token;
       if (!accessToken) throw new Error("GitHub access token missing");
-      console.log("Access token received successfully");
 
       // 2️⃣ Validate token
       await this.validateToken(accessToken);
-      console.log("Token validated successfully");
 
-      // 3️⃣ Fetch GitHub user profile
+      // 3️⃣ Fetch GitHub user
       const { data: githubUser } = await axios.get(
         "https://api.github.com/user",
         {
@@ -71,43 +148,37 @@ class GitHubOAuthService {
         },
       );
 
-      // 4️⃣ Attach GitHub account to user
+      // 4️⃣ Attach account
       await githubRepo.attachGitHubAccount({
         userId,
         githubId: githubUser.id,
         username: githubUser.login,
-        avatar: githubUser.avatar_url,
       });
-      console.log("GitHub account attached successfully");
 
-      // 5️⃣ Fetch enhanced stats safely
+      // 5️⃣ Fetch stats + repos
       const stats = await this.fetchEnhancedStatsSafe(
         accessToken,
         githubUser.login,
       );
 
-      // 6️⃣ Fetch repositories safely
-      let repos = [];
-      try {
-        repos = await this.fetchRepositories(accessToken, githubUser.login);
-      } catch (err) {
-        console.warn(
-          "Skipping repositories due to GitHub API error:",
-          err.message,
-        );
-      }
+      const repositories = await this.fetchRepositories(
+        accessToken,
+        githubUser.login,
+      );
 
-      // 7️⃣ Save stats and repos — use userId (not profileId)
-      await githubRepo.saveGitHubStats({ userId, stats });
-      await githubRepo.saveGitHubRepositories(userId, repos);
+      // 6️⃣ SAVE ATOMICALLY ✅
+      await githubRepo.saveGitHubDataAtomic({
+        userId,
+        stats,
+        repositories,
+      });
 
-      console.log("=== CONNECT GITHUB ACCOUNT END ===");
+      console.log("=== CONNECT GITHUB ACCOUNT SUCCESS ===");
     } catch (error) {
       console.error("GitHub account connection error:", error.message);
       throw error;
     }
   }
-
   async fetchEnhancedStatsSafe(token, username) {
     const stats = {
       publicRepos: 0,

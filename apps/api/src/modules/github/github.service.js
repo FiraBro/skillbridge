@@ -255,15 +255,18 @@ class GitHubOAuthService {
     }
   }
 
+  // github.service.js
+
   async disconnectGitHubAccount(userId) {
     console.log("Disconnecting GitHub account for user:", userId);
+
     try {
-      await githubRepo.detachGitHubAccount(userId);
-      await githubRepo.deleteGitHubStats(userId);
-      await githubRepo.deleteGitHubRepositories(userId);
+      await githubRepo.disconnectGitHubAccount(userId);
+
       console.log("GitHub account disconnected successfully");
+      return { success: true };
     } catch (error) {
-      console.error("Error disconnecting GitHub account:", error.message);
+      console.error("Error disconnecting GitHub account:", error);
       throw error;
     }
   }

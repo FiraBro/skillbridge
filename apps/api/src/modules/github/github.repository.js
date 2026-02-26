@@ -193,6 +193,7 @@ class GitHubRepository {
   /* =========================================================
      DISCONNECT GITHUB (SAFE)
   ========================================================= */
+
   async disconnectGitHubAccount(userId) {
     const client = await pool.connect();
     try {
@@ -205,10 +206,12 @@ class GitHubRepository {
 
       if (profileRes.rows.length) {
         const profileId = profileRes.rows[0].id;
+
         await client.query(
           "DELETE FROM github_repositories WHERE profile_id = $1",
           [profileId],
         );
+
         await client.query("DELETE FROM github_stats WHERE profile_id = $1", [
           profileId,
         ]);

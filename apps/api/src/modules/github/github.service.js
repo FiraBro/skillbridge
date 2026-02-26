@@ -2,7 +2,6 @@ import axios from "axios";
 import crypto from "crypto";
 import { env } from "../../config/env.js";
 import githubRepo from "./github.repository.js";
-import externalGitHubService from "../services/github.service.js";
 
 class GitHubOAuthService {
   constructor() {
@@ -61,19 +60,15 @@ class GitHubOAuthService {
       console.log("Token validated successfully");
 
       // Fetch GitHub user profile
-      let githubUser = null;
-      try {
-        const { data } = await axios.get("https://api.github.com/user", {
+      const { data: githubUser } = await axios.get(
+        "https://api.github.com/user",
+        {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "User-Agent": "SkillBridge/1.0",
           },
-        });
-        githubUser = data;
-      } catch (err) {
-        console.error("GitHub user fetch failed:", err.message);
-        throw new Error("GitHub service unavailable");
-      }
+        },
+      );
 
       // Attach GitHub account to user
       await githubRepo.attachGitHubAccount({
@@ -84,31 +79,16 @@ class GitHubOAuthService {
       });
       console.log("GitHub account attached successfully");
 
-      // Fetch enhanced stats safely
-      let stats = {};
-      try {
-        stats = await externalGitHubService.fetchDeveloperStats(
-          githubUser.login,
-        );
-      } catch (err) {
-        console.warn(
-          "Skipping enhanced stats due to GitHub API error:",
-          err.message,
-        );
-      }
+      // Fetch enhanced stats
+      const stats = await this.fetchEnhancedStats(
+        accessToken,
+        githubUser.login,
+      );
 
-      // Fetch repositories safely
-      let repos = [];
-      try {
-        repos = await this.fetchRepositories(accessToken, githubUser.login);
-      } catch (err) {
-        console.warn(
-          "Skipping repositories due to GitHub API error:",
-          err.message,
-        );
-      }
+      // Fetch repositories
+      const repos = await this.fetchRepositories(accessToken, githubUser.login);
 
-      // Save stats and repos (even if empty)
+      // Save stats and repos
       await githubRepo.saveGitHubStats({
         userId,
         stats,
@@ -131,8 +111,7 @@ class GitHubOAuthService {
           "User-Agent": "SkillBridge/1.0",
         },
       });
-      if (!response.data || !response.data.id)
-        throw new Error("Invalid GitHub token");
+      if (!response.data?.id) throw new Error("Invalid GitHub token");
       return true;
     } catch (error) {
       console.error("Token validation failed:", error.message);
@@ -151,34 +130,16 @@ class GitHubOAuthService {
       if (!githubUsername)
         throw new Error("GitHub username not found for user");
 
-      console.log("Syncing GitHub data for:", githubUsername);
-
-      const stats =
-        await externalGitHubService.fetchDeveloperStats(githubUsername);
-
-      const enhancedStats = {
-        ...stats,
-        contributionStreak: await this.calculateContributionStreak(
-          env.GITHUB_TOKEN,
-          githubUsername,
-        ),
-        consistencyScore: this.calculateConsistencyScore(stats),
-        weeklyActivity: await this.getWeeklyActivity(
-          env.GITHUB_TOKEN,
-          githubUsername,
-        ),
-        mostActiveDays: await this.getMostActiveDays(
-          env.GITHUB_TOKEN,
-          githubUsername,
-        ),
-      };
-
+      const stats = await this.fetchEnhancedStats(
+        env.GITHUB_TOKEN,
+        githubUsername,
+      );
       const repositories = await this.fetchRepositories(
         env.GITHUB_TOKEN,
         githubUsername,
       );
 
-      await githubRepo.saveGitHubStats({ userId, stats: enhancedStats });
+      await githubRepo.saveGitHubStats({ userId, stats });
       await githubRepo.saveGitHubRepositories(userId, repositories);
 
       console.log("GitHub data sync completed successfully");
@@ -192,7 +153,6 @@ class GitHubOAuthService {
     console.log("Disconnecting GitHub account for user:", userId);
     try {
       await githubRepo.detachGitHubAccount(userId);
-
       const profileResult = await githubRepo.getGitHubData(userId);
       if (profileResult) {
         const profileId = profileResult.stats?.profile_id;
@@ -201,7 +161,6 @@ class GitHubOAuthService {
           await githubRepo.deleteGitHubRepositories(profileId);
         }
       }
-
       console.log("GitHub account disconnected successfully");
     } catch (error) {
       console.error("Error disconnecting GitHub account:", error.message);
@@ -294,6 +253,64 @@ class GitHubOAuthService {
     } catch (error) {
       console.error("Error getting most active days:", error.message);
       return [];
+    }
+  }
+
+  async fetchEnhancedStats(token, username) {
+    try {
+      const repos = await this.fetchRepositories(token, username);
+      const totalStars = repos.reduce((acc, r) => acc + (r.stars || 0), 0);
+      const publicRepos = repos.filter((r) => r.is_public).length;
+      const commits30d = await this.fetchCommitsLast30Days(token, username);
+      const pullRequests = await this.fetchPullRequests(token, username);
+
+      return { totalStars, publicRepos, commits30d, pullRequests };
+    } catch (err) {
+      console.error("Error fetching enhanced stats:", err.message);
+      return { totalStars: 0, publicRepos: 0, commits30d: 0, pullRequests: 0 };
+    }
+  }
+
+  async fetchCommitsLast30Days(token, username) {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const response = await axios.get(
+        `https://api.github.com/users/${username}/events`,
+        {
+          headers: {
+            Authorization: `token ${token}`,
+            "User-Agent": "SkillBridge/1.0",
+          },
+        },
+      );
+
+      return response.data
+        .filter(
+          (e) =>
+            e.type === "PushEvent" && new Date(e.created_at) >= thirtyDaysAgo,
+        )
+        .reduce((acc, e) => acc + e.payload.commits.length, 0);
+    } catch (err) {
+      console.error("Error fetching commits last 30 days:", err.message);
+      return 0;
+    }
+  }
+
+  async fetchPullRequests(token, username) {
+    try {
+      const response = await axios.get(`https://api.github.com/search/issues`, {
+        headers: {
+          Authorization: `token ${token}`,
+          "User-Agent": "SkillBridge/1.0",
+        },
+        params: { q: `type:pr+author:${username}`, per_page: 100 },
+      });
+      return response.data.total_count || 0;
+    } catch (err) {
+      console.error("Error fetching pull requests:", err.message);
+      return 0;
     }
   }
 

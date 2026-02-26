@@ -42,7 +42,7 @@ app.use(cookieParser());
 // =============================================
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://skillbridge-web-sooty.vercel.app",
+  "https://skillbridge1234.vercel.app",
 ];
 
 app.use(

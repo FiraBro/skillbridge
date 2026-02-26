@@ -44,7 +44,7 @@ function decodeState(stateStr) {
  */
 export const githubCallback = async (req, res, next) => {
   console.log("GitHub callback hit:", req.method, req.url);
-  const frontendBase = env.FRONTEND_URL || "http://localhost:5173";
+  const frontendBase = env.FRONTEND_URL || "https://skillbridge1234.vercel.app";
 
   const failRedirect = (error, details = "") => {
     const params = new URLSearchParams({ error });

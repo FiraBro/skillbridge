@@ -111,7 +111,10 @@ class GitHubOAuthService {
   // CONNECT GITHUB ACCOUNT (FIXED)
   // ========================================================= */
   async connectGitHubAccount(code, userId) {
+    console.log("=== CONNECT GITHUB ACCOUNT START ===");
+
     try {
+      // 1️⃣ Exchange code for access token
       const tokenRes = await axios.post(
         "https://github.com/login/oauth/access_token",
         {
@@ -124,44 +127,85 @@ class GitHubOAuthService {
       );
 
       const accessToken = tokenRes.data.access_token;
-      if (!accessToken) throw new Error("No GitHub token");
+      if (!accessToken) throw new Error("GitHub access token missing");
 
+      // 2️⃣ Validate token
+      await this.validateToken(accessToken);
+
+      // 3️⃣ Fetch GitHub user profile
       const { data: githubUser } = await axios.get(
         "https://api.github.com/user",
         {
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "User-Agent": "SkillBridge/1.0",
+          },
         },
       );
 
+      // 4️⃣ Attach GitHub account to user
       await githubRepo.attachGitHubAccount({
         userId,
         githubId: githubUser.id,
         username: githubUser.login,
       });
 
-      // ✅ FETCH REPOS FIRST
+      // 5️⃣ Fetch repositories
       const repositories = await this.fetchRepositories(
         accessToken,
         githubUser.login,
       );
 
-      // ✅ CALCULATE FULL STATS USING REPOS
-      const stats = await this.fetchEnhancedStatsSafe(
-        accessToken,
-        githubUser,
-        repositories,
-      );
+      // 6️⃣ Compute stats from repos
+      const stats = this.computeStatsFromRepos(githubUser, repositories);
 
-      // ✅ SAVE EVERYTHING
+      // 7️⃣ Save everything atomically
       await githubRepo.saveGitHubDataAtomic({
         userId,
         stats,
         repositories,
       });
+
+      console.log("GitHub account connected and data saved successfully ✅");
     } catch (err) {
-      console.error(err);
+      console.error("GitHub account connection error:", err.message);
       throw err;
     }
+  }
+  computeStatsFromRepos(githubUser, repositories) {
+    let totalStars = 0;
+    let commits30d = 0; // optional; needs separate API if you want exact numbers
+    const languageCount = {};
+
+    repositories.forEach((repo) => {
+      totalStars += repo.stars || 0;
+      if (repo.language) {
+        languageCount[repo.language] = (languageCount[repo.language] || 0) + 1;
+      }
+    });
+
+    const topLanguages = Object.entries(languageCount)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([name]) => name);
+
+    return {
+      publicRepos: repositories.length,
+      followers: githubUser.followers || 0,
+      githubFollowing: githubUser.following || 0,
+      githubBio: githubUser.bio || "",
+      totalStars,
+      totalCommits: commits30d,
+      commits30d,
+      topLanguages,
+      contributionStreak: 0, // can calculate via events API if needed
+      consistencyScore: Math.min(1, repositories.length / 20), // example metric
+      verificationStatus: "verified",
+      accountAgeMonths: Math.floor(
+        (Date.now() - new Date(githubUser.created_at)) /
+          (1000 * 60 * 60 * 24 * 30),
+      ),
+    };
   }
   async fetchEnhancedStatsSafe(token, githubUser, repositories) {
     let totalStars = 0;

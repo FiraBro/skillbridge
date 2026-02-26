@@ -35,4 +35,4 @@ export const authApi = {
 export const initiateGithubAuth = () => {
   window.location.href = "/api/github/auth/github";
 };
-export const disconnectGithub = () => api.delete("/api/github/disconnect");
+export const disconnectGithub = () => api.delete("/github/disconnect");

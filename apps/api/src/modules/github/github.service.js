@@ -35,7 +35,7 @@ class GitHubOAuthService {
   async connectGitHubAccount(code, userId) {
     console.log("=== CONNECT GITHUB ACCOUNT START ===");
     try {
-      // Exchange code for token
+      // 1️⃣ Exchange code for access token
       const tokenRes = await axios.post(
         "https://github.com/login/oauth/access_token",
         {
@@ -56,10 +56,11 @@ class GitHubOAuthService {
       if (!accessToken) throw new Error("GitHub access token missing");
       console.log("Access token received successfully");
 
+      // 2️⃣ Validate token
       await this.validateToken(accessToken);
       console.log("Token validated successfully");
 
-      // Fetch GitHub user profile
+      // 3️⃣ Fetch GitHub user profile
       const { data: githubUser } = await axios.get(
         "https://api.github.com/user",
         {
@@ -70,7 +71,7 @@ class GitHubOAuthService {
         },
       );
 
-      // Attach GitHub account to user
+      // 4️⃣ Attach GitHub account to user
       await githubRepo.attachGitHubAccount({
         userId,
         githubId: githubUser.id,
@@ -79,16 +80,24 @@ class GitHubOAuthService {
       });
       console.log("GitHub account attached successfully");
 
-      // Fetch enhanced stats
-      const stats = await this.fetchEnhancedStats(
+      // 5️⃣ Fetch enhanced stats safely
+      const stats = await this.fetchEnhancedStatsSafe(
         accessToken,
         githubUser.login,
       );
 
-      // Fetch repositories
-      const repos = await this.fetchRepositories(accessToken, githubUser.login);
+      // 6️⃣ Fetch repositories safely
+      let repos = [];
+      try {
+        repos = await this.fetchRepositories(accessToken, githubUser.login);
+      } catch (err) {
+        console.warn(
+          "Skipping repositories due to GitHub API error:",
+          err.message,
+        );
+      }
 
-      // Save stats and repos
+      // 7️⃣ Save stats and repos
       await githubRepo.saveGitHubStats({
         userId,
         stats,
@@ -101,6 +110,121 @@ class GitHubOAuthService {
       console.error("GitHub account connection error:", error.message);
       throw error;
     }
+  }
+
+  /**
+   * Fetch enhanced stats safely with defaults
+   */
+  async fetchEnhancedStatsSafe(token, username) {
+    const stats = {
+      publicRepos: 0,
+      followers: 0,
+      totalStars: 0,
+      totalCommits: 0,
+      commits30d: 0,
+      isActive: false,
+      lastActivity: null,
+      accountCreated: null,
+      topLanguages: [],
+      contributionStreak: 0,
+      consistencyScore: 0,
+      githubBio: "",
+      githubFollowing: 0,
+      accountAgeMonths: 0,
+      weeklyActivity: {},
+      mostActiveDays: [],
+      verificationStatus: "verified",
+    };
+
+    try {
+      // 1️⃣ Basic user info
+      const { data } = await axios.get(
+        `https://api.github.com/users/${username}`,
+        {
+          headers: {
+            Authorization: `token ${token}`,
+            "User-Agent": "SkillBridge/1.0",
+          },
+        },
+      );
+
+      stats.publicRepos = data.public_repos ?? 0;
+      stats.followers = data.followers ?? 0;
+      stats.githubBio = data.bio ?? "";
+      stats.githubFollowing = data.following ?? 0;
+      stats.accountCreated = data.created_at ?? null;
+      stats.accountAgeMonths = data.created_at
+        ? Math.floor(
+            (new Date() - new Date(data.created_at)) /
+              (1000 * 60 * 60 * 24 * 30),
+          )
+        : 0;
+    } catch (err) {
+      console.warn("Failed to fetch user info:", err.message);
+    }
+
+    try {
+      // 2️⃣ Commits last 30 days
+      stats.commits30d = await this.calculateContributionStreak(
+        token,
+        username,
+      );
+    } catch (err) {
+      console.warn("Failed to fetch commits last 30 days:", err.message);
+      stats.commits30d = 0;
+    }
+
+    try {
+      // 3️⃣ Weekly activity
+      stats.weeklyActivity = await this.getWeeklyActivity(token, username);
+    } catch (err) {
+      console.warn("Failed to fetch weekly activity:", err.message);
+      stats.weeklyActivity = {};
+    }
+
+    try {
+      // 4️⃣ Most active days
+      stats.mostActiveDays = await this.getMostActiveDays(token, username);
+    } catch (err) {
+      console.warn("Failed to fetch most active days:", err.message);
+      stats.mostActiveDays = [];
+    }
+
+    try {
+      // 5️⃣ Total stars (sum of repo stars)
+      const repos = await this.fetchRepositories(token, username);
+      stats.totalStars = repos.reduce((sum, r) => sum + (r.stars || 0), 0);
+      stats.totalCommits = repos.reduce((sum, r) => sum + (r.commits || 0), 0);
+      stats.topLanguages = this.calculateTopLanguages(repos);
+    } catch (err) {
+      console.warn("Failed to fetch total stars or repos:", err.message);
+      stats.totalStars = 0;
+      stats.totalCommits = 0;
+      stats.topLanguages = [];
+    }
+
+    // 6️⃣ Consistency score
+    stats.consistencyScore = this.calculateConsistencyScore(stats);
+
+    // 7️⃣ Active flag
+    stats.isActive = stats.publicRepos > 0 || stats.commits30d > 0;
+
+    return stats;
+  }
+
+  /**
+   * Helper to get top languages from repos
+   */
+  calculateTopLanguages(repos) {
+    const langMap = {};
+    repos.forEach((repo) => {
+      if (repo.language)
+        langMap[repo.language] = (langMap[repo.language] || 0) + 1;
+    });
+    return Object.entries(langMap)
+      .sort(([, a], [, b]) => b - a)
+      .map(([lang]) => lang)
+      .slice(0, 5);
   }
 
   async validateToken(accessToken) {
@@ -256,20 +380,20 @@ class GitHubOAuthService {
     }
   }
 
-  async fetchEnhancedStats(token, username) {
-    try {
-      const repos = await this.fetchRepositories(token, username);
-      const totalStars = repos.reduce((acc, r) => acc + (r.stars || 0), 0);
-      const publicRepos = repos.filter((r) => r.is_public).length;
-      const commits30d = await this.fetchCommitsLast30Days(token, username);
-      const pullRequests = await this.fetchPullRequests(token, username);
+  // async fetchEnhancedStats(token, username) {
+  //   try {
+  //     const repos = await this.fetchRepositories(token, username);
+  //     const totalStars = repos.reduce((acc, r) => acc + (r.stars || 0), 0);
+  //     const publicRepos = repos.filter((r) => r.is_public).length;
+  //     const commits30d = await this.fetchCommitsLast30Days(token, username);
+  //     const pullRequests = await this.fetchPullRequests(token, username);
 
-      return { totalStars, publicRepos, commits30d, pullRequests };
-    } catch (err) {
-      console.error("Error fetching enhanced stats:", err.message);
-      return { totalStars: 0, publicRepos: 0, commits30d: 0, pullRequests: 0 };
-    }
-  }
+  //     return { totalStars, publicRepos, commits30d, pullRequests };
+  //   } catch (err) {
+  //     console.error("Error fetching enhanced stats:", err.message);
+  //     return { totalStars: 0, publicRepos: 0, commits30d: 0, pullRequests: 0 };
+  //   }
+  // }
 
   async fetchCommitsLast30Days(token, username) {
     try {

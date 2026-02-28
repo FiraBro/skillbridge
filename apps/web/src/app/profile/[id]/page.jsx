@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { useQueryClient, useMutation } from "@tanstack/react-query"; // Added useMutation
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -9,18 +9,15 @@ import {
   useReputationHistory,
 } from "@/hooks/useProfiles";
 import { usePosts, useDeletePost } from "@/hooks/usePosts";
-import { initiateGithubAuth, disconnectGithub } from "@/lib/api"; // Added disconnectGithub API call
+import { initiateGithubAuth, disconnectGithub } from "@/lib/api";
 
 // Components
 import ProfileHero from "../component/profile-hero";
 import SkillsCloud from "../component/skill-cloud";
-import GitHubStats from "../component/github-stats";
 import ReputationBreakdown from "../component/reputation-breakdown";
 import ReputationHistory from "../component/reputation-history";
 import ContactPanel from "../component/contact-panel";
 import EndorsementSection from "../component/endorsement-section";
-import GitHubVerificationBadge from "../component/github-verification-badge";
-import GitHubActivityBadge from "../component/github-activity-badge";
 import PostCard from "@/app/companies/components/postCard";
 
 // Hooks & UI
@@ -28,7 +25,7 @@ import useGithubVisibility from "@/hooks/useGithubVisibility";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button"; // Assuming you have a UI Button
+import { Button } from "@/components/ui/button";
 import {
   ShieldCheck,
   Award,
@@ -165,18 +162,16 @@ export default function ProfilePage() {
                     </Button>
                   )}
 
-                  {/* GITHUB STATS & DISCONNECT */}
+                  {/* GITHUB USERNAME & DISCONNECT */}
                   {isGithubConnected && (
-                    <div className="space-y-6">
-                      <div className="flex justify-between items-end">
-                        <GitHubStats
-                          stats={{
-                            stars: profile.total_stars,
-                            prs: profile.pull_requests,
-                            commits30d: profile.commits_30d,
-                            username: profile.github_username,
-                          }}
-                        />
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-4 p-4 border rounded-xl bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <Github className="h-5 w-5 text-muted-foreground" />
+                          <span className="font-medium">
+                            {profile.github_username}
+                          </span>
+                        </div>
                         {isOwnProfile && (
                           <Button
                             variant="ghost"
@@ -191,10 +186,6 @@ export default function ProfilePage() {
                               : "Disconnect"}
                           </Button>
                         )}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <GitHubVerificationBadge stats={profile} />
-                        <GitHubActivityBadge stats={profile} />
                       </div>
                     </div>
                   )}

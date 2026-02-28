@@ -67,10 +67,9 @@ class GitHubOAuthService {
       const accessToken = tokenRes.data.access_token;
       if (!accessToken) throw new Error("GitHub access token missing");
 
-      // 2. Validate token
-      await this.validateToken(accessToken);
+      console.log("Access token obtained successfully");
 
-      // 3. Fetch GitHub user profile
+      // 2. Validate token and get user profile
       const { data: githubUser } = await axios.get(
         "https://api.github.com/user",
         {
@@ -81,33 +80,38 @@ class GitHubOAuthService {
         },
       );
 
-      // 4. Attach GitHub account to user (store githubId and username)
+      console.log(`GitHub user fetched: ${githubUser.login}`);
+
+      // 3. Attach GitHub account to user (store githubId and username)
       await githubRepo.attachGitHubAccount({
         userId,
         githubId: githubUser.id,
         username: githubUser.login,
       });
 
-      // 5. Fetch repositories (excluding forks)
+      // 4. Fetch repositories (excluding forks)
       const repositories = await this.fetchRepositories(
         accessToken,
         githubUser.login,
       );
+      console.log(`Fetched ${repositories.length} repositories`);
 
-      // 6. Fetch 30-day commit count across all repos
+      // 5. Fetch 30-day commit count across all repos
       const commits30d = await this.fetchCommitsLast30Days(
         accessToken,
         githubUser.login,
         repositories,
       );
+      console.log(`Total commits in last 30 days: ${commits30d}`);
 
-      // 7. Fetch total pull requests authored by the user
+      // 6. Fetch total pull requests authored by the user
       const pullRequests = await this.fetchPullRequestCount(
         accessToken,
         githubUser.login,
       );
+      console.log(`Total pull requests: ${pullRequests}`);
 
-      // 8. Compute stats – only the fields you requested
+      // 7. Compute stats – only the fields you requested
       const stats = {
         username: githubUser.login,
         followers: githubUser.followers || 0,
@@ -118,14 +122,16 @@ class GitHubOAuthService {
         ),
         commits30d,
         pullRequests,
-        // Optional: keep account age if your app needs it
+        // Optional: keep account age if needed
         accountAgeMonths: Math.floor(
           (Date.now() - new Date(githubUser.created_at)) /
             (1000 * 60 * 60 * 24 * 30),
         ),
       };
 
-      // 9. Save everything atomically
+      console.log("Stats computed:", stats);
+
+      // 8. Save everything atomically
       await githubRepo.saveGitHubDataAtomic({
         userId,
         stats,
@@ -135,6 +141,9 @@ class GitHubOAuthService {
       console.log("GitHub account connected and data saved successfully ✅");
     } catch (err) {
       console.error("GitHub account connection error:", err.message);
+      if (err.response) {
+        console.error("GitHub API response:", err.response.data);
+      }
       throw err;
     }
   }
@@ -149,7 +158,7 @@ class GitHubOAuthService {
         `https://api.github.com/users/${username}/repos`,
         {
           headers: {
-            Authorization: `token ${token}`,
+            Authorization: `Bearer ${token}`,
             "User-Agent": "SkillBridge/1.0",
           },
           params: { type: "all", sort: "updated", per_page: 100 },
@@ -162,7 +171,7 @@ class GitHubOAuthService {
           description: repo.description,
           stars: repo.stargazers_count,
           forks: repo.forks_count,
-          language: repo.language, // kept but not used in stats
+          language: repo.language, // kept for reference, not used in stats
           last_updated: repo.updated_at,
           is_public: !repo.private,
           is_fork: repo.fork,
@@ -174,6 +183,10 @@ class GitHubOAuthService {
         .filter((r) => !r.is_fork); // exclude forks as requested
     } catch (error) {
       console.error("Fetch repositories error:", error.message);
+      if (error.response) {
+        console.error("Status:", error.response.status);
+        console.error("Data:", error.response.data);
+      }
       return [];
     }
   }
@@ -195,7 +208,7 @@ class GitHubOAuthService {
           `https://api.github.com/repos/${username}/${repo.name}/commits`,
           {
             headers: {
-              Authorization: `token ${token}`,
+              Authorization: `Bearer ${token}`,
               "User-Agent": "SkillBridge/1.0",
             },
             params: {
@@ -204,12 +217,17 @@ class GitHubOAuthService {
             },
           },
         );
+        console.log(
+          `Repo ${repo.name}: ${commits.length} commits in last 30 days`,
+        );
         totalCommits += commits.length;
       } catch (error) {
-        // Repo might be empty or have no commits – skip silently
         console.log(
           `Could not fetch commits for ${repo.name}: ${error.message}`,
         );
+        if (error.response) {
+          console.log(`Status: ${error.response.status}`);
+        }
       }
     }
 
@@ -224,7 +242,7 @@ class GitHubOAuthService {
     try {
       const { data } = await axios.get("https://api.github.com/search/issues", {
         headers: {
-          Authorization: `token ${token}`,
+          Authorization: `Bearer ${token}`,
           "User-Agent": "SkillBridge/1.0",
         },
         params: {
@@ -232,9 +250,14 @@ class GitHubOAuthService {
           per_page: 1, // we only need total_count
         },
       });
+      console.log("Pull request search response:", data);
       return data.total_count || 0;
     } catch (error) {
       console.error("Failed to fetch pull request count:", error.message);
+      if (error.response) {
+        console.error("Status:", error.response.status);
+        console.error("Data:", error.response.data);
+      }
       return 0;
     }
   }

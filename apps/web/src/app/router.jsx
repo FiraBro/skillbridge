@@ -35,11 +35,6 @@ const RoleRedirect = lazy(
 );
 const Notifications = lazy(() => import("./notifications/page.jsx"));
 // Loader for suspense
-const PageLoader = () => (
-  <div className="h-screen w-full flex items-center justify-center bg-background">
-    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-  </div>
-);
 
 // Role constants
 const ROLES = {
@@ -53,7 +48,7 @@ export const router = createBrowserRouter([
   {
     path: "/auth",
     element: (
-      <Suspense fallback={<PageLoader />}>
+      <Suspense>
         <AuthLayout />
       </Suspense>
     ),
@@ -68,7 +63,7 @@ export const router = createBrowserRouter([
   // -------------------- PROTECTED ROUTES --------------------
   {
     element: (
-      <Suspense fallback={<PageLoader />}>
+      <Suspense>
         <AppLayout />
       </Suspense>
     ),

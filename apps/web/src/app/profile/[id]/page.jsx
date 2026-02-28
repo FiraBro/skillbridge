@@ -172,7 +172,7 @@ export default function ProfilePage() {
                           <span className="font-medium">
                             {/* Corrected template literal syntax and URL path */}
                             <Link
-                              to={`https://github.com${profile.github_username}`}
+                              to={`https://github.com/${profile.github_username}`}
                             >
                               {profile.github_username}
                             </Link>

@@ -3,7 +3,6 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "react-router-dom";
 import {
   useProfile,
   useReputation,
@@ -170,12 +169,15 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3">
                           <Github className="h-5 w-5 text-muted-foreground" />
                           <span className="font-medium">
-                            {/* Corrected template literal syntax and URL path */}
-                            <Link
-                              to={`https://github.com/${profile.github_username}`}
+                            {/* Use <a> tag for external links to prevent URL appending */}
+                            <a
+                              href={`https://github.com/${profile.github_username}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
                             >
                               {profile.github_username}
-                            </Link>
+                            </a>
                           </span>
                         </div>
 

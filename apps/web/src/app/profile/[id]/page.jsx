@@ -169,9 +169,15 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3">
                           <Github className="h-5 w-5 text-muted-foreground" />
                           <span className="font-medium">
-                            {profile.github_username}
+                            {/* Corrected template literal syntax and URL path */}
+                            <Link
+                              to={`https://github.com${profile.github_username}`}
+                            >
+                              {profile.github_username}
+                            </Link>
                           </span>
                         </div>
+
                         {isOwnProfile && (
                           <Button
                             variant="ghost"

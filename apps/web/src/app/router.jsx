@@ -89,6 +89,7 @@ export const router = createBrowserRouter([
           { path: "/posts/:slug/edit", element: <PostEdit /> },
           { path: "/notifications", element: <Notifications /> },
           { path: "/jobs/:id/apply", element: <ProposalPage /> },
+          { path: "/discovery", element: <TalentDiscovery /> },
         ],
       },
 
@@ -97,7 +98,6 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute allowedRoles={[ROLES.COMPANY]} />,
         children: [
           { path: "/company-dashboard", element: <CompanyDashboard /> },
-          { path: "/discovery", element: <TalentDiscovery /> },
           { path: "/jobs/create", element: <CreateJob /> },
           { path: "/applicants/:jobId", element: <ApplicantReview /> },
         ],

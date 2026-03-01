@@ -16,86 +16,91 @@ import PostCard from "@/app/companies/components/postCard";
 // Hooks & UI
 import useGithubVisibility from "@/hooks/useGithubVisibility";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  ShieldCheck,
   History,
   FileText,
   Github,
   Link2Off,
   Settings,
   UserCircle,
+  ShieldCheck,
+  LayoutDashboard,
+  ExternalLink,
 } from "lucide-react";
 
 export default function ProfilePage() {
   const { username } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { user: viewer } = useAuth();
-  const handledParams = useRef(false);
+  const lastHandledUser = useRef(null);
 
-  /* -------------------- DATA -------------------- */
   const {
     data: profile,
     isLoading: loadingProfile,
     isError,
+    refetch,
   } = useProfile(username);
-
   const userId = profile?.user_id;
   const isOwnProfile = viewer?.id === userId;
 
   const { data: history } = useReputationHistory(userId);
-  const { data: posts = [], isLoading: loadingPosts } = usePosts({
-    authorId: userId,
-    limit: 10,
-  });
-
-  const deletePost = useDeletePost();
+  const { data: posts = [] } = usePosts({ authorId: userId, limit: 10 });
   const { isGithubConnected } = useGithubVisibility(profile, viewer);
+  const deletePostMutation = useDeletePost();
 
-  /* -------------------- MUTATIONS -------------------- */
   const disconnectMutation = useMutation({
     mutationFn: disconnectGithub,
     onSuccess: () => {
-      toast.success("GitHub disconnected successfully.");
+      toast.success("GitHub disconnected.");
       queryClient.invalidateQueries({ queryKey: ["profile", username] });
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to disconnect GitHub.");
     },
   });
 
-  const handleDisconnectGithub = () => {
-    if (confirm("Are you sure? This will remove your GitHub stats.")) {
-      disconnectMutation.mutate();
-    }
+  const handleDeletePost = (postId) => {
+    if (!window.confirm("Delete this post?")) return;
+    deletePostMutation.mutate(postId, {
+      onSuccess: () => {
+        toast.success("Post removed");
+        queryClient.invalidateQueries({ queryKey: ["posts", userId] });
+      },
+    });
   };
 
   useEffect(() => {
-    if (handledParams.current || !username) return;
-
-    if (searchParams.get("success") === "github_connected") {
-      handledParams.current = true;
-      toast.success("GitHub account connected.");
+    if (
+      searchParams.get("success") === "github_connected" &&
+      lastHandledUser.current !== username
+    ) {
+      lastHandledUser.current = username;
+      toast.success("GitHub connected!");
       queryClient.invalidateQueries({ queryKey: ["profile", username] });
       setSearchParams({}, { replace: true });
     }
   }, [username, searchParams, setSearchParams, queryClient]);
 
-  // Loading State
-  if (loadingProfile) return <Skeleton className="h-96 rounded-3xl w-full" />;
+  if (loadingProfile) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-6 md:py-10 space-y-6">
+        <Skeleton className="h-48 md:h-64 rounded-[2rem] w-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="lg:col-span-2 h-[400px] rounded-3xl" />
+          <Skeleton className="h-[300px] rounded-3xl" />
+        </div>
+      </div>
+    );
+  }
 
-  // Error/Not Found State
   if (isError || !profile) {
     return (
-      <div className="flex flex-col items-center justify-center p-20 space-y-4">
-        <UserCircle className="h-16 w-16 text-muted-foreground opacity-20" />
-        <p className="text-xl font-medium text-muted-foreground italic">
-          User Not Found
-        </p>
-        <Button variant="outline" onClick={() => window.history.back()}>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
+        <UserCircle className="h-16 w-16 text-muted-foreground/20 mb-4" />
+        <h2 className="text-2xl font-bold">Profile not found</h2>
+        <Button className="mt-4 rounded-xl" onClick={() => navigate(-1)}>
           Go Back
         </Button>
       </div>
@@ -103,7 +108,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 max-w-7xl mx-auto px-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 space-y-6 md:space-y-10 animate-in fade-in duration-500">
+      {/* Hero Section - Responsive inner padding handled in ProfileHero */}
       <ProfileHero
         user={{
           id: profile.user_id,
@@ -113,83 +119,105 @@ export default function ProfilePage() {
         reputation={profile.reputation_score}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        {/* Main Feed Area */}
+        <div className="lg:col-span-2 order-2 lg:order-1 space-y-6">
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="bg-muted/50 p-1 h-12 rounded-xl mb-6 flex overflow-x-auto no-scrollbar">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="posts">
-                <FileText className="h-4 w-4 mr-1" /> Posts
-              </TabsTrigger>
-              <TabsTrigger value="history">
-                <History className="h-4 w-4 mr-1" /> History
-              </TabsTrigger>
-              {isOwnProfile && (
-                <TabsTrigger value="settings">
-                  <Settings className="h-4 w-4 mr-1" /> Edit Profile
+            {/* Scrollable Tabs for Mobile */}
+            <div className="relative mb-6">
+              <TabsList className="flex w-full justify-start overflow-x-auto no-scrollbar bg-muted/30 p-1 h-12 rounded-2xl border backdrop-blur-sm scroll-smooth items-center">
+                <TabsTrigger
+                  value="overview"
+                  className="min-w-[100px] rounded-xl px-4"
+                >
+                  Overview
                 </TabsTrigger>
-              )}
-            </TabsList>
+                <TabsTrigger
+                  value="posts"
+                  className="min-w-[100px] rounded-xl px-4"
+                >
+                  Posts
+                </TabsTrigger>
+                <TabsTrigger
+                  value="history"
+                  className="min-w-[100px] rounded-xl px-4"
+                >
+                  Activity
+                </TabsTrigger>
+                {isOwnProfile && (
+                  <TabsTrigger
+                    value="settings"
+                    className="min-w-[100px] rounded-xl px-4 text-primary font-semibold ml-auto"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            </div>
 
-            <TabsContent value="overview" className="space-y-6 outline-none">
-              {/* GITHUB SECTION */}
-              <div className="p-6 border rounded-2xl bg-card shadow-sm">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Github className="h-5 w-5" /> GitHub Connection
-                </h3>
+            {/* OVERVIEW CONTENT */}
+            <TabsContent value="overview" className="outline-none m-0">
+              <section className="p-5 md:p-8 border rounded-[2rem] bg-card shadow-sm border-border/60">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    <Github className="h-5 w-5" /> GitHub Integration
+                  </h3>
+                  {isGithubConnected && (
+                    <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 border-none px-3 py-1 rounded-full">
+                      Connected
+                    </Badge>
+                  )}
+                </div>
 
                 {!isGithubConnected ? (
-                  isOwnProfile ? (
+                  <div className="bg-muted/10 border-2 border-dashed rounded-3xl p-8 md:p-12 text-center">
+                    <p className="text-muted-foreground mb-6 text-sm md:text-base">
+                      Sync your repositories to display your coding reputation.
+                    </p>
                     <Button
                       onClick={initiateGithubAuth}
-                      className="w-full h-14 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white gap-2 text-lg font-bold"
+                      className="w-full sm:w-auto h-12 px-8 rounded-xl bg-zinc-900 font-bold"
                     >
-                      <Github className="h-5 w-5" /> Connect GitHub Account
+                      Connect Account
                     </Button>
-                  ) : (
-                    <p className="text-muted-foreground italic">
-                      No GitHub account linked.
-                    </p>
-                  )
+                  </div>
                 ) : (
-                  <div className="flex items-center justify-between gap-4 p-4 border rounded-xl bg-muted/30">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-zinc-900 p-2 rounded-lg">
-                        <Github className="h-5 w-5 text-white" />
+                  <div className="flex flex-col sm:flex-row items-center justify-between p-4 md:p-6 border rounded-2xl bg-muted/20 gap-4">
+                    <div className="flex items-center gap-4 w-full">
+                      <div className="bg-zinc-950 p-3 rounded-xl">
+                        <Github className="h-6 w-6 text-white" />
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted-foreground">
-                          Connected as
-                        </span>
+                      <div className="truncate">
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                          Linked Account
+                        </p>
                         <a
                           href={`https://github.com/${profile.github_username}`}
                           target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-bold hover:underline text-primary"
+                          className="text-lg font-bold flex items-center gap-1 hover:text-primary"
                         >
-                          @{profile.github_username}
+                          @{profile.github_username}{" "}
+                          <ExternalLink className="h-3 w-3" />
                         </a>
                       </div>
                     </div>
-
                     {isOwnProfile && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={handleDisconnectGithub}
-                        disabled={disconnectMutation.isPending}
-                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => disconnectMutation.mutate()}
+                        className="w-full sm:w-auto text-destructive hover:bg-destructive/10"
                       >
-                        <Link2Off className="h-4 w-4 mr-2" />
                         Disconnect
                       </Button>
                     )}
                   </div>
                 )}
-              </div>
+              </section>
             </TabsContent>
 
-            <TabsContent value="posts" className="space-y-4 outline-none">
+            {/* POSTS CONTENT */}
+            <TabsContent value="posts" className="space-y-4 m-0">
               {posts.length > 0 ? (
                 posts.map((post, idx) => (
                   <PostCard
@@ -197,55 +225,67 @@ export default function ProfilePage() {
                     post={post}
                     index={idx}
                     canDelete={isOwnProfile}
+                    onDelete={() => handleDeletePost(post.id)}
                   />
                 ))
               ) : (
-                <div className="text-center py-20 bg-muted/10 rounded-3xl border-2 border-dashed">
-                  <p className="text-muted-foreground">No posts yet</p>
+                <div className="py-20 text-center bg-muted/5 rounded-[2rem] border-2 border-dashed border-border/40">
+                  <p className="text-muted-foreground">
+                    No public insights yet.
+                  </p>
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="history">
+            <TabsContent value="history" className="m-0">
               <ReputationHistory events={history ?? []} />
             </TabsContent>
 
-            {isOwnProfile && (
-              <TabsContent
-                value="settings"
-                className="p-6 border rounded-2xl bg-card"
-              >
-                <h3 className="text-xl font-bold mb-4">Profile Settings</h3>
-                <p className="text-muted-foreground mb-6">
-                  Manage your account details and preferences.
-                </p>
-                {/* Add your Edit Profile Form Component here */}
-                <div className="space-y-4">
-                  <Button variant="outline">Update Display Name</Button>
-                  <br />
-                  <Button variant="outline">Change Profile Picture</Button>
-                </div>
-              </TabsContent>
-            )}
+            <TabsContent
+              value="settings"
+              className="p-6 md:p-8 border rounded-[2rem] bg-card m-0"
+            >
+              <h3 className="text-xl font-bold mb-6">Profile Settings</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button
+                  variant="outline"
+                  className="h-20 justify-start px-6 rounded-2xl group transition-all"
+                >
+                  <div className="text-left">
+                    <p className="font-bold group-hover:text-primary transition-colors">
+                      Personal Info
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                      Bio & Avatar
+                    </p>
+                  </div>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-20 justify-start px-6 rounded-2xl group transition-all"
+                >
+                  <div className="text-left">
+                    <p className="font-bold group-hover:text-primary transition-colors">
+                      Account Security
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                      Login & Pass
+                    </p>
+                  </div>
+                </Button>
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
 
-        <div className="space-y-6 lg:sticky lg:top-24">
-          <ContactPanel
-            userId={profile.user_id}
-            userName={profile.full_name}
-            isOwnProfile={isOwnProfile}
-          />
-          <div className="bg-card rounded-3xl border p-6 space-y-4 shadow-sm">
-            <h3 className="font-bold flex items-center gap-2">
-              <ShieldCheck className="h-5 w-4 text-primary" /> Verification
-            </h3>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <Badge className="bg-green-500/10 text-green-600 border-none">
-                Verified
-              </Badge>
-            </div>
+        {/* Sidebar - Stacks on bottom for Mobile, sticks on Right for Desktop */}
+        <div className="lg:col-span-1 order-1 lg:order-2 space-y-6">
+          <div className="sticky top-6 space-y-6">
+            <ContactPanel
+              userId={profile.user_id}
+              userName={profile.full_name}
+              isOwnProfile={isOwnProfile}
+            />
           </div>
         </div>
       </div>

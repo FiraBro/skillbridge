@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // Added for smoothness
+import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   FaSearch,
-  FaUsers,
   FaChevronLeft,
   FaChevronRight,
+  FaSlidersH,
 } from "react-icons/fa";
 
 import useDebounce from "@/hooks/useDebounce";
@@ -20,7 +20,6 @@ import DeveloperListItem from "../components/developer-card";
 
 export default function TalentDiscovery() {
   const { user } = useAuth();
-  const isCompany = user?.role === "company";
 
   const [search, setSearch] = useState("");
   const [minRep, setMinRep] = useState(0);
@@ -28,7 +27,6 @@ export default function TalentDiscovery() {
 
   const debouncedSearch = useDebounce(search, 500);
 
-  // 1. Fetching Data
   const {
     data: devRes,
     isLoading,
@@ -48,28 +46,13 @@ export default function TalentDiscovery() {
   const totalPages = devRes?.data?.totalPages ?? 1;
   const bookmarks = bookmarkRes?.data?.map((b) => b.id) ?? [];
 
-  // Reset page if filters reduce total pages
   useEffect(() => {
     if (page > totalPages && totalPages > 0) setPage(1);
   }, [totalPages, page]);
 
-  // Smooth scroll to top on page change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [page]);
-
-  if (!isCompany) {
-    return (
-      <div className="max-w-3xl mx-auto py-32 text-center">
-        <h2 className="text-2xl font-bold mb-3">
-          Talent Discovery is for Companies
-        </h2>
-        <p className="text-muted-foreground">
-          Only company accounts can browse and bookmark developers.
-        </p>
-      </div>
-    );
-  }
 
   const handleBookmark = (devId) => {
     bookmarkMutation.mutate({
@@ -78,13 +61,9 @@ export default function TalentDiscovery() {
     });
   };
 
-  // Framer Motion Variants
   const containerVars = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.05 },
-    },
+    visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
     exit: { opacity: 0, transition: { duration: 0.2 } },
   };
 
@@ -94,32 +73,35 @@ export default function TalentDiscovery() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 space-y-10 min-h-screen">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-12 space-y-6 md:space-y-12 min-h-screen">
       {/* Hero Section */}
       <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="pt-6 pb-2 space-y-2"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-3 text-center md:text-left"
       >
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
-          Discover Top Developers
+        <h1 className="text-3xl md:text-6xl font-black tracking-tighter text-foreground">
+          Discover Talent
         </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl leading-relaxed">
-          Browse vetted talent based on reputation, skills, and verified
-          contribution history.
+        <p className="text-sm md:text-xl text-muted-foreground max-w-2xl leading-relaxed mx-auto md:mx-0">
+          Connect with vetted developers based on verifiable reputation scores
+          and open-source contribution history.
         </p>
       </motion.div>
 
-      {/* Filters Section */}
-      <div className="bg-card border rounded-2xl p-5 flex flex-col md:flex-row gap-4 items-center sticky top-4 z-10 shadow-sm backdrop-blur-md bg-card/90">
-        <div className="relative flex-1 w-full">
+      {/* Filter Bar - Optimized for Mobile Sticky */}
+      <div className="sticky top-4 md:top-20 z-30 bg-background/80 backdrop-blur-xl border border-border/50 rounded-3xl p-2 md:p-4 shadow-2xl flex flex-col md:flex-row gap-2 md:gap-4 items-stretch transition-all">
+        <div className="relative flex-1 group">
           <FaSearch
-            className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isFetching ? "text-primary animate-pulse" : "text-muted-foreground"}`}
+            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 ${
+              isFetching
+                ? "text-primary scale-110"
+                : "text-muted-foreground group-focus-within:text-primary"
+            }`}
           />
           <Input
-            className="pl-10 focus-visible:ring-primary"
-            placeholder="Search by name, skills, or bio..."
+            className="pl-12 h-12 md:h-14 rounded-2xl border-none bg-muted/40 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:bg-background text-base"
+            placeholder="Search by tech stack or name..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -128,13 +110,16 @@ export default function TalentDiscovery() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-            Min Rep:
-          </span>
+        <div className="flex items-center gap-2 bg-muted/40 p-1 md:p-1.5 rounded-2xl md:min-w-[200px]">
+          <div className="flex items-center gap-2 pl-3">
+            <FaSlidersH className="text-primary h-4 w-4" />
+            <span className="hidden md:inline text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+              Min Rep
+            </span>
+          </div>
           <Input
             type="number"
-            className="w-full md:w-24"
+            className="h-10 md:h-11 w-full md:w-24 rounded-xl border-none bg-background font-bold text-center"
             value={minRep}
             onChange={(e) => {
               setMinRep(Number(e.target.value));
@@ -144,21 +129,18 @@ export default function TalentDiscovery() {
         </div>
       </div>
 
-      {/* Developer List - Fixed height container to prevent layout shifts */}
-      <div className="min-h-[600px] relative">
+      {/* Developer Grid */}
+      <div className="min-h-[500px] relative">
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
               key="loader"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-4"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8"
             >
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div
                   key={i}
-                  className="h-32 rounded-2xl bg-muted animate-pulse border"
+                  className="h-64 rounded-[2rem] bg-muted/50 animate-pulse border border-border/50"
                 />
               ))}
             </motion.div>
@@ -169,10 +151,10 @@ export default function TalentDiscovery() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="space-y-4"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8"
             >
               {developers.map((dev) => (
-                <motion.div key={dev.id} variants={itemVars}>
+                <motion.div key={dev.id} variants={itemVars} className="h-full">
                   <DeveloperListItem
                     developer={dev}
                     isBookmarked={bookmarks.includes(dev.id)}
@@ -184,57 +166,69 @@ export default function TalentDiscovery() {
           ) : (
             <motion.div
               key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-24 bg-muted/30 rounded-3xl border border-dashed"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center py-32 bg-muted/10 rounded-[3rem] border-4 border-dashed border-muted flex flex-col items-center justify-center gap-6 px-8"
             >
-              <p className="text-lg text-muted-foreground">
-                No developers match your criteria.
-              </p>
+              <div className="p-6 bg-muted rounded-full">
+                <FaSearch className="h-10 w-10 text-muted-foreground opacity-20" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xl font-bold text-foreground">
+                  No matches found
+                </p>
+                <p className="text-muted-foreground">
+                  Try adjusting your search terms or lowering the reputation
+                  filter.
+                </p>
+              </div>
               <Button
-                variant="link"
+                variant="outline"
+                className="rounded-full px-10 h-12 font-bold border-2"
                 onClick={() => {
                   setSearch("");
                   setMinRep(0);
                 }}
               >
-                Clear filters
+                Clear All Filters
               </Button>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Container */}
       {developers.length > 0 && (
-        <div className="flex justify-center items-center gap-6 pt-6 border-t">
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full"
-            disabled={page === 1 || isFetching}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <FaChevronLeft />
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-primary">{page}</span>
-            <span className="text-muted-foreground">/</span>
-            <span className="font-medium text-muted-foreground">
-              {totalPages}
-            </span>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-8 py-10 border-t border-border/50">
+          <div className="text-sm font-medium text-muted-foreground order-2 md:order-1">
+            Page{" "}
+            <span className="text-foreground font-black px-2 py-1 bg-muted rounded-md">
+              {page}
+            </span>{" "}
+            of {totalPages}
           </div>
 
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full"
-            disabled={page === totalPages || isFetching}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            <FaChevronRight />
-          </Button>
+          <div className="flex items-center gap-3 order-1 md:order-2 w-full md:w-auto">
+            <Button
+              variant="secondary"
+              size="lg"
+              className="flex-1 md:flex-none rounded-2xl h-14 px-8 font-bold active:scale-95 transition-transform"
+              disabled={page === 1 || isFetching}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <FaChevronLeft className="mr-2 h-3 w-3" /> Prev
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="lg"
+              className="flex-1 md:flex-none rounded-2xl h-14 px-8 font-bold active:scale-95 transition-transform"
+              disabled={page === totalPages || isFetching}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next <FaChevronRight className="ml-2 h-3 w-3" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

@@ -1,23 +1,16 @@
 import { useEffect, useRef } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  useProfile,
-  useReputation,
-  useReputationHistory,
-} from "@/hooks/useProfiles";
+import { useProfile, useReputationHistory } from "@/hooks/useProfiles";
 import { usePosts, useDeletePost } from "@/hooks/usePosts";
 import { initiateGithubAuth, disconnectGithub } from "@/lib/api";
 
 // Components
 import ProfileHero from "../component/profile-hero";
-import SkillsCloud from "../component/skill-cloud";
-import ReputationBreakdown from "../component/reputation-breakdown";
 import ReputationHistory from "../component/reputation-history";
 import ContactPanel from "../component/contact-panel";
-import EndorsementSection from "../component/endorsement-section";
 import PostCard from "@/app/companies/components/postCard";
 
 // Hooks & UI
@@ -28,12 +21,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck,
-  Award,
-  Zap,
   History,
   FileText,
   Github,
   Link2Off,
+  Settings,
+  UserCircle,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -53,7 +46,6 @@ export default function ProfilePage() {
   const userId = profile?.user_id;
   const isOwnProfile = viewer?.id === userId;
 
-  const { data: reputation } = useReputation(userId);
   const { data: history } = useReputationHistory(userId);
   const { data: posts = [], isLoading: loadingPosts } = usePosts({
     authorId: userId,
@@ -61,8 +53,7 @@ export default function ProfilePage() {
   });
 
   const deletePost = useDeletePost();
-  const { canShowGithub, canConnectGithub, isGithubConnected } =
-    useGithubVisibility(profile, viewer);
+  const { isGithubConnected } = useGithubVisibility(profile, viewer);
 
   /* -------------------- MUTATIONS -------------------- */
   const disconnectMutation = useMutation({
@@ -76,21 +67,8 @@ export default function ProfilePage() {
     },
   });
 
-  /* -------------------- CALLBACKS -------------------- */
-  const handleDeletePost = (postId) => {
-    if (!confirm("Are you sure you want to delete this post?")) return;
-    deletePost.mutate(postId, {
-      onSuccess: () => {
-        toast.success("Post deleted successfully!");
-        queryClient.invalidateQueries({ queryKey: ["posts"] });
-      },
-    });
-  };
-
   const handleDisconnectGithub = () => {
-    if (
-      confirm("Are you sure? This will remove your GitHub stats and badges.")
-    ) {
+    if (confirm("Are you sure? This will remove your GitHub stats.")) {
       disconnectMutation.mutate();
     }
   };
@@ -106,9 +84,23 @@ export default function ProfilePage() {
     }
   }, [username, searchParams, setSearchParams, queryClient]);
 
+  // Loading State
   if (loadingProfile) return <Skeleton className="h-96 rounded-3xl w-full" />;
-  if (isError || !profile)
-    return <div className="p-20 text-center italic">User not found</div>;
+
+  // Error/Not Found State
+  if (isError || !profile) {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 space-y-4">
+        <UserCircle className="h-16 w-16 text-muted-foreground opacity-20" />
+        <p className="text-xl font-medium text-muted-foreground italic">
+          User Not Found
+        </p>
+        <Button variant="outline" onClick={() => window.history.back()}>
+          Go Back
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 max-w-7xl mx-auto px-4">
@@ -118,117 +110,121 @@ export default function ProfilePage() {
           name: profile.full_name,
           username: profile.username,
         }}
-        reputation={reputation?.total ?? profile.reputation_score}
+        reputation={profile.reputation_score}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="bg-muted/50 p-1 h-12 rounded-xl mb-6 flex overflow-x-auto no-scrollbar">
-              <TabsTrigger value="overview">
-                <Zap className="h-4 w-4 mr-1" /> Overview
-              </TabsTrigger>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="posts">
                 <FileText className="h-4 w-4 mr-1" /> Posts
-                {posts.length > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {posts.length}
-                  </Badge>
-                )}
               </TabsTrigger>
-              {canShowGithub && (
-                <TabsTrigger value="history">
-                  <History className="h-4 w-4 mr-1" /> History
+              <TabsTrigger value="history">
+                <History className="h-4 w-4 mr-1" /> History
+              </TabsTrigger>
+              {isOwnProfile && (
+                <TabsTrigger value="settings">
+                  <Settings className="h-4 w-4 mr-1" /> Edit Profile
                 </TabsTrigger>
               )}
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-8 outline-none">
-              {canShowGithub && (
-                <>
-                  <ReputationBreakdown
-                    total={reputation?.total ?? profile.reputation_score}
-                    breakdown={reputation?.breakdown}
-                  />
-                  <SkillsCloud skills={profile.skills ?? []} />
+            <TabsContent value="overview" className="space-y-6 outline-none">
+              {/* GITHUB SECTION */}
+              <div className="p-6 border rounded-2xl bg-card shadow-sm">
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  <Github className="h-5 w-5" /> GitHub Connection
+                </h3>
 
-                  {/* CONNECT GITHUB CTA */}
-                  {isOwnProfile && !isGithubConnected && (
+                {!isGithubConnected ? (
+                  isOwnProfile ? (
                     <Button
                       onClick={initiateGithubAuth}
                       className="w-full h-14 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white gap-2 text-lg font-bold"
                     >
                       <Github className="h-5 w-5" /> Connect GitHub Account
                     </Button>
-                  )}
-
-                  {/* GITHUB USERNAME & DISCONNECT */}
-                  {isGithubConnected && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between gap-4 p-4 border rounded-xl bg-muted/30">
-                        <div className="flex items-center gap-3">
-                          <Github className="h-5 w-5 text-muted-foreground" />
-                          <span className="font-medium">
-                            {/* Use <a> tag for external links to prevent URL appending */}
-                            <a
-                              href={`https://github.com/${profile.github_username}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:underline"
-                            >
-                              {profile.github_username}
-                            </a>
-                          </span>
-                        </div>
-
-                        {isOwnProfile && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleDisconnectGithub}
-                            disabled={disconnectMutation.isPending}
-                            className="text-muted-foreground hover:text-destructive gap-1"
-                          >
-                            <Link2Off className="h-4 w-4" />
-                            {disconnectMutation.isPending
-                              ? "Disconnecting..."
-                              : "Disconnect"}
-                          </Button>
-                        )}
+                  ) : (
+                    <p className="text-muted-foreground italic">
+                      No GitHub account linked.
+                    </p>
+                  )
+                ) : (
+                  <div className="flex items-center justify-between gap-4 p-4 border rounded-xl bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-zinc-900 p-2 rounded-lg">
+                        <Github className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">
+                          Connected as
+                        </span>
+                        <a
+                          href={`https://github.com/${profile.github_username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold hover:underline text-primary"
+                        >
+                          @{profile.github_username}
+                        </a>
                       </div>
                     </div>
-                  )}
-                </>
-              )}
+
+                    {isOwnProfile && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDisconnectGithub}
+                        disabled={disconnectMutation.isPending}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Link2Off className="h-4 w-4 mr-2" />
+                        Disconnect
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="posts" className="space-y-4 outline-none">
-              {loadingPosts ? (
-                [1, 2].map((i) => (
-                  <Skeleton key={i} className="h-40 w-full rounded-xl" />
-                ))
-              ) : posts.length > 0 ? (
+              {posts.length > 0 ? (
                 posts.map((post, idx) => (
                   <PostCard
                     key={post.id}
                     post={post}
                     index={idx}
-                    canDelete={viewer?.id === post.author_id}
-                    onDelete={() => handleDeletePost(post.id)}
+                    canDelete={isOwnProfile}
                   />
                 ))
               ) : (
                 <div className="text-center py-20 bg-muted/10 rounded-3xl border-2 border-dashed">
-                  <p className="text-muted-foreground font-medium">
-                    No posts published yet
-                  </p>
+                  <p className="text-muted-foreground">No posts yet</p>
                 </div>
               )}
             </TabsContent>
 
-            {canShowGithub && (
-              <TabsContent value="history">
-                <ReputationHistory events={history ?? []} />
+            <TabsContent value="history">
+              <ReputationHistory events={history ?? []} />
+            </TabsContent>
+
+            {isOwnProfile && (
+              <TabsContent
+                value="settings"
+                className="p-6 border rounded-2xl bg-card"
+              >
+                <h3 className="text-xl font-bold mb-4">Profile Settings</h3>
+                <p className="text-muted-foreground mb-6">
+                  Manage your account details and preferences.
+                </p>
+                {/* Add your Edit Profile Form Component here */}
+                <div className="space-y-4">
+                  <Button variant="outline">Update Display Name</Button>
+                  <br />
+                  <Button variant="outline">Change Profile Picture</Button>
+                </div>
               </TabsContent>
             )}
           </Tabs>

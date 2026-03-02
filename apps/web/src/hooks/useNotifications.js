@@ -12,7 +12,6 @@ export const useNotifications = () => {
       const response = await notificationService.getNotifications();
 
       // DEBUG: See exactly what the hook is about to return to the UI
-      console.log("Hook receiving from service:", response.data);
 
       if (response.data) {
         return response.data;

@@ -6,6 +6,7 @@ import AppLayout from "@/layouts/app.layout.jsx";
 import { ErrorBoundary } from "react-error-boundary";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import ProposalPage from "./developers/ProposalPage";
+import LandingPage from "./LandingPage";
 
 // Lazy imports
 const Login = lazy(() => import("./auth/login"));
@@ -45,6 +46,16 @@ const ROLES = {
 };
 
 export const router = createBrowserRouter([
+  {
+    path: "/",
+    element: (
+      <Suspense
+        fallback={<div className="p-10 font-black uppercase">Loading...</div>}
+      >
+        <LandingPage />
+      </Suspense>
+    ),
+  },
   // -------------------- AUTH ROUTES --------------------
   {
     path: "/auth",

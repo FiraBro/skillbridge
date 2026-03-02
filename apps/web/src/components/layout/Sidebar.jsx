@@ -38,12 +38,7 @@ export default function Sidebar() {
       path: "/dashboard",
       group: "navigation",
     },
-    {
-      icon: Search,
-      label: "Discovery",
-      path: "/discovery",
-      group: "navigation",
-    },
+
     {
       icon: Briefcase,
       label: "Opportunities",

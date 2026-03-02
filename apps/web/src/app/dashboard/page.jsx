@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ActivityFeed from "./components/activity-feed";
-
 export default function CommunityPage() {
   const navigate = useNavigate();
 

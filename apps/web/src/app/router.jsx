@@ -17,7 +17,8 @@ const Profile = lazy(() => import("@/app/profile/[id]/page.jsx"));
 const Dashboard = lazy(() => import("./dashboard/page.jsx"));
 
 const CompanyDashboard = lazy(() => import("./companies/dashboard/page.jsx"));
-const TalentDiscovery = lazy(() => import("./companies/discovery/page.jsx"));
+// const TalentDiscovery = lazy(() => import("./companies/discovery/page.jsx"));
+
 const CreateJob = lazy(() => import("./jobs/create/page.jsx"));
 const ApplicantReview = lazy(() => import("./companies/applicants/page.jsx"));
 
@@ -89,7 +90,7 @@ export const router = createBrowserRouter([
           { path: "/posts/:slug/edit", element: <PostEdit /> },
           { path: "/notifications", element: <Notifications /> },
           { path: "/jobs/:id/apply", element: <ProposalPage /> },
-          { path: "/discovery", element: <TalentDiscovery /> },
+          // { path: "/discovery", element: <TalentDiscovery /> },
         ],
       },
 

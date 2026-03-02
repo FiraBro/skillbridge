@@ -79,7 +79,6 @@ export const fetchUser = async (req, res, next) => {
 export const deleteUser = async (req, res, next) => {
   try {
     const userId = req.params.id; // ✅ Added the 's'
-    console.log("Deleting User ID:", userId); // Debug line to be sure
     await authService.deleteUser(userId);
     res.json(success(null, "User account deleted successfully"));
   } catch (err) {

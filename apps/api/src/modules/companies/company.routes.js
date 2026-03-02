@@ -4,7 +4,7 @@ import { authorize, requireAuth } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 router.get("/discovery", requireAuth, companyController.discover);
-router.use(requireAuth, authorize("company"));
+router.use(requireAuth, authorize("client"));
 // Company Profile
 router.get("/profile", companyController.getProfile);
 router.post("/profile", companyController.updateProfile);

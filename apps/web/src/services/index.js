@@ -10,6 +10,7 @@ const extractData = (promise) => promise.then((res) => res.data || res);
 export const jobService = {
   getAll: (params) => {
     const res = extractData(apiClient.get("/jobs", { params }));
+    console.log("Fetched Jobs:", res);
     return res;
   },
   getRecommended: () => extractData(apiClient.get("/jobs/recommended")),

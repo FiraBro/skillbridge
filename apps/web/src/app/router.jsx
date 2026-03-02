@@ -13,22 +13,14 @@ const Login = lazy(() => import("./auth/login"));
 const Register = lazy(() => import("./auth/register"));
 const ForgotPassword = lazy(() => import("./auth/forgot-password"));
 const ResetPassword = lazy(() => import("./auth/reset-password"));
-
 const Profile = lazy(() => import("@/app/profile/[id]/page.jsx"));
 const Dashboard = lazy(() => import("./dashboard/page.jsx"));
-
 const CompanyDashboard = lazy(() => import("./companies/dashboard/page.jsx"));
-// const TalentDiscovery = lazy(() => import("./companies/discovery/page.jsx"));
-
 const CreateJob = lazy(() => import("./jobs/create/page.jsx"));
 const ApplicantReview = lazy(() => import("./companies/applicants/page.jsx"));
-
-// const Search = lazy(() => import("./search/page.jsx"));
 const Admin = lazy(() => import("./admin/page.jsx"));
-
 const Jobs = lazy(() => import("./jobs/page.jsx"));
 const JobDetail = lazy(() => import("./jobs/[id]/page.jsx"));
-
 const PostDetail = lazy(() => import("./posts/[slug]/page.jsx"));
 const PostCreate = lazy(() => import("./posts/create/page.jsx"));
 const PostEdit = lazy(() => import("./posts/[slug]/edit/page.jsx"));
@@ -36,31 +28,37 @@ const RoleRedirect = lazy(
   () => import("@/components/auth/RoleBasedRedirect.jsx"),
 );
 const Notifications = lazy(() => import("./notifications/page.jsx"));
-// Loader for suspense
 
 // Role constants
 const ROLES = {
   DEVELOPER: "developer",
-  COMPANY: "company",
+  COMPANY: "client",
   ADMIN: "admin",
 };
 
+// Simple loading state
+const PageLoader = () => (
+  <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-zinc-950">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+  </div>
+);
+
 export const router = createBrowserRouter([
+  // 1. PUBLIC LANDING PAGE (GUESTS ONLY)
   {
     path: "/",
     element: (
-      <Suspense
-        fallback={<div className="p-10 font-black uppercase">Loading...</div>}
-      >
+      <Suspense fallback={<PageLoader />}>
         <LandingPage />
       </Suspense>
     ),
   },
-  // -------------------- AUTH ROUTES --------------------
+
+  // 2. AUTHENTICATION (LOGIN/REGISTER)
   {
     path: "/auth",
     element: (
-      <Suspense>
+      <Suspense fallback={<PageLoader />}>
         <AuthLayout />
       </Suspense>
     ),
@@ -72,67 +70,75 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // -------------------- PROTECTED ROUTES --------------------
+  // 3. PROTECTED APP AREA
   {
     element: (
-      <Suspense>
+      <Suspense fallback={<PageLoader />}>
         <AppLayout />
       </Suspense>
     ),
     children: [
-      // General authenticated routes (any logged-in user)
       {
-        element: <ProtectedRoute />,
+        element: <ProtectedRoute />, // Layer 1: Auth Check
         children: [
-          { path: "/dashboard", element: <Dashboard /> },
+          // THE TRAFFIC CONTROLLER
+          // When a user is logged in but hits a neutral path, send them to their dashboard
+          { index: true, element: <RoleRedirect /> },
+          { path: "home", element: <RoleRedirect /> },
+
+          // SHARED AUTHENTICATED ROUTES
           {
-            path: "/profile/:username",
+            path: "profile/:username",
             element: (
-              <ErrorBoundary fallback={<div>A critical error occurred.</div>}>
+              <ErrorBoundary
+                fallback={<div className="p-10">Profile Load Error.</div>}
+              >
                 <Profile />
               </ErrorBoundary>
             ),
           },
-          { path: "/jobs", element: <Jobs /> },
-          { path: "/jobs/:id", element: <JobDetail /> },
-          // { path: "/search", element: <Search /> },
-          { path: "/posts/create", element: <PostCreate /> },
-          { path: "/posts/:slug", element: <PostDetail /> },
-          { path: "/posts/:slug/edit", element: <PostEdit /> },
-          { path: "/notifications", element: <Notifications /> },
-          { path: "/jobs/:id/apply", element: <ProposalPage /> },
-          // { path: "/discovery", element: <TalentDiscovery /> },
+          { path: "jobs", element: <Jobs /> },
+          { path: "jobs/:id", element: <JobDetail /> },
+          { path: "notifications", element: <Notifications /> },
+          { path: "posts/:slug", element: <PostDetail /> },
+
+          // --- DEVELOPER ROUTES ---
+          {
+            element: <ProtectedRoute allowedRoles={[ROLES.DEVELOPER]} />,
+            children: [
+              { path: "dashboard", element: <Dashboard /> },
+              { path: "jobs/:id/apply", element: <ProposalPage /> },
+              { path: "posts/create", element: <PostCreate /> },
+              { path: "posts/:slug/edit", element: <PostEdit /> },
+            ],
+          },
+
+          // --- COMPANY/CLIENT ROUTES ---
+          {
+            element: <ProtectedRoute allowedRoles={[ROLES.COMPANY]} />,
+            children: [
+              { path: "company-dashboard", element: <CompanyDashboard /> },
+              { path: "jobs/create", element: <CreateJob /> },
+              { path: "applicants/:jobId", element: <ApplicantReview /> },
+            ],
+          },
+
+          // --- ADMIN ROUTES ---
+          {
+            element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
+            children: [{ path: "admin", element: <Admin /> }],
+          },
         ],
       },
-
-      // -------------------- COMPANY ONLY --------------------
-      {
-        element: <ProtectedRoute allowedRoles={[ROLES.COMPANY]} />,
-        children: [
-          { path: "/company-dashboard", element: <CompanyDashboard /> },
-          { path: "/jobs/create", element: <CreateJob /> },
-          { path: "/applicants/:jobId", element: <ApplicantReview /> },
-        ],
-      },
-
-      // -------------------- ADMIN ONLY --------------------
-      {
-        element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
-        children: [{ path: "/admin", element: <Admin /> }],
-      },
-
-      // Root redirect
-
-      { path: "/", element: <RoleRedirect /> },
     ],
   },
 
-  // -------------------- 404 --------------------
+  // 4. FALLBACK
   {
     path: "*",
     element: (
-      <div className="p-20 text-center text-muted-foreground font-medium italic">
-        404 - Skill Not Found
+      <div className="p-20 text-center font-black uppercase tracking-widest text-zinc-400">
+        404 — Skill Not Found
       </div>
     ),
   },

@@ -1,36 +1,43 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
  * ProtectedRoute checks:
  * 1. If the user is logged in
  * 2. If the user has the required role(s)
- *
- * Usage:
- * <ProtectedRoute allowedRoles={['company', 'admin']} />
  */
 export const ProtectedRoute = ({ allowedRoles }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
-  // Wait until auth state loads
+  // 1. Wait until auth state loads
   if (isLoading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-zinc-950">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
       </div>
     );
   }
 
-  // Redirect to login if not authenticated
+  // 2. Redirect to login if not authenticated
+  // We save the current location in state so we can redirect them back after login
   if (!isAuthenticated) {
-    return <Navigate to="/auth/login" replace />;
+    return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
-  // If roles are specified, check if user has one of them
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />; // or an Unauthorized page
+  // 3. If specific roles are required, check if user has permission
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!allowedRoles.includes(user?.role)) {
+      console.warn(
+        `Access Denied: Role "${user?.role}" is not authorized for this route.`,
+      );
+
+      // Redirect to /home, which will trigger RoleBasedRedirect.jsx
+      // to send them to their specific dashboard (developer, client, or admin).
+      return <Navigate to="/home" replace />;
+    }
   }
 
-  // Authorized
+  // 4. Authorized - Render the child routes
   return <Outlet />;
 };

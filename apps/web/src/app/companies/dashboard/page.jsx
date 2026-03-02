@@ -16,7 +16,9 @@ import { useCompanyJobs } from "@/hooks/useJobs";
 
 export default function CompanyDashboard() {
   const { data, isLoading, isError } = useCompanyJobs();
-  const jobs = data?.data || [];
+  const jobs = Array.isArray(data) ? data : data?.data || [];
+
+  console.log("Fixed Jobs Array:", jobs);
 
   if (isLoading) return <DashboardSkeleton />;
 

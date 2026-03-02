@@ -91,61 +91,63 @@ export default function CreatePostPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans text-zinc-900 overflow-x-hidden">
-      {/* --- RESPONSIVE HEADER --- */}
-      <header className="h-14 px-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm z-40">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 overflow-x-hidden">
+      {/* --- RESPONSIVE STICKY HEADER --- */}
+      <header className="h-14 md:h-16 px-4 md:px-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm z-50">
         <div className="flex items-center gap-2 md:gap-4">
           <Link
             to="/"
-            className="p-2 hover:bg-zinc-100 rounded-md transition-colors"
+            className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-md transition-colors"
+            aria-label="Go back"
           >
             <ChevronLeft className="h-5 w-5" />
           </Link>
-          <span className="font-bold text-sm md:text-base tracking-tight">
-            {isPreview ? "Previewing Post" : "Create Post"}
-          </span>
+          <h1 className="font-bold text-sm md:text-lg tracking-tight truncate max-w-[120px] sm:max-w-none">
+            {isPreview ? "Previewing" : "Create Post"}
+          </h1>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 md:gap-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsPreview(!isPreview)}
-            className={`text-sm font-medium ${isPreview ? "text-[#108a00] bg-[#108a00]/5" : ""}`}
+            className={`text-xs md:text-sm font-semibold h-9 px-3 md:px-4 ${
+              isPreview ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" : ""
+            }`}
           >
             {isPreview ? "Edit" : "Preview"}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={mutation.isPending || !title.trim() || !markdown.trim()}
-            className="bg-[#108a00] hover:bg-[#0d7300] text-white px-4 h-9 rounded-md font-bold text-sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 h-9 rounded-md font-bold text-xs md:text-sm transition-all active:scale-95"
           >
-            {mutation.isPending ? "Publishing..." : "Publish"}
+            {mutation.isPending ? "..." : "Publish"}
           </Button>
-          <Button variant="ghost" size="icon" className="md:hidden">
+          <Button variant="ghost" size="icon" className="md:hidden h-9 w-9">
             <MoreVertical className="h-5 w-5" />
           </Button>
         </div>
       </header>
 
-      <main className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
-        <div className="space-y-6 md:space-y-8">
-          {/* --- COVER IMAGE (RESPONSIVE) --- */}
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 md:py-12">
+        <div className="space-y-6 md:space-y-10">
+          {/* --- COVER IMAGE UPLOADER --- */}
           {!isPreview && (
-            <div className="flex items-center gap-4">
+            <div className="w-full">
               {!imagePreview ? (
                 <>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current.click()}
-                    className="flex items-center gap-2 px-4 py-2 border-2 border-zinc-200 dark:border-zinc-800 rounded-md text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
+                    className="flex items-center gap-2 px-4 py-3 md:py-4 w-full justify-center border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-bold text-zinc-500 hover:border-blue-500 hover:text-blue-500 transition-all"
                   >
-                    <ImageIcon className="h-4 w-4" />
+                    <ImageIcon className="h-5 w-5" />
                     Add a cover image
                   </button>
                   <input
                     type="file"
-                    name="cover_image"
                     ref={fileInputRef}
                     onChange={handleImageChange}
                     className="hidden"
@@ -153,7 +155,7 @@ export default function CreatePostPage() {
                   />
                 </>
               ) : (
-                <div className="relative w-full aspect-[21/9] rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                <div className="relative group w-full aspect-[21/9] rounded-xl overflow-hidden shadow-sm border border-zinc-200 dark:border-zinc-800">
                   <img
                     src={imagePreview}
                     className="w-full h-full object-cover"
@@ -164,7 +166,7 @@ export default function CreatePostPage() {
                       setSelectedFile(null);
                       setImagePreview(null);
                     }}
-                    className="absolute top-4 right-4 bg-zinc-900/80 hover:bg-red-600 p-1.5 rounded-full text-white transition-all"
+                    className="absolute top-3 right-3 md:top-4 md:right-4 bg-zinc-900/90 hover:bg-red-600 p-2 rounded-full text-white shadow-lg transition-all active:scale-90"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -173,57 +175,61 @@ export default function CreatePostPage() {
             </div>
           )}
 
-          {/* --- CONTENT AREA --- */}
-          <div className="space-y-6">
+          {/* --- EDITOR / PREVIEW --- */}
+          <div className="min-h-[60vh]">
             {isPreview ? (
-              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {imagePreview && (
                   <img
                     src={imagePreview}
-                    className="w-full aspect-[21/9] object-cover rounded-xl mb-8"
+                    className="w-full aspect-[21/9] object-cover rounded-xl mb-6 md:mb-10 shadow-sm"
                     alt="Preview Cover"
                   />
                 )}
-                <h1 className="text-3xl md:text-5xl font-black mb-4 leading-tight">
+                <h1 className="text-3xl md:text-5xl lg:text-6xl font-black mb-4 md:mb-6 leading-[1.1] tracking-tight">
                   {title || "Untitled Transmission"}
                 </h1>
-                <div className="flex flex-wrap gap-3 mb-8">
+                <div className="flex flex-wrap gap-2 md:gap-3 mb-8 md:mb-12">
                   {tags.map((t) => (
-                    <span key={t} className="text-[#108a00] font-medium">
+                    <span
+                      key={t}
+                      className="text-blue-600 dark:text-blue-400 font-bold text-sm md:text-base"
+                    >
                       #{t}
                     </span>
                   ))}
                 </div>
-                <div className="prose prose-zinc dark:prose-invert max-w-none">
+                <div className="prose prose-zinc dark:prose-invert max-w-none prose-img:rounded-xl">
                   <MarkdownRenderer
-                    content={markdown || "_No content content yet..._"}
+                    content={
+                      markdown || "_No content added yet. Start writing..._"
+                    }
                   />
                 </div>
               </div>
             ) : (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                {/* AUTO-RESIZING TITLE */}
+              <div className="space-y-6 md:space-y-8 animate-in fade-in duration-300">
                 <textarea
                   ref={titleRef}
                   rows="1"
                   placeholder="New post title here..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-3xl md:text-5xl font-black placeholder:text-zinc-300 dark:placeholder:text-zinc-700 border-none focus:ring-0 resize-none bg-transparent p-0 overflow-hidden leading-tight"
+                  className="w-full text-3xl md:text-5xl lg:text-6xl font-black placeholder:text-zinc-300 dark:placeholder:text-zinc-800 border-none focus:ring-0 resize-none bg-transparent p-0 overflow-hidden leading-[1.1] tracking-tight"
                 />
 
-                {/* TAGS INPUT */}
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
                   {tags.map((tag) => (
                     <span
                       key={tag}
-                      className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-md text-sm font-medium text-zinc-600 dark:text-zinc-400 group"
+                      className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900 px-3 py-1 rounded-md text-xs md:text-sm font-bold text-zinc-600 dark:text-zinc-400 group border border-transparent hover:border-red-200 dark:hover:border-red-900 transition-all"
                     >
                       #{tag}
                       <button
                         type="button"
                         onClick={() => setTags(tags.filter((t) => t !== tag))}
-                        className="hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-zinc-400 hover:text-red-500 transition-colors"
+                        aria-label="Remove tag"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -235,17 +241,16 @@ export default function CreatePostPage() {
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyDown={handleAddTag}
-                      className="border-none focus:ring-0 bg-transparent text-sm md:text-base p-0 w-32 placeholder:text-zinc-400"
+                      className="border-none focus:ring-0 bg-transparent text-sm md:text-base p-1 w-28 md:w-40 placeholder:text-zinc-400"
                     />
                   )}
                 </div>
 
-                {/* MAIN CONTENT AREA */}
                 <textarea
                   placeholder="Write your content here..."
                   value={markdown}
                   onChange={(e) => setMarkdown(e.target.value)}
-                  className="w-full min-h-[40vh] text-base md:text-xl border-none focus:ring-0 bg-transparent resize-none font-sans placeholder:text-zinc-300 dark:placeholder:text-zinc-700 leading-relaxed p-0"
+                  className="w-full min-h-[40vh] md:min-h-[50vh] text-base md:text-xl border-none focus:ring-0 bg-transparent resize-none font-sans placeholder:text-zinc-200 dark:placeholder:text-zinc-800 leading-relaxed p-0"
                 />
               </div>
             )}
@@ -253,23 +258,23 @@ export default function CreatePostPage() {
         </div>
       </main>
 
-      {/* --- DESKTOP HINTS SIDEBAR --- */}
-      <aside className="hidden xl:block fixed top-32 right-8 w-64 space-y-6">
-        <div className="p-4 border border-zinc-100 dark:border-zinc-800 rounded-xl space-y-3">
-          <div className="flex items-center gap-2 text-[#108a00]">
+      {/* --- DESKTOP HINTS (HIDDEN ON MOBILE/TABLET) --- */}
+      <aside className="hidden xl:block fixed top-32 right-6 2xl:right-12 w-64 space-y-6">
+        <div className="p-5 border border-zinc-100 dark:border-zinc-800 rounded-2xl bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm shadow-sm space-y-4">
+          <div className="flex items-center gap-2 text-blue-600">
             <Info className="h-4 w-4" />
-            <h4 className="font-bold text-xs uppercase tracking-widest">
+            <h4 className="font-bold text-[10px] uppercase tracking-[0.2em]">
               Writing Tips
             </h4>
           </div>
-          <ul className="text-xs text-zinc-500 space-y-3 leading-relaxed">
+          <ul className="text-xs text-zinc-500 dark:text-zinc-400 space-y-3 leading-relaxed">
             <li>
               • Use <b># Header</b> for main sections.
             </li>
             <li>
-              • Use <b>[Link Name](URL)</b> for hyperlinks.
+              • Use <b>[Link](URL)</b> for hyperlinks.
             </li>
-            <li>• Add up to 4 tags to reach the right audience.</li>
+            <li>• Markdown is fully supported for code and lists.</li>
           </ul>
         </div>
       </aside>

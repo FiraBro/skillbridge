@@ -1,26 +1,29 @@
 import Redis from "ioredis";
 import { env } from "./env.js";
 
-// 1. Create the instance
-export const redis = new Redis(env.REDIS_URL || "redis://127.0.0.1:6379", {
-  // Add this to prevent BullMQ/Redis from hanging during a reconnect
-  maxRetriesPerRequest: null,
-  // Add this to ensure TLS works for Upstash
+const commonConfig = {
+  retryStrategy(times) {
+    return Math.min(times * 50, 2000);
+  },
   tls: env.REDIS_URL?.startsWith("rediss://")
     ? { rejectUnauthorized: false }
     : undefined,
+  reconnectOnError(err) {
+    if (err.message.includes("READONLY") || err.code === "ECONNRESET") {
+      return true;
+    }
+    return false;
+  },
+};
+
+// 1. Connection for General Cache / Auth (Fails after 3 tries)
+export const redis = new Redis(env.REDIS_URL, {
+  ...commonConfig,
+  maxRetriesPerRequest: 3,
 });
 
-// 2. THE CRITICAL PART: Add the error listener
-redis.on("error", (err) => {
-  if (err.code === "ECONNREFUSED") {
-    console.warn("⚠️ Redis connection refused at", err.address, ":", err.port);
-    // The server will now stay ALIVE instead of crashing
-  } else {
-    console.error("❌ Redis Error:", err);
-  }
-});
-
-redis.on("connect", () => {
-  console.log("✅ Successfully connected to Redis/Upstash");
+// 2. Connection for BullMQ (Required to be NULL)
+export const queueConnection = new Redis(env.REDIS_URL, {
+  ...commonConfig,
+  maxRetriesPerRequest: null,
 });

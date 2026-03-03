@@ -39,6 +39,11 @@ export const requireAuth = (req, res, next) => {
  */
 export const authorize = (...allowedRoles) => {
   return (req, res, next) => {
+    console.log("DEBUG AUTH:", {
+      userRole: req.user?.role,
+      allowed: allowedRoles,
+      match: allowedRoles.includes(req.user?.role),
+    });
     if (!req.user) {
       return next(new ApiError(401, "Unauthorized: Authentication required"));
     }

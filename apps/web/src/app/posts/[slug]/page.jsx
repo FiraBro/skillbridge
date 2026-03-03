@@ -97,7 +97,7 @@ export default function PostDetailPage() {
     <article className="max-w-3xl mx-auto py-12 px-6">
       {/* Navigation */}
       <nav className="flex items-center justify-between mb-12">
-        <Link to="/dashboard">
+        <Link to="/app/dashboard">
           <Button
             variant="ghost"
             size="sm"
@@ -108,7 +108,7 @@ export default function PostDetailPage() {
           </Button>
         </Link>
         {user?.id === post.author_id && (
-          <Link to={`/posts/${post.slug}/edit`}>
+          <Link to={`/app/posts/${post.slug}/edit`}>
             <Button variant="outline" size="sm">
               Edit Insight
             </Button>
@@ -145,7 +145,7 @@ export default function PostDetailPage() {
               </Avatar>
               <div>
                 <Link
-                  to={`/profile/${post.author_username}`}
+                  to={`/app/profile/${post.author_username}`}
                   className="text-sm font-semibold hover:underline block"
                 >
                   {post.author_name}

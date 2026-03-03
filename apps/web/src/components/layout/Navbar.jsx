@@ -71,7 +71,7 @@ export default function Navbar() {
           {/* LOGO - Hidden when search is expanded on mobile */}
           {!isSearchExpanded && (
             <Link
-              to="/"
+              to="/app/dashboard"
               onClick={() => setSearchQuery("")}
               className="shrink-0"
             >
@@ -142,7 +142,7 @@ export default function Navbar() {
           {/* RIGHT ACTIONS - Hidden when search expanded on mobile */}
           {!isSearchExpanded && (
             <div className="flex items-center gap-1 md:gap-3 shrink-0">
-              <Link to="/jobs" className="hidden sm:block">
+              <Link to="/app/jobs" className="hidden sm:block">
                 <Button variant="ghost" size="sm" className="gap-2 font-medium">
                   <Briefcase className="h-4 w-4" />
                   <span className="hidden lg:inline">Jobs</span>

@@ -93,7 +93,7 @@ export default function EditPostPage() {
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center justify-between">
-        <Link to={`/posts/${slug}`}>
+        <Link to={`/app/posts/${slug}`}>
           <Button
             variant="ghost"
             className="gap-2 font-bold uppercase text-[10px] tracking-widest text-muted-foreground hover:text-primary transition-colors"

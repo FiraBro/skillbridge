@@ -220,7 +220,7 @@ function ErrorState({ navigate }) {
         This listing is no longer available or the link may be broken.
       </p>
       <Button
-        onClick={() => navigate("/jobs")}
+        onClick={() => navigate("/app/jobs")}
         className="rounded-full px-10 bg-gray-900 text-white hover:bg-gray-800"
       >
         Browse other jobs

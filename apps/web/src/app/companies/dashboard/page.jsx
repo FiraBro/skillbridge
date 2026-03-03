@@ -54,7 +54,7 @@ export default function CompanyDashboard() {
           </p>
         </div>
 
-        <Link to="/jobs/create" className="w-full sm:w-auto">
+        <Link to="/app/jobs/create" className="w-full sm:w-auto">
           <Button className="w-full sm:w-auto gap-2 h-12 px-6 rounded-xl shadow-lg shadow-primary/20 transition-transform active:scale-95">
             <FaPlus />
             Post a Problem
@@ -127,7 +127,7 @@ export default function CompanyDashboard() {
 
                 <div className="flex items-center gap-3 w-full md:w-auto border-t md:border-none pt-4 md:pt-0">
                   <Link
-                    to={`/applicants/${job.id}`}
+                    to={`/app/applicants/${job.id}`}
                     className="flex-1 md:flex-none"
                   >
                     <Button
@@ -138,7 +138,7 @@ export default function CompanyDashboard() {
                     </Button>
                   </Link>
 
-                  <Link to={`/jobs/${job.id}`}>
+                  <Link to={`/app/jobs/${job.id}`}>
                     <Button
                       size="icon"
                       variant="secondary"
@@ -163,7 +163,7 @@ export default function CompanyDashboard() {
               <p className="text-muted-foreground mb-6">
                 Start your hiring process by posting your first problem.
               </p>
-              <Link to="/jobs/create">
+              <Link to="/app/jobs/create">
                 <Button variant="outline" className="rounded-full px-8">
                   Create Job Post
                 </Button>

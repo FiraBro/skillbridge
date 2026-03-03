@@ -35,20 +35,19 @@ export default function Sidebar() {
     {
       icon: LayoutDashboard,
       label: "Feed",
-      path: "/dashboard",
+      path: "/app/dashboard",
       group: "navigation",
     },
-
     {
       icon: Briefcase,
       label: "Opportunities",
-      path: "/jobs",
+      path: "/app/jobs",
       group: "navigation",
     },
     {
       icon: FileText,
       label: "My Projects",
-      path: profilePath,
+      path: user?.username ? `/app/profile/${user.username}` : "/auth/login",
       group: "career",
     },
   ];
@@ -128,7 +127,7 @@ export default function Sidebar() {
               {repPercentage.toFixed(1)}%
             </span>
           </div>
-          <Link to="/posts/create" className="block">
+          <Link to="/app/posts/create" className="block">
             <Button className="w-full h-11 shadow-md font-semibold gap-2 transition-all active:scale-95">
               <Plus className="h-4 w-4" />
               <span>New Insight</span>
@@ -188,7 +187,7 @@ export default function Sidebar() {
                     {repPercentage.toFixed(1)}%
                   </span>
                 </div>
-                <Link to="/posts/create" className="block">
+                <Link to="/app/posts/create" className="block">
                   <Button className="w-full h-12 rounded-xl text-base font-bold">
                     <Plus className="mr-2 h-5 w-5" /> New Insight
                   </Button>

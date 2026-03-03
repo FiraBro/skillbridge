@@ -17,7 +17,7 @@ export default function CommunityPage() {
       <header className="sticky top-0 z-40 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl border-b border-zinc-200/60 dark:border-zinc-800/60">
         <div className="max-w-4xl mx-auto px-4 md:px-6 h-16 md:h-18 flex items-center justify-end">
           <Button
-            onClick={() => navigate("/posts/create")}
+            onClick={() => navigate("/app/posts/create")}
             className="rounded-full bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:opacity-90 transition-all gap-2 px-5 md:px-6 h-9 md:h-10 shadow-sm"
           >
             <Plus className="h-4 w-4" />

@@ -17,7 +17,11 @@ export const jobService = {
   getById: (id) => extractData(apiClient.get(`/jobs/${id}`)),
   create: (data) => extractData(apiClient.post("/jobs", data)),
   apply: (id, data) => extractData(apiClient.post(`/jobs/${id}/apply`, data)),
-  getCompanyJobs: () => extractData(apiClient.get("/jobs/company")),
+  getCompanyJobs: () => {
+    const res = extractData(apiClient.get("/jobs/company"));
+    console.log("Fetched Company Jobs:", res);
+    return res;
+  },
   getApplicants: (jobId) =>
     extractData(apiClient.get(`/jobs/${jobId}/applicants`)),
   updateApplicationStatus: (applicationId, data) =>
@@ -62,24 +66,27 @@ export const postService = {
    COMPANY & DISCOVERY
 ========================= */
 export const companyService = {
-  getProfile: () => extractData(apiClient.get("/company/profile")),
+  getProfile: () => extractData(apiClient.get("/companies/profile")),
   updateProfile: (profileData) =>
-    extractData(apiClient.post("/company/profile", profileData)),
+    extractData(apiClient.post("/companies/profile", profileData)),
 
   // Talent Discovery
   discoverTalent: (params) =>
     extractData(apiClient.get("/companies/discovery", { params })),
 
   // Bookmarks
-  getBookmarks: () => extractData(apiClient.get("/company/bookmarks")),
+  getBookmarks: () => extractData(apiClient.get("/companies/bookmarks")),
   bookmarkDeveloper: (devId) =>
-    extractData(apiClient.post(`/company/bookmarks/${devId}`)),
+    extractData(apiClient.post(`/companies/bookmarks/${devId}`)),
   removeBookmark: (devId) =>
-    extractData(apiClient.delete(`/company/bookmarks/${devId}`)),
+    extractData(apiClient.delete(`/companies/bookmarks/${devId}`)),
 
   updateApplicationStatus: (appId, feedbackData) =>
     extractData(
-      apiClient.patch(`/company/applications/${appId}/feedback`, feedbackData),
+      apiClient.patch(
+        `/companies/applications/${appId}/feedback`,
+        feedbackData,
+      ),
     ),
 };
 

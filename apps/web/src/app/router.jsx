@@ -32,7 +32,7 @@ const Notifications = lazy(() => import("./notifications/page.jsx"));
 // Role constants
 const ROLES = {
   DEVELOPER: "developer",
-  COMPANY: "client",
+  COMPANY: "company",
   ADMIN: "admin",
 };
 
@@ -84,7 +84,7 @@ export const router = createBrowserRouter([
           // THE TRAFFIC CONTROLLER
           // When a user is logged in but hits a neutral path, send them to their dashboard
           { index: true, element: <RoleRedirect /> },
-          { path: "home", element: <RoleRedirect /> },
+          { path: "/", element: <RoleRedirect /> },
 
           // SHARED AUTHENTICATED ROUTES
           {

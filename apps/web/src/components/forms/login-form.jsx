@@ -36,7 +36,7 @@ export const LoginForm = () => {
       if (!user || !token) return;
 
       setAuth(user, token);
-      navigate("/app", { replace: true });
+      navigate("/app/dashboard", { replace: true });
     },
 
     onError: (err) => {

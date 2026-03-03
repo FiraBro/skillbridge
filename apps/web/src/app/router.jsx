@@ -72,61 +72,66 @@ export const router = createBrowserRouter([
 
   // 3. PROTECTED APP AREA
   {
-    element: (
-      <Suspense fallback={<PageLoader />}>
-        <AppLayout />
-      </Suspense>
-    ),
+    element: <ProtectedRoute />,
     children: [
       {
-        element: <ProtectedRoute />, // Layer 1: Auth Check
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <AppLayout />
+          </Suspense>
+        ),
         children: [
-          // THE TRAFFIC CONTROLLER
-          // When a user is logged in but hits a neutral path, send them to their dashboard
-          { index: true, element: <RoleRedirect /> },
-          { path: "/", element: <RoleRedirect /> },
-
-          // SHARED AUTHENTICATED ROUTES
           {
-            path: "profile/:username",
-            element: (
-              <ErrorBoundary
-                fallback={<div className="p-10">Profile Load Error.</div>}
-              >
-                <Profile />
-              </ErrorBoundary>
-            ),
-          },
-          { path: "jobs", element: <Jobs /> },
-          { path: "jobs/:id", element: <JobDetail /> },
-          { path: "notifications", element: <Notifications /> },
-          { path: "posts/:slug", element: <PostDetail /> },
-
-          // --- DEVELOPER ROUTES ---
-          {
-            element: <ProtectedRoute allowedRoles={[ROLES.DEVELOPER]} />,
+            element: <ProtectedRoute />, // Layer 1: Auth Check
             children: [
-              { path: "dashboard", element: <Dashboard /> },
-              { path: "jobs/:id/apply", element: <ProposalPage /> },
-              { path: "posts/create", element: <PostCreate /> },
-              { path: "posts/:slug/edit", element: <PostEdit /> },
-            ],
-          },
+              // THE TRAFFIC CONTROLLER
+              // When a user is logged in but hits a neutral path, send them to their dashboard
+              { index: true, element: <RoleRedirect /> },
+              { path: "/", element: <RoleRedirect /> },
 
-          // --- COMPANY/CLIENT ROUTES ---
-          {
-            element: <ProtectedRoute allowedRoles={[ROLES.COMPANY]} />,
-            children: [
-              { path: "company-dashboard", element: <CompanyDashboard /> },
-              { path: "jobs/create", element: <CreateJob /> },
-              { path: "applicants/:jobId", element: <ApplicantReview /> },
-            ],
-          },
+              // SHARED AUTHENTICATED ROUTES
+              {
+                path: "profile/:username",
+                element: (
+                  <ErrorBoundary
+                    fallback={<div className="p-10">Profile Load Error.</div>}
+                  >
+                    <Profile />
+                  </ErrorBoundary>
+                ),
+              },
+              { path: "jobs", element: <Jobs /> },
+              { path: "jobs/:id", element: <JobDetail /> },
+              { path: "notifications", element: <Notifications /> },
+              { path: "posts/:slug", element: <PostDetail /> },
 
-          // --- ADMIN ROUTES ---
-          {
-            element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
-            children: [{ path: "admin", element: <Admin /> }],
+              // --- DEVELOPER ROUTES ---
+              {
+                element: <ProtectedRoute allowedRoles={[ROLES.DEVELOPER]} />,
+                children: [
+                  { path: "dashboard", element: <Dashboard /> },
+                  { path: "jobs/:id/apply", element: <ProposalPage /> },
+                  { path: "posts/create", element: <PostCreate /> },
+                  { path: "posts/:slug/edit", element: <PostEdit /> },
+                ],
+              },
+
+              // --- COMPANY/CLIENT ROUTES ---
+              {
+                element: <ProtectedRoute allowedRoles={[ROLES.COMPANY]} />,
+                children: [
+                  { path: "company-dashboard", element: <CompanyDashboard /> },
+                  { path: "jobs/create", element: <CreateJob /> },
+                  { path: "applicants/:jobId", element: <ApplicantReview /> },
+                ],
+              },
+
+              // --- ADMIN ROUTES ---
+              {
+                element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
+                children: [{ path: "admin", element: <Admin /> }],
+              },
+            ],
           },
         ],
       },

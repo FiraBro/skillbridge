@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 const RoleRedirect = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
 
-  // 1. Critical: Wait for the session to load
+  // 1. If still checking authentication, show the spinner
   if (isLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-zinc-950">
@@ -18,22 +18,22 @@ const RoleRedirect = () => {
     );
   }
 
-  // 2. If session finishes and user isn't logged in, send to Login
+  // 2. If not authenticated, the ProtectedRoute parent should have caught this,
+  // but we add a fallback here just in case.
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />;
   }
 
-  // 3. Logic-based redirection
-  // Ensure these paths match exactly what you defined in your <Route /> definitions
+  // 3. Match the paths defined in your router.jsx exactly
   switch (user?.role) {
     case "admin":
-      return <Navigate to="/admin-dashboard" replace />;
+      return <Navigate to="/admin" replace />;
     case "company":
       return <Navigate to="/company-dashboard" replace />;
     case "developer":
       return <Navigate to="/dashboard" replace />;
     default:
-      // Fallback for safety (e.g., if a role is undefined)
+      // If the role is unexpected, clear the path to dashboard
       return <Navigate to="/dashboard" replace />;
   }
 };

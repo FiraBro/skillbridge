@@ -6,9 +6,8 @@ import AppLayout from "@/layouts/app.layout.jsx";
 import { ErrorBoundary } from "react-error-boundary";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import ProposalPage from "./developers/ProposalPage";
-import LandingPage from "./LandingPage";
-
-// ---------------- LAZY IMPORTS ----------------
+import AuthCheckOrLanding from "@/components/auth/AuthCheckOrLandingPage";
+// ---------- LAZY IMPORTS ----------
 const Login = lazy(() => import("./auth/login"));
 const Register = lazy(() => import("./auth/register"));
 const ForgotPassword = lazy(() => import("./auth/forgot-password"));
@@ -28,42 +27,38 @@ const PostDetail = lazy(() => import("./posts/[slug]/page.jsx"));
 const PostCreate = lazy(() => import("./posts/create/page.jsx"));
 const PostEdit = lazy(() => import("./posts/[slug]/edit/page.jsx"));
 
-const RoleRedirect = lazy(
-  () => import("@/components/auth/RoleBasedRedirect.jsx"),
-);
-
 const Notifications = lazy(() => import("./notifications/page.jsx"));
 
-// ---------------- ROLES ----------------
+// ---------- ROLES ----------
 const ROLES = {
   DEVELOPER: "developer",
   COMPANY: "company",
   ADMIN: "admin",
 };
 
-// ---------------- GLOBAL PAGE LOADER ----------------
+// ---------- PAGE LOADER ----------
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-zinc-950">
     <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
   </div>
 );
 
-// ---------------- ROUTER ----------------
+// ---------- ROUTER ----------
 export const router = createBrowserRouter([
   // =====================================================
-  // 1️⃣ PUBLIC LANDING PAGE
+  // 1️⃣ ROOT - Landing OR Authenticated Redirect
   // =====================================================
   {
     path: "/",
     element: (
       <Suspense fallback={<PageLoader />}>
-        <LandingPage />
+        <AuthCheckOrLanding />
       </Suspense>
     ),
   },
 
   // =====================================================
-  // 2️⃣ AUTH ROUTES (PUBLIC)
+  // 2️⃣ AUTH ROUTES
   // =====================================================
   {
     path: "/auth",
@@ -81,8 +76,7 @@ export const router = createBrowserRouter([
   },
 
   // =====================================================
-  // 3️⃣ PROTECTED APPLICATION AREA
-  // IMPORTANT: uses "/app" base path to prevent route clash
+  // 3️⃣ PROTECTED APP ROUTES (all under /app)
   // =====================================================
   {
     path: "/app",
@@ -95,10 +89,7 @@ export const router = createBrowserRouter([
           </Suspense>
         ),
         children: [
-          // ---------- ROLE TRAFFIC CONTROLLER ----------
-          { index: true, element: <RoleRedirect /> },
-
-          // ---------- SHARED ROUTES ----------
+          // SHARED ROUTES
           {
             path: "profile/:username",
             element: (
@@ -113,13 +104,12 @@ export const router = createBrowserRouter([
               </ErrorBoundary>
             ),
           },
-
           { path: "jobs", element: <Jobs /> },
           { path: "jobs/:id", element: <JobDetail /> },
           { path: "notifications", element: <Notifications /> },
           { path: "posts/:slug", element: <PostDetail /> },
 
-          // ---------- DEVELOPER ----------
+          // DEVELOPER
           {
             element: <ProtectedRoute allowedRoles={[ROLES.DEVELOPER]} />,
             children: [
@@ -130,7 +120,7 @@ export const router = createBrowserRouter([
             ],
           },
 
-          // ---------- COMPANY ----------
+          // COMPANY
           {
             element: <ProtectedRoute allowedRoles={[ROLES.COMPANY]} />,
             children: [
@@ -140,7 +130,7 @@ export const router = createBrowserRouter([
             ],
           },
 
-          // ---------- ADMIN ----------
+          // ADMIN
           {
             element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
             children: [{ path: "admin", element: <Admin /> }],

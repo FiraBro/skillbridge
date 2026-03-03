@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { BrandLogo } from "../comman/BrandLogo";
 
+// ---------- VALIDATION SCHEMA ----------
 const schema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -24,21 +25,21 @@ export const LoginForm = () => {
     resolver: zodResolver(schema),
   });
 
+  // ---------- LOGIN MUTATION ----------
   const mutation = useMutation({
     mutationFn: async (data) => {
-      console.log("Sending login request with:", data);
       const res = await authApi.login(data); // Axios call
-      console.log("API response:", res.data);
-      return res.data; // Only return the data for onSuccess
+      return res.data; // only data needed
     },
     onSuccess: (data) => {
       const { user, token } = data.data || {};
       if (!user || !token) return;
 
       setAuth(user, token);
-      navigate("/app/dashboard", { replace: true });
-    },
 
+      // ✅ Navigate to "/" and let RoleRedirect handle the correct page
+      navigate("/", { replace: true });
+    },
     onError: (err) => {
       console.error("Login error:", err.response || err);
     },
@@ -96,6 +97,7 @@ export const LoginForm = () => {
           {mutation.isLoading ? "Signing in..." : "Sign In"}
         </button>
       </form>
+
       <div className="auth-footer">
         Don't have an account? <a href="/auth/register">Sign Up</a>
       </div>

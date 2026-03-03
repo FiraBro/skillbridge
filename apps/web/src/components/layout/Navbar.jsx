@@ -248,7 +248,7 @@ function SearchResults({
           {developers.slice(0, 4).map((dev) => (
             <button
               key={dev.id}
-              onClick={() => handleSelection(`/profile/${dev.username}`)}
+              onClick={() => handleSelection(`/app/profile/${dev.username}`)}
               className="w-full flex items-center gap-3 px-4 py-2 hover:bg-muted transition-colors text-left"
             >
               <Avatar className="h-7 w-7">
@@ -273,7 +273,7 @@ function SearchResults({
           {jobs.slice(0, 4).map((job) => (
             <button
               key={job.id}
-              onClick={() => handleSelection(`/jobs/${job.id}`)}
+              onClick={() => handleSelection(`/app/jobs/${job.id}`)}
               className="w-full px-4 py-2 hover:bg-muted transition-colors text-left flex flex-col"
             >
               <span className="text-sm font-bold truncate">{job.title}</span>

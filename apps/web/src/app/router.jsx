@@ -29,14 +29,12 @@ const RoleRedirect = lazy(
 );
 const Notifications = lazy(() => import("./notifications/page.jsx"));
 
-// Role constants
 const ROLES = {
   DEVELOPER: "developer",
-  COMPANY: "company",
+  COMPANY: "company", // Matches your DB and Register form now
   ADMIN: "admin",
 };
 
-// Simple loading state
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-zinc-950">
     <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
@@ -44,7 +42,7 @@ const PageLoader = () => (
 );
 
 export const router = createBrowserRouter([
-  // 1. PUBLIC LANDING PAGE (GUESTS ONLY)
+  // --- 1. PUBLIC LANDING PAGE ---
   {
     path: "/",
     element: (
@@ -54,7 +52,7 @@ export const router = createBrowserRouter([
     ),
   },
 
-  // 2. AUTHENTICATION (LOGIN/REGISTER)
+  // --- 2. AUTHENTICATION (GUESTS ONLY) ---
   {
     path: "/auth",
     element: (
@@ -70,80 +68,79 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // 3. PROTECTED APP AREA
+  // --- 3. PROTECTED APP AREA ---
   {
+    // LAYER 1: Redirects to /login if no token exists
     element: <ProtectedRoute />,
     children: [
       {
+        // LAYER 2: Sidebar/Navbar only render if Layer 1 passes
         element: (
           <Suspense fallback={<PageLoader />}>
             <AppLayout />
           </Suspense>
         ),
         children: [
+          // TRAFFIC CONTROLLER (Decides which dashboard to show based on role)
+          { index: true, element: <RoleRedirect /> },
+
+          // SHARED AUTHENTICATED ROUTES
           {
-            element: <ProtectedRoute />, // Layer 1: Auth Check
+            path: "profile/:username",
+            element: (
+              <ErrorBoundary
+                fallback={
+                  <div className="p-10 text-red-500">
+                    Error loading profile.
+                  </div>
+                }
+              >
+                <Profile />
+              </ErrorBoundary>
+            ),
+          },
+          { path: "jobs", element: <Jobs /> },
+          { path: "jobs/:id", element: <JobDetail /> },
+          { path: "notifications", element: <Notifications /> },
+          { path: "posts/:slug", element: <PostDetail /> },
+
+          // --- DEVELOPER ONLY ---
+          {
+            element: <ProtectedRoute allowedRoles={[ROLES.DEVELOPER]} />,
             children: [
-              // THE TRAFFIC CONTROLLER
-              // When a user is logged in but hits a neutral path, send them to their dashboard
-              { index: true, element: <RoleRedirect /> },
-              { path: "/", element: <RoleRedirect /> },
-
-              // SHARED AUTHENTICATED ROUTES
-              {
-                path: "profile/:username",
-                element: (
-                  <ErrorBoundary
-                    fallback={<div className="p-10">Profile Load Error.</div>}
-                  >
-                    <Profile />
-                  </ErrorBoundary>
-                ),
-              },
-              { path: "jobs", element: <Jobs /> },
-              { path: "jobs/:id", element: <JobDetail /> },
-              { path: "notifications", element: <Notifications /> },
-              { path: "posts/:slug", element: <PostDetail /> },
-
-              // --- DEVELOPER ROUTES ---
-              {
-                element: <ProtectedRoute allowedRoles={[ROLES.DEVELOPER]} />,
-                children: [
-                  { path: "dashboard", element: <Dashboard /> },
-                  { path: "jobs/:id/apply", element: <ProposalPage /> },
-                  { path: "posts/create", element: <PostCreate /> },
-                  { path: "posts/:slug/edit", element: <PostEdit /> },
-                ],
-              },
-
-              // --- COMPANY/CLIENT ROUTES ---
-              {
-                element: <ProtectedRoute allowedRoles={[ROLES.COMPANY]} />,
-                children: [
-                  { path: "company-dashboard", element: <CompanyDashboard /> },
-                  { path: "jobs/create", element: <CreateJob /> },
-                  { path: "applicants/:jobId", element: <ApplicantReview /> },
-                ],
-              },
-
-              // --- ADMIN ROUTES ---
-              {
-                element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
-                children: [{ path: "admin", element: <Admin /> }],
-              },
+              { path: "dashboard", element: <Dashboard /> },
+              { path: "jobs/:id/apply", element: <ProposalPage /> },
+              { path: "posts/create", element: <PostCreate /> },
+              { path: "posts/:slug/edit", element: <PostEdit /> },
             ],
+          },
+
+          // --- COMPANY ONLY ---
+          {
+            element: <ProtectedRoute allowedRoles={[ROLES.COMPANY]} />,
+            children: [
+              { path: "company-dashboard", element: <CompanyDashboard /> },
+              { path: "jobs/create", element: <CreateJob /> },
+              { path: "applicants/:jobId", element: <ApplicantReview /> },
+            ],
+          },
+
+          // --- ADMIN ONLY ---
+          {
+            element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
+            children: [{ path: "admin", element: <Admin /> }],
           },
         ],
       },
     ],
   },
 
-  // 4. FALLBACK
+  // --- 4. FALLBACK ---
   {
     path: "*",
     element: (
-      <div className="p-20 text-center font-black uppercase tracking-widest text-zinc-400">
-        404 — Skill Not Found
+      <div className="p-20 text-center font-bold text-gray-400">
+        404 — Page Not Found
       </div>
     ),
   },

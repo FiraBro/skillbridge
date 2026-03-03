@@ -1,5 +1,5 @@
 // apps/web/src/app/router.jsx
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import AuthLayout from "@/components/layout/auth-layout";
 import AppLayout from "@/layouts/app.layout.jsx";
@@ -8,41 +8,51 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import ProposalPage from "./developers/ProposalPage";
 import LandingPage from "./LandingPage";
 
-// Lazy imports
+// ---------------- LAZY IMPORTS ----------------
 const Login = lazy(() => import("./auth/login"));
 const Register = lazy(() => import("./auth/register"));
 const ForgotPassword = lazy(() => import("./auth/forgot-password"));
 const ResetPassword = lazy(() => import("./auth/reset-password"));
+
 const Profile = lazy(() => import("@/app/profile/[id]/page.jsx"));
 const Dashboard = lazy(() => import("./dashboard/page.jsx"));
 const CompanyDashboard = lazy(() => import("./companies/dashboard/page.jsx"));
 const CreateJob = lazy(() => import("./jobs/create/page.jsx"));
 const ApplicantReview = lazy(() => import("./companies/applicants/page.jsx"));
 const Admin = lazy(() => import("./admin/page.jsx"));
+
 const Jobs = lazy(() => import("./jobs/page.jsx"));
 const JobDetail = lazy(() => import("./jobs/[id]/page.jsx"));
+
 const PostDetail = lazy(() => import("./posts/[slug]/page.jsx"));
 const PostCreate = lazy(() => import("./posts/create/page.jsx"));
 const PostEdit = lazy(() => import("./posts/[slug]/edit/page.jsx"));
+
 const RoleRedirect = lazy(
   () => import("@/components/auth/RoleBasedRedirect.jsx"),
 );
+
 const Notifications = lazy(() => import("./notifications/page.jsx"));
 
+// ---------------- ROLES ----------------
 const ROLES = {
   DEVELOPER: "developer",
-  COMPANY: "company", // Matches your DB and Register form now
+  COMPANY: "company",
   ADMIN: "admin",
 };
 
+// ---------------- GLOBAL PAGE LOADER ----------------
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-zinc-950">
     <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
   </div>
 );
 
+// ---------------- ROUTER ----------------
 export const router = createBrowserRouter([
-  // --- 1. PUBLIC LANDING PAGE ---
+  // =====================================================
+  // 1️⃣ PUBLIC LANDING PAGE
+  // =====================================================
   {
     path: "/",
     element: (
@@ -52,7 +62,9 @@ export const router = createBrowserRouter([
     ),
   },
 
-  // --- 2. AUTHENTICATION (GUESTS ONLY) ---
+  // =====================================================
+  // 2️⃣ AUTH ROUTES (PUBLIC)
+  // =====================================================
   {
     path: "/auth",
     element: (
@@ -68,23 +80,25 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // --- 3. PROTECTED APP AREA ---
+  // =====================================================
+  // 3️⃣ PROTECTED APPLICATION AREA
+  // IMPORTANT: uses "/app" base path to prevent route clash
+  // =====================================================
   {
-    // LAYER 1: Redirects to /login if no token exists
+    path: "/app",
     element: <ProtectedRoute />,
     children: [
       {
-        // LAYER 2: Sidebar/Navbar only render if Layer 1 passes
         element: (
           <Suspense fallback={<PageLoader />}>
             <AppLayout />
           </Suspense>
         ),
         children: [
-          // TRAFFIC CONTROLLER (Decides which dashboard to show based on role)
+          // ---------- ROLE TRAFFIC CONTROLLER ----------
           { index: true, element: <RoleRedirect /> },
 
-          // SHARED AUTHENTICATED ROUTES
+          // ---------- SHARED ROUTES ----------
           {
             path: "profile/:username",
             element: (
@@ -99,12 +113,13 @@ export const router = createBrowserRouter([
               </ErrorBoundary>
             ),
           },
+
           { path: "jobs", element: <Jobs /> },
           { path: "jobs/:id", element: <JobDetail /> },
           { path: "notifications", element: <Notifications /> },
           { path: "posts/:slug", element: <PostDetail /> },
 
-          // --- DEVELOPER ONLY ---
+          // ---------- DEVELOPER ----------
           {
             element: <ProtectedRoute allowedRoles={[ROLES.DEVELOPER]} />,
             children: [
@@ -115,7 +130,7 @@ export const router = createBrowserRouter([
             ],
           },
 
-          // --- COMPANY ONLY ---
+          // ---------- COMPANY ----------
           {
             element: <ProtectedRoute allowedRoles={[ROLES.COMPANY]} />,
             children: [
@@ -125,7 +140,7 @@ export const router = createBrowserRouter([
             ],
           },
 
-          // --- ADMIN ONLY ---
+          // ---------- ADMIN ----------
           {
             element: <ProtectedRoute allowedRoles={[ROLES.ADMIN]} />,
             children: [{ path: "admin", element: <Admin /> }],
@@ -135,7 +150,9 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // --- 4. FALLBACK ---
+  // =====================================================
+  // 4️⃣ FALLBACK
+  // =====================================================
   {
     path: "*",
     element: (

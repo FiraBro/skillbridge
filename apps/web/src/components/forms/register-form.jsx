@@ -47,9 +47,9 @@ export const RegisterForm = () => {
 
       // 2. Dynamic Redirect: Send users to the correct dashboard
       if (user.role === "company") {
-        navigate("/company-dashboard");
+        navigate("/app/company-dashboard");
       } else {
-        navigate("/dashboard");
+        navigate("/app/dashboard");
       }
     },
   });

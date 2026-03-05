@@ -73,7 +73,7 @@ const PostCard = React.memo(
             {/* Author Info */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Link to={`/profile/${post.author_username}`}>
+                <Link to={`/app/profile/${post.author_username}`}>
                   <Avatar className="h-9 w-9 border">
                     <AvatarImage src={post.author_avatar} />
                     <AvatarFallback>{post.author_name?.[0]}</AvatarFallback>
@@ -82,7 +82,7 @@ const PostCard = React.memo(
                 <div className="leading-tight">
                   <div className="flex items-center gap-2">
                     <Link
-                      to={`/profile/${post.author_username}`}
+                      to={`/app/profile/${post.author_username}`}
                       className="font-bold text-sm hover:text-primary transition-colors"
                     >
                       {post.author_name}
@@ -114,7 +114,7 @@ const PostCard = React.memo(
 
             {/* Post Body */}
             <div className="space-y-2">
-              <Link to={`/posts/${post.slug}`}>
+              <Link to={`/app/posts/${post.slug}`}>
                 <h3 className="font-bold text-xl md:text-2xl hover:text-primary transition-colors leading-tight">
                   {post.title}
                 </h3>
@@ -172,7 +172,7 @@ const PostCard = React.memo(
                 </DropdownMenu>
               </div>
 
-              <Link to={`/posts/${post.slug}`}>
+              <Link to={`/app/posts/${post.slug}`}>
                 <Button
                   variant="ghost"
                   size="sm"

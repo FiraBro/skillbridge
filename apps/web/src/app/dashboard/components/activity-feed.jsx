@@ -56,7 +56,10 @@ const PostCard = React.memo(
       >
         <Card className="rounded-md border border-border overflow-hidden bg-card hover:shadow-md transition-shadow">
           {coverImageUrl && (
-            <Link to={`/posts/${post.slug}`} className="block overflow-hidden">
+            <Link
+              to={`/app/posts/${post.slug}`}
+              className="block overflow-hidden"
+            >
               <img
                 src={coverImageUrl}
                 alt={post.title}

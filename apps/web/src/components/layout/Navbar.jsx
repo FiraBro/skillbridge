@@ -189,7 +189,7 @@ export default function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() =>
-                      navigate(`/profile/${user?.username || "me"}`)
+                      navigate(`/app/profile/${user?.username || "me"}`)
                     }
                   >
                     <User className="mr-2 h-4 w-4" /> Profile

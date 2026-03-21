@@ -111,7 +111,7 @@ export default function PostCard({
                 </Link>
               </div>
 
-              <Link to={`/posts/${post.slug}`}>
+              <Link to={`/app/posts/${post.slug}`}>
                 <Button
                   variant="ghost"
                   size="sm"

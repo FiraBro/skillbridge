@@ -19,17 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  History,
-  FileText,
-  Github,
-  Link2Off,
-  Settings,
-  UserCircle,
-  ShieldCheck,
-  LayoutDashboard,
-  ExternalLink,
-} from "lucide-react";
+import { Github, Settings, UserCircle, ExternalLink } from "lucide-react";
 
 export default function ProfilePage() {
   const { username } = useParams();

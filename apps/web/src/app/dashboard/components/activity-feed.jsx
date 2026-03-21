@@ -42,152 +42,170 @@ import { toast } from "react-toastify";
  * Preserves your original rounded-md design.
  * React.memo ensures that liking one post doesn't lag the other 999 posts.
  */
+/**
+ * 1. MEMOIZED POST CARD
+ * Fixed with React.forwardRef to handle Framer Motion's internal 'ref'.
+ * All internal navigation links updated to use the /app/ prefix.
+ */
 const PostCard = React.memo(
-  ({ post, currentUser, onLike, onFollow, onShare, toggleFollowLoading }) => {
-    const coverImageUrl = resolveMediaUrl(post.cover_image);
-    const isOwnPost = currentUser?.id === post.author_id;
+  React.forwardRef(
+    (
+      { post, currentUser, onLike, onFollow, onShare, toggleFollowLoading },
+      ref,
+    ) => {
+      const coverImageUrl = resolveMediaUrl(post.cover_image);
+      const isOwnPost = currentUser?.id === post.author_id;
 
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        className="w-full"
-      >
-        <Card className="rounded-md border border-border overflow-hidden bg-card hover:shadow-md transition-shadow">
-          {coverImageUrl && (
-            <Link
-              to={`/app/posts/${post.slug}`}
-              className="block overflow-hidden"
-            >
-              <img
-                src={coverImageUrl}
-                alt={post.title}
-                loading="lazy" // Performance: Only load images near the viewport
-                className="w-full h-56 object-cover hover:scale-105 transition-transform duration-500"
-              />
-            </Link>
-          )}
+      return (
+        <motion.div
+          ref={ref} // CRITICAL: This allows AnimatePresence to track the element
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          layout // Helps smooth out the 'popLayout' transition
+          className="w-full"
+        >
+          <Card className="rounded-md border border-border overflow-hidden bg-card hover:shadow-md transition-shadow">
+            {coverImageUrl && (
+              <Link
+                to={`/app/posts/${post.slug}`}
+                className="block overflow-hidden"
+              >
+                <img
+                  src={coverImageUrl}
+                  alt={post.title}
+                  loading="lazy"
+                  className="w-full h-56 object-cover hover:scale-105 transition-transform duration-500"
+                />
+              </Link>
+            )}
 
-          <div className="p-5 space-y-4">
-            {/* Author Info */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Link to={`/app/profile/${post.author_username}`}>
-                  <Avatar className="h-9 w-9 border">
-                    <AvatarImage src={post.author_avatar} />
-                    <AvatarFallback>{post.author_name?.[0]}</AvatarFallback>
-                  </Avatar>
-                </Link>
-                <div className="leading-tight">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      to={`/app/profile/${post.author_username}`}
-                      className="font-bold text-sm hover:text-primary transition-colors"
-                    >
-                      {post.author_name}
-                    </Link>
-                    {!isOwnPost && (
-                      <button
-                        onClick={() => onFollow(post.author_id)}
-                        disabled={toggleFollowLoading}
-                        className={cn(
-                          "text-xs font-bold transition-colors ml-2 disabled:opacity-50",
-                          post.is_following_author
-                            ? "text-muted-foreground"
-                            : "text-emerald-600 hover:text-emerald-700",
-                        )}
+            <div className="p-5 space-y-4">
+              {/* Author Info */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Link to={`/app/profile/${post.author_username}`}>
+                    <Avatar className="h-9 w-9 border">
+                      <AvatarImage src={post.author_avatar} />
+                      <AvatarFallback>{post.author_name?.[0]}</AvatarFallback>
+                    </Avatar>
+                  </Link>
+                  <div className="leading-tight">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/app/profile/${post.author_username}`}
+                        className="font-bold text-sm hover:text-primary transition-colors"
                       >
-                        {post.is_following_author ? "Following" : "Follow"}
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {formatDistanceToNow(new Date(post.created_at), {
-                      addSuffix: true,
-                    })}
+                        {post.author_name}
+                      </Link>
+                      {!isOwnPost && (
+                        <button
+                          onClick={() => onFollow(post.author_id)}
+                          disabled={toggleFollowLoading}
+                          className={cn(
+                            "text-xs font-bold transition-colors ml-2 disabled:opacity-50",
+                            post.is_following_author
+                              ? "text-muted-foreground"
+                              : "text-emerald-600 hover:text-emerald-700",
+                          )}
+                        >
+                          {post.is_following_author ? "Following" : "Follow"}
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {formatDistanceToNow(new Date(post.created_at), {
+                        addSuffix: true,
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Post Body */}
-            <div className="space-y-2">
-              <Link to={`/app/posts/${post.slug}`}>
-                <h3 className="font-bold text-xl md:text-2xl hover:text-primary transition-colors leading-tight">
-                  {post.title}
-                </h3>
-              </Link>
-              <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
-                {post.markdown?.substring(0, 240)}...
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-between pt-4 border-t">
-              <div className="flex items-center gap-5 text-xs font-bold">
-                <button
-                  onClick={() => onLike(post)}
-                  className={cn(
-                    "flex items-center gap-1.5 transition disabled:opacity-50",
-                    post.is_liked
-                      ? "text-red-500"
-                      : "text-muted-foreground hover:text-primary",
-                  )}
-                >
-                  <Heart
-                    className={cn("h-4 w-4", post.is_liked && "fill-current")}
-                  />
-                  {post.likes_count || 0}
-                </button>
-
-                <Link
-                  to={`/posts/${post.slug}#comments`}
-                  className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  {post.comments_count || 0}
+              {/* Post Body */}
+              <div className="space-y-2">
+                <Link to={`/app/posts/${post.slug}`}>
+                  <h3 className="font-bold text-xl md:text-2xl hover:text-primary transition-colors leading-tight">
+                    {post.title}
+                  </h3>
                 </Link>
-
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition">
-                      <Share2 className="h-4 w-4" />
-                      <span>{post.shares_count || 0}</span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    <DropdownMenuItem onClick={() => onShare(post, "copy")}>
-                      <Copy className="mr-2 h-4 w-4" /> Copy Link
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onShare(post, "telegram")}>
-                      <Send className="mr-2 h-4 w-4 text-blue-500" /> Telegram
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onShare(post, "whatsapp")}>
-                      <MessageCircle className="mr-2 h-4 w-4 text-green-500" />{" "}
-                      WhatsApp
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+                  {post.markdown?.substring(0, 240)}...
+                </p>
               </div>
 
-              <Link to={`/app/posts/${post.slug}`}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-2 text-xs font-bold uppercase tracking-wider"
-                >
-                  Read More <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
+              {/* Actions */}
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex items-center gap-5 text-xs font-bold">
+                  <button
+                    onClick={() => onLike(post)}
+                    className={cn(
+                      "flex items-center gap-1.5 transition disabled:opacity-50",
+                      post.is_liked
+                        ? "text-red-500"
+                        : "text-muted-foreground hover:text-primary",
+                    )}
+                  >
+                    <Heart
+                      className={cn("h-4 w-4", post.is_liked && "fill-current")}
+                    />
+                    {post.likes_count || 0}
+                  </button>
+
+                  <Link
+                    to={`/app/posts/${post.slug}#comments`} // Fixed prefix
+                    className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    {post.comments_count || 0}
+                  </Link>
+
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition">
+                        <Share2 className="h-4 w-4" />
+                        <span>{post.shares_count || 0}</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48">
+                      <DropdownMenuItem onClick={() => onShare(post, "copy")}>
+                        <Copy className="mr-2 h-4 w-4" /> Copy Link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onShare(post, "telegram")}
+                      >
+                        <Send className="mr-2 h-4 w-4 text-blue-500" /> Telegram
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onShare(post, "whatsapp")}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4 text-green-500" />{" "}
+                        WhatsApp
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <Link to={`/app/posts/${post.slug}`}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-2 text-xs font-bold uppercase tracking-wider"
+                  >
+                    Read More <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              </div>
             </div>
-          </div>
-        </Card>
-      </motion.div>
-    );
-  },
+          </Card>
+        </motion.div>
+      );
+    },
+  ),
 );
+
+PostCard.displayName = "PostCard";
 
 export default function ActivityFeed() {
   const { user: currentUser } = useAuth();

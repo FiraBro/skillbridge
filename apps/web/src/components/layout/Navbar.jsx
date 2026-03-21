@@ -24,7 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useJobs } from "@/hooks/useJobs";
 import { useDeveloperDiscovery } from "@/hooks/useDeveloper";
-import { NotificationDropdown } from "../NotificationCenter";
+import NotificationDropdown from "@/components/NotificationCenter";
 import { BrandLogo } from "../comman/BrandLogo";
 
 export default function Navbar() {
@@ -161,6 +161,8 @@ export default function Navbar() {
                 <NotificationDropdown
                   isOpen={isNotificationsOpen}
                   onClose={() => setIsNotificationsOpen(false)}
+                  onClick={(path) => handleSelection(path)}
+                  onSee={() => handleSelection("/app/notifications")}
                 />
               </div>
 
@@ -184,7 +186,7 @@ export default function Navbar() {
                     </p>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                  <DropdownMenuItem onClick={() => navigate("/app/dashboard")}>
                     <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
                   </DropdownMenuItem>
                   <DropdownMenuItem

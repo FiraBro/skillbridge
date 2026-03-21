@@ -1,5 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { postService } from "@/services";
+import { toast } from "react-toastify";
 
 /* ============================
    POSTS QUERIES
@@ -10,9 +16,11 @@ export const usePosts = ({
   sortBy = "relevant",
   tag,
   authorId,
+  userId, // Added userId to query key for unique user caches
 }) => {
   return useQuery({
-    queryKey: ["posts", sortBy, page, limit, tag, authorId],
+    // Included all dependencies in the key to prevent data mixing
+    queryKey: ["posts", sortBy, page, limit, tag, authorId, userId],
     queryFn: () =>
       postService.getAll({
         page,
@@ -21,8 +29,16 @@ export const usePosts = ({
         tag,
         authorId,
       }),
-    staleTime: 0,
-    keepPreviousData: true,
+
+    // 🚀 FIX FOR LATENCY:
+    // 1. Keeps current data on screen while fetching new data (no blank screens)
+    placeholderData: keepPreviousData,
+
+    // 2. Data is considered "fresh" for 5 mins. Switching back to a tab is now INSTANT.
+    staleTime: 1000 * 60 * 5,
+
+    // 3. Keep unused data in cache for 10 mins before deleting
+    gcTime: 1000 * 60 * 10,
   });
 };
 
@@ -31,16 +47,19 @@ export const usePostDetail = (slug) => {
     queryKey: ["posts", slug],
     queryFn: () => postService.getBySlug(slug),
     enabled: !!slug,
+    staleTime: 1000 * 60 * 2, // 2 minutes for post details
   });
 };
 
+/* ============================
+   CACHE UTILS (Optimistic Updates)
+============================ */
 const updateLocalCache = (queryClient, id, newValue, action) => {
   queryClient.setQueriesData({ queryKey: ["posts"], exact: false }, (old) => {
     if (!old) return old;
     const transform = (item) => {
       if (Array.isArray(item)) return item.map(transform);
       if (item && typeof item === "object") {
-        // Force ID string comparison to avoid UUID mismatch
         if (action === "follow" && String(item.author_id) === String(id)) {
           return { ...item, is_following_author: newValue };
         }
@@ -70,23 +89,19 @@ const updateLocalCache = (queryClient, id, newValue, action) => {
   });
 };
 
+/* ============================
+   MUTATIONS
+============================ */
 export const useToggleFollow = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (authorId) => postService.toggleFollow(authorId),
-
     onMutate: async (authorId) => {
       await queryClient.cancelQueries({ queryKey: ["posts"] });
-
-      // Snapshot all post queries
       const previousQueries = queryClient.getQueriesData({
         queryKey: ["posts"],
       });
-
-      // 🔑 Determine current follow state from cache
       let currentValue = false;
-
       for (const [, data] of previousQueries) {
         if (Array.isArray(data)) {
           const found = data.find(
@@ -98,25 +113,13 @@ export const useToggleFollow = () => {
           }
         }
       }
-
-      // ✅ Optimistically TOGGLE
       updateLocalCache(queryClient, authorId, !currentValue, "follow");
-
       return { previousQueries };
     },
-
     onSuccess: (res, authorId) => {
-      // ✅ use backend truth
-      updateLocalCache(
-        queryClient,
-        authorId,
-        res.following, // 🔥 correct field
-        "follow",
-      );
+      updateLocalCache(queryClient, authorId, res.following, "follow");
     },
-
     onError: (_err, _authorId, context) => {
-      // Rollback everything
       if (context?.previousQueries) {
         context.previousQueries.forEach(([key, data]) => {
           queryClient.setQueryData(key, data);
@@ -124,9 +127,7 @@ export const useToggleFollow = () => {
       }
       toast.error("Follow action failed");
     },
-
     onSettled: () => {
-      // Final sync with DB
       queryClient.invalidateQueries({ queryKey: ["posts"] });
     },
   });
@@ -134,24 +135,18 @@ export const useToggleFollow = () => {
 
 export const useToggleLikePost = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({ id, isLiked }) => {
-      return isLiked ? postService.unlike(id) : postService.like(id);
-    },
-
+    mutationFn: async ({ id, isLiked }) =>
+      isLiked ? postService.unlike(id) : postService.like(id),
     onMutate: async ({ id, isLiked }) => {
       await queryClient.cancelQueries({ queryKey: ["posts"], exact: false });
       const previousData = queryClient.getQueriesData({
         queryKey: ["posts"],
         exact: false,
       });
-
       updateLocalCache(queryClient, id, !isLiked, "like");
-
       return { previousData };
     },
-
     onError: (_, __, context) => {
       context?.previousData?.forEach(([key, data]) => {
         queryClient.setQueryData(key, data);
@@ -160,28 +155,19 @@ export const useToggleLikePost = () => {
   });
 };
 
-/* ============================
-   SHARE POST
-============================ */
 export const useSharePost = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (id) => postService.share(id),
-
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["posts"], exact: false });
       const previousData = queryClient.getQueriesData({
         queryKey: ["posts"],
         exact: false,
       });
-
-      // Optimistically increment the count
       updateLocalCache(queryClient, id, null, "share");
-
       return { previousData };
     },
-
     onError: (_, __, context) => {
       context?.previousData?.forEach(([key, data]) => {
         queryClient.setQueryData(key, data);
@@ -190,9 +176,6 @@ export const useSharePost = () => {
   });
 };
 
-/* ============================
-   COMMENTS & POSTS MANAGEMENT
-============================ */
 export const useAddComment = () => {
   const queryClient = useQueryClient();
   return useMutation({

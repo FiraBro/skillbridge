@@ -10,8 +10,8 @@ export const env = {
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
   JWT_RESET_SECRET: process.env.JWT_RESET_SECRET,
 
-  // ⚡ ADD THIS LINE HERE
-  REDIS_URL: process.env.REDIS_URL,
+  // // ⚡ ADD THIS LINE HERE
+  // REDIS_URL: process.env.REDIS_URL,
 
   JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || "7d",
   JWT_RESET_EXPIRES_IN: process.env.JWT_RESET_EXPIRES_IN || "15m",

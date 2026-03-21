@@ -1,5 +1,5 @@
 import { ProjectModel } from "./project.schema.js";
-import { redis } from "../../config/redis.js";
+// import { redis } from "../../config/redis.js";
 import { fetchRepoStars } from "../utils/github.js";
 import { sanitizeMarkdown } from "../utils/sanitize.js";
 
@@ -41,15 +41,21 @@ export const ProjectService = {
     });
   },
 
-  async getProject(id) {
-    const redisKey = `project:${id}:views`;
-    redis.incr(redisKey); // async, non-blocking
+ async getProject(id) {
+    // 1. Increment the view count directly in PostgreSQL
+    // We don't necessarily need to 'await' this if we want to return the 
+    // project data as fast as possible, but awaiting is safer for data consistency.
+    await ProjectModel.incrementViews(id); 
+
+    // 2. Fetch and return the project details
     return ProjectModel.findById(id);
   },
+
   async updateProject(id, userId, data) {
     const descriptionHtml = sanitizeMarkdown(data.description);
     return ProjectModel.update(id, userId, { ...data, descriptionHtml });
   },
+
   async deleteProject(id, userId) {
     return ProjectModel.delete(id, userId);
   },

@@ -3,7 +3,7 @@ import {
   calculateReputation,
   getReputationBreakdown,
 } from "../services/reputation.engine.js";
-import { getSettings } from "../admin/admin.service.js";
+// import { getSettings } from "../admin/admin.service.js";
 
 /**
  * Get detailed reputation breakdown for a user
@@ -49,7 +49,7 @@ export async function getUserReputationBreakdown(userId) {
   }
 
   const data = rows[0];
-  const weights = await getSettings("reputation_weights");
+  // const weights = await getSettings("reputation_weights");
 
   return getReputationBreakdown(
     {
@@ -68,7 +68,7 @@ export async function getUserReputationBreakdown(userId) {
       projectsCount: parseInt(data.projects_count) || 0,
       endorsementsCount: parseInt(data.endorsements_count) || 0,
     },
-    weights,
+    // weights,
   );
 }
 

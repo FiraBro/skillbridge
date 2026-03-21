@@ -1,5 +1,4 @@
 import { query } from "../../config/db.js";
-import { emailQueue } from "../../queues/email.queue.js";
 
 export async function recordProfileView(profileId, viewerId, viewerRole) {
   await query(
@@ -7,25 +6,7 @@ export async function recordProfileView(profileId, viewerId, viewerRole) {
     [profileId, viewerId, viewerRole],
   );
 
-  if (viewerRole === "company") {
-    const { rows } = await query(
-      `SELECT u.email, u.name as dev_name, v.name as company_name
-       FROM profiles p
-       JOIN users u ON u.id = p.user_id
-       LEFT JOIN users v ON v.id = $2
-       WHERE p.id = $1`,
-      [profileId, viewerId],
-    );
-
-    const data = rows[0];
-    if (data?.email) {
-      await emailQueue.add("send-profile-view-notification", {
-        to: data.email,
-        devName: data.dev_name,
-        companyName: data.company_name || "A potential employer",
-      });
-    }
-  }
+  // EMAIL NOTIFICATION REMOVED: No longer sending email to dev when company views profile
 }
 
 export async function sendContactRequest(senderId, receiverId, message) {
@@ -39,23 +20,8 @@ export async function sendContactRequest(senderId, receiverId, message) {
 
   if (rows.length === 0) throw new Error("Contact request already sent");
 
-  const { rows: userRows } = await query(
-    `SELECT u.email, u.name as receiver_name, s.name as sender_name
-     FROM users u
-     JOIN users s ON s.id = $1
-     WHERE u.id = $2`,
-    [senderId, receiverId],
-  );
+  // EMAIL NOTIFICATION REMOVED: No longer sending email to receiver
 
-  const data = userRows[0];
-  if (data) {
-    await emailQueue.add("send-contact-request-notification", {
-      to: data.email,
-      receiverName: data.receiver_name,
-      senderName: data.sender_name,
-      message: message,
-    });
-  }
   return rows[0];
 }
 
@@ -76,32 +42,14 @@ export async function updateRequestStatus(requestId, userId, status) {
 
   const request = rows[0];
 
-  // Logic: Only notify the company if the developer ACCEPTED
-  if (status === "accepted") {
-    const { rows: actorRows } = await query(
-      `SELECT s.email as company_email, s.name as company_name, r.name as dev_name
-       FROM users s
-       JOIN users r ON r.id = $2
-       WHERE s.id = $1`,
-      [request.sender_id, userId],
-    );
+  // EMAIL NOTIFICATION REMOVED: No longer notifying the company on acceptance
 
-    const emailData = actorRows[0];
-    if (emailData) {
-      await emailQueue.add("send-request-accepted-notification", {
-        to: emailData.company_email,
-        companyName: emailData.company_name,
-        devName: emailData.dev_name,
-      });
-    }
-  }
   return request;
 }
 
 export async function getUserNotifications(userId) {
   if (!userId) throw new Error("User ID is required");
 
-  // FIX: Explicitly cast 'type' to ensure UNION compatibility in some Postgres versions
   const combinedQuery = `
     SELECT 
       'profile_view'::text as type,
@@ -130,7 +78,6 @@ export async function getUserNotifications(userId) {
 
     UNION ALL
 
-    -- This handles the Company seeing that their sent request was accepted
     SELECT 
       'request_accepted'::text as type,
       cr.id,

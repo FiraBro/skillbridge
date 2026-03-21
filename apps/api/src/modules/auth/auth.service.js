@@ -3,8 +3,6 @@ import jwt from "jsonwebtoken";
 import { query } from "../../config/db.js";
 import { env } from "../../config/env.js";
 import ApiError from "../utils/apiError.js";
-import { emailQueue } from "../../queues/email.queue.js"; // You'll create this next
-import { githubQueue } from "../../queues/github.queue.js";
 import generateResetToken from "../utils/token.js";
 import generateAccessToken from "../utils/accessToken.js";
 import { generateUniqueUsername } from "../utils/slug.js";
@@ -16,23 +14,17 @@ export const register = async ({
   name,
   role = "developer",
 }) => {
-  // 1. Check if user already exists
   const existing = await query("SELECT id FROM users WHERE email=$1", [email]);
 
   if (existing.rowCount > 0) {
     throw new ApiError(409, "Email already registered");
   }
 
-  // 2. Generate the username BEFORE the database insert
-  // This ensures we satisfy the NOT NULL constraint in the users table
   const username = await generateUniqueUsername(name);
 
-  // 3. Hash the password
-  // Adding a fallback to 10 in case env.BCRYPT_SALT_ROUNDS is undefined
   const saltRounds = parseInt(env.BCRYPT_SALT_ROUNDS) || 10;
   const passwordHash = await bcrypt.hash(password, saltRounds);
 
-  // 4. Update the SQL to include the username column ($5)
   const result = await query(
     `
     INSERT INTO users(email, password_hash, name, role, username)
@@ -44,15 +36,12 @@ export const register = async ({
 
   const user = result.rows[0];
 
-  // 5. ⚡ Auto-create Profile
-  // We pass the same username we just saved to the users table
   await profileService.createProfile({
     userId: user.id,
     username: user.username,
     fullName: name,
   });
 
-  // 6. Generate access token
   const token = generateAccessToken(user);
 
   return {
@@ -90,16 +79,12 @@ export const login = async ({ email, password }) => {
   return { user, token };
 };
 
-// apps/api/src/modules/auth/auth.service.js
-
 export const forgotPassword = async (email) => {
-  // 1. Check if user exists
   const result = await query("SELECT id, name FROM users WHERE email=$1", [
     email,
   ]);
   const user = result.rows[0];
 
-  // Real-world security: Always return success to prevent "Email Enumeration" attacks
   if (!user) {
     return {
       success: true,
@@ -108,11 +93,10 @@ export const forgotPassword = async (email) => {
   }
 
   const resetToken = generateResetToken(user.id);
-  const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 Minutes
+  const expires = new Date(Date.now() + 15 * 60 * 1000);
 
-  // 2. Use a Transaction to update the DB
   try {
-    await query("BEGIN"); // Start transaction
+    await query("BEGIN");
 
     await query(
       `
@@ -124,27 +108,14 @@ export const forgotPassword = async (email) => {
       [resetToken, expires, user.id],
     );
 
-    // 3. Push the email task to the Background Queue
-    // We pass the name and email so the worker has everything it needs
-    await emailQueue.add(
-      "send-reset-email",
-      {
-        email: email,
-        name: user.name,
-        token: resetToken,
-        resetLink: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`,
-      },
-      {
-        attempts: 3, // Retry 3 times if email service fails
-        backoff: 1000, // Wait 1 second before retrying
-      },
-    );
+    // BACKGROUND JOB REMOVED: Email will no longer be queued here.
+    // You may want to call a direct email send function here instead.
 
-    await query("COMMIT"); // Save changes
+    await query("COMMIT");
 
     return { success: true };
   } catch (error) {
-    await query("ROLLBACK"); // Cancel changes if something fails
+    await query("ROLLBACK");
     throw error;
   }
 };
@@ -152,19 +123,15 @@ export const forgotPassword = async (email) => {
 export const resetPassword = async (token, newPassword) => {
   let payload;
 
-  // 1. Verify the JWT Token first (Before opening a DB connection)
   try {
     payload = jwt.verify(token, env.JWT_RESET_SECRET);
   } catch (error) {
     throw new ApiError(400, "Invalid or expired token");
   }
 
-  // 2. Start the Transaction block
   try {
     await query("BEGIN");
 
-    // 3. Find user and lock the row (FOR UPDATE)
-    // This prevents "Race Conditions" if the user clicks twice
     const result = await query(
       `
       SELECT id, password_reset_expires 
@@ -177,17 +144,13 @@ export const resetPassword = async (token, newPassword) => {
 
     const user = result.rows[0];
 
-    // 4. Validate user existence and token expiration
     if (!user || new Date(user.password_reset_expires) < new Date()) {
-      // If invalid, we must rollback before throwing the error
       await query("ROLLBACK");
       throw new ApiError(400, "Invalid or expired token");
     }
 
-    // 5. Hash the new password (CPU intensive task)
     const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_SALT_ROUNDS);
 
-    // 6. Update user security credentials and clear reset fields
     await query(
       `
       UPDATE users 
@@ -199,21 +162,15 @@ export const resetPassword = async (token, newPassword) => {
       [passwordHash, user.id],
     );
 
-    // 7. Success: Commit changes to permanent storage
     await query("COMMIT");
   } catch (error) {
-    // 8. Failure: Rollback ensures no "partial updates" occur
-    // If the DB crashes or code fails, the reset token remains unchanged
     await query("ROLLBACK");
-
-    // Re-throw the error so the controller can handle the response
     if (error instanceof ApiError) throw error;
     throw new ApiError(500, "Internal server error during password reset");
   }
 };
 
 export const handleGithubAuth = async (githubUser) => {
-  // 1. Save or Update user in DB
   const result = await query(
     `INSERT INTO users (github_id, github_username, email, avatar_url)
      VALUES ($1, $2, $3, $4)
@@ -225,7 +182,6 @@ export const handleGithubAuth = async (githubUser) => {
 
   const user = result.rows[0];
 
-  // ⚡ Ensure Profile exists for GitHub users
   const { rowCount: profileExists } = await query(
     "SELECT 1 FROM profiles WHERE user_id = $1",
     [user.id],
@@ -241,18 +197,13 @@ export const handleGithubAuth = async (githubUser) => {
     });
   }
 
-  // 2. Trigger background sync for credibility anchor
-  await githubQueue.add("sync-developer-stats", {
-    userId: user.id,
-    githubUsername: githubUser.login,
-    accessToken: githubUser.token,
-  });
+  // BACKGROUND JOB REMOVED: GitHub stats will no longer be synced here.
 
-  // 3. Generate the session token
   const token = generateAccessToken(user);
 
   return { user, token };
 };
+
 export const fetchUser = async () => {
   const result = await query("SELECT * FROM users");
   return result;

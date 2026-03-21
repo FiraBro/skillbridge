@@ -1,16 +1,26 @@
-import { Router } from "express";
-import * as adminController from "./admin.controller.js";
+// admin.routes.js
+import express from "express";
+import * as controller from "./admin.controller.js";
+import { validatePagination, validateUserQuery } from "./admin.validation.js";
 
-const router = Router();
+import { authorize, requireAuth } from "../middlewares/auth.middleware.js";
+const router = express.Router();
 
-// Admin Endpoints (Restricted)
-router.get("/stats", adminController.getStats);
-router.get("/reports", adminController.getReports);
-router.post("/reports/:id/resolve", adminController.resolveReport);
-router.get("/settings/:key", adminController.getSettings);
-router.patch("/settings/:key", adminController.updateSettings);
+router.use(requireAuth, authorize("admin"));
 
-// Public Moderation Endpoints
-router.post("/report", adminController.reportContent);
+/* ================= DASHBOARD ================= */
+router.get("/dashboard/stats", controller.getDashboardStats);
+router.get("/activity", validatePagination, controller.getActivity);
+
+/* ================= USERS ================= */
+router.get("/users", validateUserQuery, controller.getUsers);
+router.patch("/users/:id/suspend", controller.toggleSuspendUser);
+
+/* ================= REPORTS ================= */
+router.get("/reports", validatePagination, controller.getReports);
+router.patch("/reports/:id/resolve", controller.resolveReport);
+
+/* ================= SYSTEM ================= */
+router.get("/system-health", controller.getSystemHealth);
 
 export default router;

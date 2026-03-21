@@ -1,6 +1,5 @@
 import { query } from "../../config/db.js";
 import ApiError from "../utils/apiError.js";
-import { emailQueue } from "../../queues/email.queue.js";
 
 /**
  * Browse all open jobs with optional filters
@@ -20,7 +19,6 @@ export async function browseJobs(filters = {}) {
     sql += ` AND (j.title ILIKE $${params.length} OR j.description ILIKE $${params.length})`;
   }
 
-  // Simplified skill filtering for now
   if (skills && skills.length > 0) {
     params.push(skills);
     sql += ` AND j.required_skills ?| $${params.length}`;
@@ -36,7 +34,6 @@ export async function browseJobs(filters = {}) {
  * Get recommended jobs for a user based on skill matching
  */
 export async function getRecommendedJobs(userId) {
-  // 1. Get user skills from profile
   const { rows: profileRows } = await query(
     `
     SELECT ps.name as skill_name
@@ -50,10 +47,9 @@ export async function getRecommendedJobs(userId) {
   const userSkills = profileRows.map((r) => r.skill_name);
 
   if (userSkills.length === 0) {
-    return browseJobs(); // Return all if no skills defined
+    return browseJobs();
   }
 
-  // 2. Fetch jobs and calculate match score
   const { rows: jobs } = await query(
     `
     SELECT j.*, u.name as client_name
@@ -90,7 +86,6 @@ export async function getRecommendedJobs(userId) {
 export async function applyToJob(jobId, developerId, data) {
   const { message, milestones } = data;
 
-  // 1. Validation: Ensure milestones exist and are valid
   if (!milestones || !Array.isArray(milestones) || milestones.length === 0) {
     throw new ApiError(
       400,
@@ -98,7 +93,6 @@ export async function applyToJob(jobId, developerId, data) {
     );
   }
 
-  // 2. Check if job is open
   const { rows: jobCheck } = await query(
     `SELECT status FROM jobs WHERE id = $1`,
     [jobId],
@@ -108,7 +102,6 @@ export async function applyToJob(jobId, developerId, data) {
   if (jobCheck[0].status !== "open")
     throw new ApiError(400, "Job is no longer accepting applications");
 
-  // 3. PROFESSIONAL LOGIC: Recalculate total bid on the server
   const totalBidAmount = milestones.reduce((sum, m) => {
     const amount = parseFloat(m.amount);
     if (isNaN(amount) || amount <= 0) {
@@ -120,8 +113,6 @@ export async function applyToJob(jobId, developerId, data) {
     return sum + amount;
   }, 0);
 
-  // 4. Insert application with structured data
-  // Note: milestones is stored as JSONB for flexibility
   const { rows } = await query(
     `INSERT INTO job_applications (
       job_id, 
@@ -140,35 +131,13 @@ export async function applyToJob(jobId, developerId, data) {
     throw new ApiError(409, "You have already applied to this job");
   }
 
-  // 5. Background Notification (Email)
-  try {
-    const { rows: meta } = await query(
-      `SELECT u.email as client_email, u.name as client_name, j.title, dev.name as dev_name
-       FROM jobs j 
-       JOIN users u ON u.id = j.client_id 
-       JOIN users dev ON dev.id = $1
-       WHERE j.id = $2`,
-      [developerId, jobId],
-    );
-
-    if (meta[0]?.client_email) {
-      await emailQueue.add("send-job-application-notification", {
-        to: meta[0].client_email,
-        clientName: meta[0].client_name,
-        applicantName: meta[0].dev_name,
-        jobTitle: meta[0].title,
-        totalBid: totalBidAmount, // Now we can include the price in the notification!
-      });
-    }
-  } catch (e) {
-    console.error("Non-fatal email queue error:", e.message);
-  }
+  // EMAIL NOTIFICATION REMOVED
 
   return rows[0];
 }
 
 /**
- * Create a new job post with enhanced fields
+ * Create a new job post
  */
 export async function createJob(clientId, jobData) {
   const {
@@ -213,18 +182,12 @@ export async function toggleJobPublish(jobId, clientId, isPublished) {
 }
 
 /**
- * Update hiring status and private notes for an application
+ * Update hiring status and private notes
  */
 export async function updateApplicationFeedback(applicationId, clientId, data) {
   const { status, notes } = data;
 
   try {
-    // 1. Log the incoming request to your BACKEND terminal to debug
-    console.log(`Updating App: ${applicationId} for Client: ${clientId}`);
-
-    // 2. Execute the update
-    // Note: We use "status" as the column name here.
-    // IF YOUR DB COLUMN IS 'hiring_status', CHANGE 'status =' TO 'hiring_status =' below.
     const updateQuery = `
       UPDATE job_applications
       SET 
@@ -247,76 +210,19 @@ export async function updateApplicationFeedback(applicationId, clientId, data) {
       throw new ApiError(404, "Application not found or unauthorized");
     }
 
-    const updated = rows[0];
+    // STATUS NOTIFICATION REMOVED
 
-    // 3. CRITICAL FIX: Wrap the notification in a way that CANNOT crash the request
-    // We don't 'await' this so the user gets their response even if Redis/Email fails
-    if (status) {
-      (async () => {
-        try {
-          const { rows: info } = await query(
-            `SELECT u.email, u.name as dev_name, j.title FROM job_applications ja
-             JOIN users u ON u.id = ja.developer_id
-             JOIN jobs j ON j.id = ja.job_id
-             WHERE ja.id = $1`,
-            [applicationId],
-          );
-
-          if (info?.[0]?.email && emailQueue) {
-            await emailQueue.add("send-application-status-notification", {
-              to: info[0].email,
-              status,
-              jobTitle: info[0].title,
-            });
-          }
-        } catch (err) {
-          console.error(
-            "Background Notification Failed (Non-Fatal):",
-            err.message,
-          );
-        }
-      })();
-    }
-
-    return updated;
+    return rows[0];
   } catch (error) {
-    // THIS WILL LOG THE REAL ERROR TO YOUR BACKEND CONSOLE
-    console.error("--- DETAILED BACKEND ERROR ---");
-    console.error(error);
-    console.error("------------------------------");
-
     if (error instanceof ApiError) throw error;
     throw new ApiError(500, `Internal Server Error: ${error.message}`);
   }
 }
 
-// Helper to keep the main function clean
-async function handleStatusNotification(applicationId, status) {
-  const { rows: info } = await query(
-    `SELECT u.email, u.name as dev_name, j.title, c.name as company_name
-     FROM job_applications ja
-     JOIN users u ON u.id = ja.developer_id
-     JOIN jobs j ON j.id = ja.job_id
-     JOIN users c ON c.id = j.client_id
-     WHERE ja.id = $1`,
-    [applicationId],
-  );
-
-  if (info?.[0]?.email) {
-    await emailQueue.add("send-application-status-notification", {
-      to: info[0].email,
-      applicantName: info[0].dev_name,
-      status,
-      jobTitle: info[0].title,
-      companyName: info[0].company_name,
-    });
-  }
-}
 /**
- * Get applicants for a specific job — only visible to the job owner (client)
+ * Get applicants for a specific job
  */
 export async function getJobApplicants(jobId, clientId) {
-  // Verify ownership
   const { rows: owner } = await query(
     `SELECT 1 FROM jobs WHERE id = $1 AND client_id = $2`,
     [jobId, clientId],
@@ -375,13 +281,13 @@ export async function getCompanyJobs(clientId) {
 }
 
 /**
- * Get job details with application status for a specific user
+ * Get job details with application status
  */
 export async function getJobDetails(jobId, userId = null) {
   const { rows } = await query(
     `
     SELECT j.*, u.name as client_name,
-           (SELECT status FROM job_applications WHERE job_id = j.id AND developer_id = $2) as application_status
+           (SELECT hiring_status FROM job_applications WHERE job_id = j.id AND developer_id = $2) as application_status
     FROM jobs j
     JOIN users u ON u.id = j.client_id
     WHERE j.id = $1

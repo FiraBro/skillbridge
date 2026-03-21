@@ -1,7 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  Search,
   Briefcase,
   FileText,
   Plus,
@@ -18,6 +17,7 @@ import {
   SheetTrigger,
   SheetHeader,
   SheetTitle,
+  SheetClose, // Added this import
 } from "@/components/ui/sheet";
 
 export default function Sidebar() {
@@ -27,9 +27,6 @@ export default function Sidebar() {
 
   const MAX_REPUTATION = 100;
   const repPercentage = ((reputation?.total ?? 0) / MAX_REPUTATION) * 100;
-  const profilePath = user?.username
-    ? `/profile/${user.username}`
-    : "/auth/login";
 
   const navItems = [
     {
@@ -55,9 +52,13 @@ export default function Sidebar() {
   const isActive = (path) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
 
+  // --- SUB-COMPONENT: NavLink ---
   const NavLink = ({ item, isMobile = false }) => {
+    if (!item) return null;
+
     const active = isActive(item.path);
-    return (
+
+    const content = (
       <Link
         to={item.path}
         className={cn("relative group block", !isMobile && "px-3")}
@@ -72,7 +73,7 @@ export default function Sidebar() {
             active
               ? "bg-primary/5 text-primary hover:bg-primary/10"
               : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
-            isMobile && "h-12 text-base", // Larger touch targets for mobile sheet
+            isMobile && "h-12 text-base",
           )}
         >
           <item.icon
@@ -85,6 +86,13 @@ export default function Sidebar() {
         </Button>
       </Link>
     );
+
+    // If mobile, wrap in SheetClose to shut the drawer on click
+    if (isMobile) {
+      return <SheetClose asChild>{content}</SheetClose>;
+    }
+
+    return content;
   };
 
   return (
@@ -138,7 +146,7 @@ export default function Sidebar() {
 
       {/* --- MOBILE BOTTOM NAVIGATION --- */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/80 backdrop-blur-md border-t z-50 px-4 flex items-center justify-around">
-        {navItems.slice(0, 3).map((item) => {
+        {navItems.map((item) => {
           const active = isActive(item.path);
           return (
             <Link
@@ -179,7 +187,10 @@ export default function Sidebar() {
               <SheetTitle>Menu</SheetTitle>
             </SheetHeader>
             <div className="space-y-4">
-              <NavLink item={navItems[3]} isMobile />
+              {navItems.map((item) => (
+                <NavLink key={`mobile-${item.path}`} item={item} isMobile />
+              ))}
+
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl mb-4">
                   <span className="text-sm font-medium">Your Reputation</span>
@@ -187,11 +198,14 @@ export default function Sidebar() {
                     {repPercentage.toFixed(1)}%
                   </span>
                 </div>
-                <Link to="/app/posts/create" className="block">
-                  <Button className="w-full h-12 rounded-xl text-base font-bold">
-                    <Plus className="mr-2 h-5 w-5" /> New Insight
-                  </Button>
-                </Link>
+                {/* Added SheetClose here as well */}
+                <SheetClose asChild>
+                  <Link to="/app/posts/create" className="block">
+                    <Button className="w-full h-12 rounded-xl text-base font-bold">
+                      <Plus className="mr-2 h-5 w-5" /> New Insight
+                    </Button>
+                  </Link>
+                </SheetClose>
               </div>
             </div>
           </SheetContent>

@@ -114,7 +114,6 @@ export const notificationService = {
 export const profileService = {
   getByUsername: (username) => {
     const res = extractData(apiClient.get(`/profiles/${username}`));
-    console.log("Fetched Profile:", res);
     return res;
   },
   getReputationBreakdown: (userId) =>

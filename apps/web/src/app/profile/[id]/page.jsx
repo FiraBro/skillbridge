@@ -46,7 +46,10 @@ export default function ProfilePage() {
     refetch,
   } = useProfile(username);
   const userId = profile?.user_id;
+  console.log("user id:", userId);
+
   const isOwnProfile = viewer?.id === userId;
+  console.log("is profile:", isOwnProfile);
 
   const { data: history } = useReputationHistory(userId);
   const { data: posts = [] } = usePosts({ authorId: userId, limit: 10 });

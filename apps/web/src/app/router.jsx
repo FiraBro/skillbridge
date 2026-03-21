@@ -1,5 +1,6 @@
 // apps/web/src/app/router.jsx
 import { createBrowserRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import AuthLayout from "@/components/layout/auth-layout";
 import AppLayout from "@/layouts/app.layout.jsx";
@@ -147,7 +148,15 @@ export const router = createBrowserRouter([
     path: "*",
     element: (
       <div className="p-20 text-center font-bold text-gray-400">
-        404 — Page Not Found
+        404 — Page Not Found go back to{" "}
+        <Link to="/app/dashboard" className="text-blue-500 hover:underline">
+          Dashboard
+        </Link>{" "}
+        or{" "}
+        <Link to="/" className="text-blue-500 hover:underline">
+          Home
+        </Link>
+        .
       </div>
     ),
   },

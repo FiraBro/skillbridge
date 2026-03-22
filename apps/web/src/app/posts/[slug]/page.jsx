@@ -13,7 +13,7 @@ import {
 
 import {
   usePostDetail,
-  useToggleLikePost, // Changed: Integrated the toggle hook
+  useToggleLikePost,
   useAddComment,
   useDeleteComment,
   useSharePost,
@@ -36,31 +36,23 @@ export default function PostDetailPage() {
 
   const { data: post, isLoading, isError, error } = usePostDetail(slug);
 
-  // Integrated Hooks
   const toggleLikeMutation = useToggleLikePost();
   const commentMutation = useAddComment();
   const deleteCommentMutation = useDeleteComment();
   const shareMutation = useSharePost();
 
-  /* --- Handlers --- */
   const handleLike = useCallback(() => {
     if (!post) return;
-
-    // The hook expects an object { id, isLiked }
     toggleLikeMutation.mutate(
       { id: post.id, isLiked: post.is_liked },
-      {
-        onError: () => showToast("Failed to update reaction"),
-      },
+      { onError: () => showToast("Failed to update reaction") },
     );
   }, [post, toggleLikeMutation]);
 
   const handleShare = useCallback(async () => {
     if (!post) return;
     const url = window.location.href;
-
     shareMutation.mutate(post.id);
-
     try {
       if (navigator.share) {
         await navigator.share({ title: post.title, url });
@@ -90,12 +82,17 @@ export default function PostDetailPage() {
   };
 
   /* --- UI States --- */
-  if (isLoading) return <Skeleton />;
-  if (isError || !post) return <ErrorState message={error?.message} />;
+  if (isLoading)
+    return (
+      <div className="max-w-3xl mx-auto py-12 px-6">
+        <Skeleton className="h-[600px] w-full rounded-2xl" />
+      </div>
+    );
+  if (isError || !post)
+    return <div className="py-20 text-center">Post not found.</div>;
 
   return (
     <article className="max-w-3xl mx-auto py-12 px-6">
-      {/* Navigation */}
       <nav className="flex items-center justify-between mb-12">
         <Link to="/app/dashboard">
           <Button
@@ -116,7 +113,6 @@ export default function PostDetailPage() {
         )}
       </nav>
 
-      {/* Main Post Content Area */}
       <div className="group/post -mx-4 px-4 py-8 rounded-2xl transition-all duration-300 hover:bg-slate-50/60 dark:hover:bg-white/5">
         <header className="space-y-6 mb-10">
           <div className="flex flex-wrap gap-2">
@@ -179,14 +175,13 @@ export default function PostDetailPage() {
           </div>
         </header>
 
-        <main className="prose prose-slate prose-lg max-w-none dark:prose-invert prose-headings:font-serif">
+        <main className="prose prose-slate prose-lg max-w-none dark:prose-invert">
           <MarkdownRenderer content={post.markdown || ""} />
         </main>
       </div>
 
       <Separator className="my-12" />
 
-      {/* Responses Section */}
       <footer className="space-y-8">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5 text-slate-400" />
@@ -201,12 +196,12 @@ export default function PostDetailPage() {
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="What are your thoughts?"
-              className="min-h-[120px] p-4 rounded-xl border-none bg-slate-100/50 dark:bg-white/5 focus-visible:ring-1 focus-visible:bg-white dark:focus-visible:bg-slate-900 transition-all resize-none shadow-inner"
+              className="min-h-[120px] p-4 rounded-xl border-none bg-slate-100/50 dark:bg-white/5 resize-none shadow-inner"
             />
             <Button
               type="submit"
               size="icon"
-              className="absolute bottom-3 right-3 rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-all transform group-focus-within:translate-y-0 translate-y-2"
+              className="absolute bottom-3 right-3 rounded-full shadow-lg opacity-0 group-focus-within:opacity-100 transition-all"
               disabled={commentMutation.isPending || !commentText.trim()}
             >
               <Send className="h-4 w-4" />
@@ -221,12 +216,11 @@ export default function PostDetailPage() {
               >
                 Sign in
               </Link>{" "}
-              to share your thoughts on this insight.
+              to share your thoughts.
             </p>
           </div>
         )}
 
-        {/* Comment List */}
         <div className="space-y-2">
           {post.comments?.map((comment) => (
             <div
@@ -247,12 +241,17 @@ export default function PostDetailPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 hover:bg-red-50"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500"
                       onClick={() =>
-                        deleteCommentMutation.mutate({
-                          postId: post.id,
-                          commentId: comment.id,
-                        })
+                        deleteCommentMutation.mutate(
+                          { postId: post.id, commentId: comment.id },
+                          {
+                            onSuccess: () =>
+                              showToast("Comment deleted successfully"),
+                            onError: () =>
+                              showToast("Failed to delete comment"),
+                          },
+                        )
                       }
                       disabled={deleteCommentMutation.isPending}
                     >

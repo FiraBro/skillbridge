@@ -147,6 +147,7 @@ export default function ProfilePage() {
             </div>
 
             {/* OVERVIEW CONTENT */}
+            {/* OVERVIEW CONTENT */}
             <TabsContent value="overview" className="outline-none m-0">
               <section className="p-5 md:p-8 border rounded-[2rem] bg-card shadow-sm border-border/60">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -161,18 +162,29 @@ export default function ProfilePage() {
                 </div>
 
                 {!isGithubConnected ? (
-                  <div className="bg-muted/10 border-2 border-dashed rounded-3xl p-8 md:p-12 text-center">
-                    <p className="text-muted-foreground mb-6 text-sm md:text-base">
-                      Sync your repositories to display your coding reputation.
-                    </p>
-                    <Button
-                      onClick={initiateGithubAuth}
-                      className="w-full sm:w-auto h-12 px-8 rounded-xl bg-zinc-900 font-bold"
-                    >
-                      Connect Account
-                    </Button>
-                  </div>
+                  // If it's the owner, show the CTA. If it's a visitor, show a "Not linked" message.
+                  isOwnProfile ? (
+                    <div className="bg-muted/10 border-2 border-dashed rounded-3xl p-8 md:p-12 text-center">
+                      <p className="text-muted-foreground mb-6 text-sm md:text-base">
+                        Sync your repositories to display your coding
+                        reputation.
+                      </p>
+                      <Button
+                        onClick={initiateGithubAuth}
+                        className="w-full sm:w-auto h-12 px-8 rounded-xl bg-zinc-900 font-bold"
+                      >
+                        Connect Account
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center bg-muted/5 rounded-3xl border border-dashed">
+                      <p className="text-muted-foreground italic">
+                        This user hasn't linked their GitHub account yet.
+                      </p>
+                    </div>
+                  )
                 ) : (
+                  // If connected, show the account info (available to everyone)
                   <div className="flex flex-col sm:flex-row items-center justify-between p-4 md:p-6 border rounded-2xl bg-muted/20 gap-4">
                     <div className="flex items-center gap-4 w-full">
                       <div className="bg-zinc-950 p-3 rounded-xl">
@@ -185,6 +197,7 @@ export default function ProfilePage() {
                         <a
                           href={`https://github.com/${profile.github_username}`}
                           target="_blank"
+                          rel="noopener noreferrer"
                           className="text-lg font-bold flex items-center gap-1 hover:text-primary"
                         >
                           @{profile.github_username}{" "}

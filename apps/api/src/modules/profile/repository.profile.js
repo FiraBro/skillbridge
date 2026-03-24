@@ -19,12 +19,36 @@ export async function createProfile({
   return rows[0];
 }
 
+// export async function getProfileByUsername(username) {
+//   const { rows } = await query(
+//     `
+//     SELECT
+//       p.id, p.user_id, p.username, p.full_name, p.bio, p.location, p.reputation_score, p.joined_at, p.updated_at,
+//       -- FIX: Check profile first, then stats, then the main users table
+//       COALESCE(p.github_username, gs.github_username, u.github_username) AS github_username,
+//       (
+//         SELECT COALESCE(json_agg(s.name), '[]')
+//         FROM profile_skills ps
+//         JOIN skills s ON s.id = ps.skill_id
+//         WHERE ps.profile_id = p.id
+//       ) AS skills,
+//       gs.public_repos, gs.followers, gs.total_stars, gs.total_commits,
+//       gs.commits_30d, gs.is_active, gs.last_activity, gs.account_created, gs.last_synced_at
+//     FROM profiles p
+//     JOIN users u ON u.id = p.user_id  -- Join users to get their linked github account
+//     LEFT JOIN github_stats gs ON gs.profile_id = p.id
+//     WHERE p.username = $1
+//     `,
+//     [username],
+//   );
+//   return rows[0];
+// }
+
 export async function getProfileByUsername(username) {
   const { rows } = await query(
     `
     SELECT 
       p.id, p.user_id, p.username, p.full_name, p.bio, p.location, p.reputation_score, p.joined_at, p.updated_at,
-      -- FIX: Check profile first, then stats, then the main users table
       COALESCE(p.github_username, gs.github_username, u.github_username) AS github_username,
       (
         SELECT COALESCE(json_agg(s.name), '[]')
@@ -35,7 +59,7 @@ export async function getProfileByUsername(username) {
       gs.public_repos, gs.followers, gs.total_stars, gs.total_commits,
       gs.commits_30d, gs.is_active, gs.last_activity, gs.account_created, gs.last_synced_at
     FROM profiles p
-    JOIN users u ON u.id = p.user_id  -- Join users to get their linked github account
+    LEFT JOIN users u ON u.id = p.user_id  -- CHANGED TO LEFT JOIN
     LEFT JOIN github_stats gs ON gs.profile_id = p.id
     WHERE p.username = $1
     `,

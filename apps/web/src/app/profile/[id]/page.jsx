@@ -37,6 +37,8 @@ export default function ProfilePage() {
   } = useProfile(username);
   const userId = profile?.user_id;
 
+  console.log("data:", profile);
+
   const isOwnProfile = viewer?.id === userId;
 
   const { data: history } = useReputationHistory(userId);
@@ -87,6 +89,7 @@ export default function ProfilePage() {
   }
 
   if (isError || !profile) {
+    console.log("Task:", isError, "Task2:", profile);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
         <UserCircle className="h-16 w-16 text-muted-foreground/20 mb-4" />

@@ -10,6 +10,11 @@ export const create = catchAsync(async (req, res) => {
 });
 
 export const get = catchAsync(async (req, res) => {
+  console.log('=== DEBUG: Incoming Username ===');
+  console.log('req.params.username:', req.params.username);
+  console.log('Type:', typeof req.params.username);
+  console.log('Length:', req.params.username?.length);
+  console.log('Hex:', Buffer.from(req.params.username || '', 'utf8').toString('hex'));
   const profile = await service.getPublicProfile(req.params.username);
   res.json(profile);
 });

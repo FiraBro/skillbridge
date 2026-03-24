@@ -44,10 +44,16 @@ export async function createProfile({
 //   return rows[0];
 // }
 
+// repository.profile.js
+
 export async function getProfileByUsername(username) {
+  console.log('=== DEBUG: Repository getProfileByUsername ===');
+  console.log('Query username:', username);
+  console.log('After TRIM/LOWER:', username?.trim().toLowerCase());
+
   const { rows } = await query(
     `
-    SELECT 
+    SELECT
       p.id, p.user_id, p.username, p.full_name, p.bio, p.location, p.reputation_score, p.joined_at, p.updated_at,
       COALESCE(p.github_username, gs.github_username, u.github_username) AS github_username,
       (
@@ -59,13 +65,19 @@ export async function getProfileByUsername(username) {
       gs.public_repos, gs.followers, gs.total_stars, gs.total_commits,
       gs.commits_30d, gs.is_active, gs.last_activity, gs.account_created, gs.last_synced_at
     FROM profiles p
-    LEFT JOIN users u ON u.id = p.user_id  -- CHANGED TO LEFT JOIN
+    LEFT JOIN users u ON u.id = p.user_id
     LEFT JOIN github_stats gs ON gs.profile_id = p.id
-    WHERE p.username = $1
+    WHERE LOWER(TRIM(p.username)) = LOWER(TRIM($1))
     `,
     [username],
   );
-  return rows[0];
+
+  console.log('SQL returned rows count:', rows.length);
+  if (rows.length > 0) {
+    console.log('First row username:', rows[0].username);
+  }
+
+  return rows[0]; // IMPORTANT: Return only the first row (the object)
 }
 
 export async function updateProfileGithubName(profileId, githubName) {
@@ -78,7 +90,7 @@ export async function updateProfileGithubName(profileId, githubName) {
 export async function upsertGithubStats(profileId, stats) {
   await query(
     `
-    INSERT INTO github_stats 
+    INSERT INTO github_stats
       (profile_id, github_username, public_repos, followers, total_stars, total_commits, commits_30d, is_active, last_activity, account_created, last_synced_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
     ON CONFLICT (profile_id)

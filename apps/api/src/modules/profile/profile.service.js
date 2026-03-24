@@ -26,7 +26,13 @@ export async function createProfile({
 }
 
 export async function getPublicProfile(username) {
+  console.log('=== DEBUG: Service getPublicProfile ===');
+  console.log('Received username:', username);
+  console.log('Type:', typeof username);
+  console.log('Length:', username?.length);
+
   const profile = await repo.getProfileByUsername(username);
+  console.log('Repository returned:', profile ? 'Profile object' : 'null/undefined');
   if (!profile) throw new ApiError(404, "Profile not found");
   return profile;
 }

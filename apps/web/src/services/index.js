@@ -104,9 +104,22 @@ export const authService = {
    NOTIFICATIONS & OTHERS
 ========================= */
 export const notificationService = {
+  // 1. Get General Notifications (Profile views, new message alerts)
   getNotifications: () => extractData(apiClient.get("/notifications")),
-  sendRequest: (data) =>
-    extractData(apiClient.post("/notifications/contact", data)),
+
+  // 2. Get the Inbox (List of all people the user is talking to)
+  getInbox: () => extractData(apiClient.get("/notifications/inbox")),
+
+  // 3. Get Chat History (The actual back-and-forth with one person)
+  getChatHistory: (partnerId) =>
+    extractData(apiClient.get(`/notifications/chat/${partnerId}`)),
+
+  // 4. Send/Reply Message (Used by both Client and Freelancer)
+  // data should be { receiverId: 123, message: "Hello!" }
+  sendMessage: (data) =>
+    extractData(apiClient.post("/notifications/message", data)),
+
+  // 5. Legacy (Keep this only if you still use the Accept/Ignore buttons)
   respondToRequest: (id, data) =>
     extractData(apiClient.patch(`/notifications/contact/${id}`, data)),
 };

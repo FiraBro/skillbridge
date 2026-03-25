@@ -1,20 +1,8 @@
 import * as notificationService from "./notification.service.js";
 import apiResponse from "../utils/apiResponse.js";
 
-/**
- * GET /api/notifications
- * Get current user's notifications
- */
 export async function getNotifications(req, res, next) {
   try {
-    // Check if req.user exists before accessing .id
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized: User not found in request",
-      });
-    }
-
     const userId = req.user.id;
     const notifications =
       await notificationService.getUserNotifications(userId);
@@ -24,54 +12,59 @@ export async function getNotifications(req, res, next) {
   }
 }
 
-/**
- * POST /api/notifications/contact
- * Send a contact request
- */
-export async function sendRequest(req, res, next) {
+export async function getInbox(req, res, next) {
   try {
-    const senderId = req.user.id;
-    const { receiverId, message } = req.body;
-
-    const request = await notificationService.sendContactRequest(
-      senderId,
-      receiverId,
-      message,
-    );
-
-    return res
-      .status(201)
-      .json(apiResponse.success(request, "Contact request sent"));
+    const userId = req.user.id;
+    const inbox = await notificationService.getUserInbox(userId);
+    return res.status(200).json(apiResponse.success(inbox));
   } catch (error) {
-    if (error.message === "Contact request already sent") {
-      return res.status(400).json(apiResponse.error(error.message, 400));
-    }
     next(error);
   }
 }
 
-/**
- * PATCH /api/notifications/contact/:id
- * Accept or Ignore a contact request
- */
+export async function getChatHistory(req, res, next) {
+  try {
+    const { partnerId } = req.params;
+    const messages = await notificationService.getChatHistory(
+      req.user.id,
+      partnerId,
+    );
+    return res.status(200).json(apiResponse.success(messages));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function postMessage(req, res, next) {
+  try {
+    const { receiverId, message } = req.body;
+    const sentMessage = await notificationService.sendMessage(
+      req.user.id,
+      receiverId,
+      message,
+    );
+    return res
+      .status(201)
+      .json(apiResponse.success(sentMessage, "Message sent"));
+  } catch (error) {
+    next(error);
+  }
+}
+
+// THIS WAS THE MISSING ONE CAUSING THE PATCH ERROR
 export async function respondToRequest(req, res, next) {
   try {
-    const userId = req.user.id;
     const { id } = req.params;
     const { status } = req.body;
-
     const request = await notificationService.updateRequestStatus(
       id,
-      userId,
+      req.user.id,
       status,
     );
     return res
       .status(200)
       .json(apiResponse.success(request, `Request ${status}`));
   } catch (error) {
-    if (error.message === "Request not found or unauthorized") {
-      return res.status(404).json(apiResponse.error(error.message, 404));
-    }
     next(error);
   }
 }

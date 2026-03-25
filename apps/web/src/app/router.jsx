@@ -29,6 +29,7 @@ const PostCreate = lazy(() => import("./posts/create/page.jsx"));
 const PostEdit = lazy(() => import("./posts/[slug]/edit/page.jsx"));
 
 const Notifications = lazy(() => import("./notifications/page.jsx"));
+const ChatPage = lazy(() => import("../components/ChatPage.jsx"));
 
 // ---------- ROLES ----------
 const ROLES = {
@@ -49,6 +50,10 @@ export const router = createBrowserRouter([
   // =====================================================
   // 1️⃣ ROOT - Landing OR Authenticated Redirect
   // =====================================================
+  {
+    path: "/chats",
+    element: <ChatPage />,
+  },
   {
     path: "/",
     element: (

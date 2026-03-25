@@ -1,67 +1,67 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { notificationService } from "@/services";
-import { useAuth } from "@/hooks/useAuth"; // Ensure you have an auth hook
+import { useAuth } from "@/hooks/useAuth";
 
+// 1. Hook for General Notifications (Profile views, etc.)
 export const useNotifications = () => {
   const { user } = useAuth();
-
   return useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
       const response = await notificationService.getNotifications();
-
-      // DEBUG: See exactly what the hook is about to return to the UI
-
-      if (response.data) {
-        return response.data;
-      }
-
-      // If your backend returns the array directly [...]
-      return Array.isArray(response.data) ? response.data : [];
+      return response.data || [];
     },
+    enabled: !!user,
     staleTime: 30000,
-    gcTime: 60000,
+  });
+};
+
+// 2. NEW: Hook for the Inbox (List of active chats)
+export const useInbox = () => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["inbox"],
+    queryFn: async () => {
+      const response = await notificationService.getInbox();
+      return response.data || [];
+    },
     enabled: !!user,
   });
 };
 
-export const useContactMutation = () => {
+// 3. NEW: Hook for Chat History (The messages between two people)
+export const useChatHistory = (partnerId) => {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["chat", partnerId],
+    queryFn: async () => {
+      const response = await notificationService.getChatHistory(partnerId);
+      return response.data || [];
+    },
+    enabled: !!user && !!partnerId,
+  });
+};
+
+// 4. UPDATED: Mutation for Messaging
+export const useChatMutation = () => {
   const queryClient = useQueryClient();
 
-  const mutation = useMutation({
-    mutationFn: async ({ action, id, payload }) => {
-      if (action === "send")
-        return await notificationService.sendRequest(payload);
-      if (action === "respond")
-        return await notificationService.respondToRequest(id, payload);
-      throw new Error("Invalid action");
+  return useMutation({
+    mutationFn: async ({ receiverId, message }) => {
+      return await notificationService.sendMessage({ receiverId, message });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      if (variables.action === "send") {
-        toast.success("Contact request sent!");
-      } else {
-        toast.info(`Request ${variables.payload.status}`);
-      }
+      // Refresh the specific chat and the inbox list
+      queryClient.invalidateQueries({
+        queryKey: ["chat", variables.receiverId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      toast.success("Message sent!");
     },
     onError: (error) => {
-      const msg =
-        error.response?.data?.message || error.message || "Action failed";
+      const msg = error.response?.data?.message || "Failed to send message";
       toast.error(msg);
     },
   });
-
-  return {
-    sendRequest: (receiverId, message) =>
-      mutation.mutate({ action: "send", payload: { receiverId, message } }),
-    respondToRequest: (requestId, status) =>
-      mutation.mutate({
-        action: "respond",
-        id: requestId,
-        payload: { status },
-      }),
-    isPending: mutation.isPending, // v5: renamed from isLoading
-    isError: mutation.isError,
-  };
 };

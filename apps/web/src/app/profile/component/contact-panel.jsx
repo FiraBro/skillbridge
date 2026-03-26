@@ -3,36 +3,41 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { FaPaperPlane, FaUserCheck, FaEnvelope } from "react-icons/fa";
-import { toast } from "react-toastify"; // Using toastify to match your hooks
-import { useContactMutation } from "@/hooks/useNotifications";
+import { toast } from "react-toastify";
+import { useChatMutation } from "@/hooks/useNotifications";
 
 export default function ContactPanel({ userId, userName, isOwnProfile }) {
   const [message, setMessage] = useState("");
   const [hasSent, setHasSent] = useState(false);
 
-  // Use the mutation hook instead of manual fetch
-  const { sendRequest, isPending } = useContactMutation();
+  // ✅ use existing mutation
+  const { mutate: sendMessage, isPending } = useChatMutation();
 
+  // Don't show panel on own profile
   if (isOwnProfile) return null;
 
-  const handleSendRequest = async () => {
+  const handleSendRequest = () => {
     if (!message.trim()) {
       toast.error("Please include a short message.");
       return;
     }
 
-    // This uses the apiClient (Axios) which automatically includes your Auth Token
-    sendRequest(userId, message, {
-      onSuccess: () => {
-        setHasSent(true);
+    // ✅ React Query mutation usage (correct way)
+    sendMessage(
+      {
+        receiverId: userId,
+        message,
       },
-      onError: (err) => {
-        // If it's a 400, it might be a "Request already sent" error from your SQL 'ON CONFLICT'
-        toast.error(err.response?.data?.message || "Failed to send request");
+      {
+        onSuccess: () => {
+          setHasSent(true);
+          setMessage("");
+        },
       },
-    });
+    );
   };
 
+  // ✅ After sending state
   if (hasSent) {
     return (
       <Card className="p-6 bg-primary/5 border-primary/20 text-center space-y-3">
@@ -48,6 +53,7 @@ export default function ContactPanel({ userId, userName, isOwnProfile }) {
   return (
     <Card className="p-6 bg-card/50 backdrop-blur-sm border-border/50">
       <div className="space-y-4">
+        {/* Header */}
         <div className="flex items-center gap-2">
           <FaEnvelope className="text-primary" />
           <h3 className="font-bold">Interested in connecting?</h3>
@@ -57,15 +63,17 @@ export default function ContactPanel({ userId, userName, isOwnProfile }) {
           Send a professional contact request to {userName}.
         </p>
 
+        {/* Message */}
         <Textarea
-          id="contact-message" // Added ID to fix browser warning
-          name="message" // Added Name to fix browser warning
+          id="contact-message"
+          name="message"
           placeholder="Hi! I saw your work on SkillBridge..."
           className="bg-background/50 text-sm h-24 resize-none"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
 
+        {/* Button */}
         <Button
           className="w-full gap-2"
           disabled={isPending}

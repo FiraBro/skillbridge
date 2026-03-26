@@ -1,6 +1,6 @@
 import React, { forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom"; // Added missing import
+import { useNavigate } from "react-router-dom";
 import {
   Eye,
   UserPlus,
@@ -8,8 +8,8 @@ import {
   Clock,
   CheckCircle,
   ArrowRight,
-  MessageSquare, // Added missing icon
-  ChevronRight, // Added missing icon
+  MessageSquare,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,12 +18,8 @@ import { Separator } from "@/components/ui/separator";
 import { useNotifications, useChatMutation } from "@/hooks/useNotifications";
 import { useClickOutside } from "@/hooks/useClickOutside";
 
-/**
- * 1. Individual Notification Card logic
- */
 const NotificationItem = ({ notification, onClose }) => {
   const navigate = useNavigate();
-  // We use useChatMutation now to stay consistent with the two-way logic
   const { isPending } = useChatMutation();
 
   const getIcon = (type) => {
@@ -62,8 +58,6 @@ const NotificationItem = ({ notification, onClose }) => {
       notification.type === "new_message" ||
       notification.type === "contact_request"
     ) {
-      // Navigate to chat if it's a message or request
-      // Ensure your backend provides partner_id in the notification object
       navigate(`/app/chat/${notification.partner_id || ""}`);
     } else if (notification.actor_username) {
       navigate(`/app/profile/${notification.actor_username}`);

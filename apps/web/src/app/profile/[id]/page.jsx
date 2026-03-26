@@ -36,8 +36,7 @@ export default function ProfilePage() {
     refetch,
   } = useProfile(username);
   const userId = profile?.user_id;
-
-  console.log("data:", profile);
+  console.log("profile:", profile);
 
   const isOwnProfile = viewer?.id === userId;
 

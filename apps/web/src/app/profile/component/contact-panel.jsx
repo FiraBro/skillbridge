@@ -10,10 +10,9 @@ export default function ContactPanel({ userId, userName, isOwnProfile }) {
   const [message, setMessage] = useState("");
   const [hasSent, setHasSent] = useState(false);
 
-  // ✅ use existing mutation
-  const { mutate: sendMessage, isPending } = useChatMutation();
+  // Using your fixed mutation hook
+  const { mutate: sendRequest, isLoading: isPending } = useChatMutation();
 
-  // Don't show panel on own profile
   if (isOwnProfile) return null;
 
   const handleSendRequest = () => {
@@ -22,22 +21,20 @@ export default function ContactPanel({ userId, userName, isOwnProfile }) {
       return;
     }
 
-    // ✅ React Query mutation usage (correct way)
-    sendMessage(
-      {
-        receiverId: userId,
-        message,
-      },
+    sendRequest(
+      { receiverId: userId, message },
       {
         onSuccess: () => {
           setHasSent(true);
-          setMessage("");
+          toast.success("Message sent successfully!");
+        },
+        onError: (err) => {
+          toast.error(err.response?.data?.message || "Failed to send message");
         },
       },
     );
   };
 
-  // ✅ After sending state
   if (hasSent) {
     return (
       <Card className="p-6 bg-primary/5 border-primary/20 text-center space-y-3">
@@ -53,7 +50,6 @@ export default function ContactPanel({ userId, userName, isOwnProfile }) {
   return (
     <Card className="p-6 bg-card/50 backdrop-blur-sm border-border/50">
       <div className="space-y-4">
-        {/* Header */}
         <div className="flex items-center gap-2">
           <FaEnvelope className="text-primary" />
           <h3 className="font-bold">Interested in connecting?</h3>
@@ -63,17 +59,15 @@ export default function ContactPanel({ userId, userName, isOwnProfile }) {
           Send a professional contact request to {userName}.
         </p>
 
-        {/* Message */}
         <Textarea
           id="contact-message"
           name="message"
-          placeholder="Hi! I saw your work on SkillBridge..."
+          placeholder={`Hi ${userName}, I saw your work on SkillBridge...`}
           className="bg-background/50 text-sm h-24 resize-none"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
 
-        {/* Button */}
         <Button
           className="w-full gap-2"
           disabled={isPending}

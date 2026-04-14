@@ -8,6 +8,9 @@ import generateAccessToken from "../utils/accessToken.js";
 import { generateUniqueUsername } from "../utils/slug.js";
 import * as profileService from "../profile/profile.service.js";
 
+/**
+ * Register a new developer/company user
+ */
 export const register = async ({
   email,
   password,
@@ -21,7 +24,6 @@ export const register = async ({
   }
 
   const username = await generateUniqueUsername(name);
-
   const saltRounds = parseInt(env.BCRYPT_SALT_ROUNDS) || 10;
   const passwordHash = await bcrypt.hash(password, saltRounds);
 
@@ -36,6 +38,7 @@ export const register = async ({
 
   const user = result.rows[0];
 
+  // Create the profile entry linked to this user
   await profileService.createProfile({
     userId: user.id,
     username: user.username,
@@ -44,15 +47,19 @@ export const register = async ({
 
   const token = generateAccessToken(user);
 
-  return {
-    user,
-    token,
-  };
+  return { user, token };
 };
 
+/**
+ * Login existing user
+ */
 export const login = async ({ email, password }) => {
+  // FIXED: Explicit column selection + COALESCE to ensure username is never null
+  // if it exists in either the users or profiles table.
   const result = await query(
-    `SELECT u.*, p.username 
+    `SELECT 
+      u.id, u.email, u.password_hash, u.name, u.role, u.is_active, u.onboarding_completed,
+      COALESCE(p.username, u.username) as username 
      FROM users u 
      LEFT JOIN profiles p ON p.user_id = u.id 
      WHERE u.email=$1`,
@@ -66,117 +73,30 @@ export const login = async ({ email, password }) => {
   }
 
   const isMatch = await bcrypt.compare(password, user.password_hash);
-
   if (!isMatch) {
     throw new ApiError(401, "Invalid credentials");
   }
 
   const token = generateAccessToken(user);
 
+  // Remove sensitive data before returning to frontend
   delete user.password_hash;
   delete user.password_reset_token;
 
   return { user, token };
 };
 
-export const forgotPassword = async (email) => {
-  const result = await query("SELECT id, name FROM users WHERE email=$1", [
-    email,
-  ]);
-  const user = result.rows[0];
-
-  if (!user) {
-    return {
-      success: true,
-      message: "If an account exists, a reset link has been sent.",
-    };
-  }
-
-  const resetToken = generateResetToken(user.id);
-  const expires = new Date(Date.now() + 15 * 60 * 1000);
-
-  try {
-    await query("BEGIN");
-
-    await query(
-      `
-      UPDATE users
-      SET password_reset_token=$1,
-          password_reset_expires=$2
-      WHERE id=$3
-      `,
-      [resetToken, expires, user.id],
-    );
-
-    // BACKGROUND JOB REMOVED: Email will no longer be queued here.
-    // You may want to call a direct email send function here instead.
-
-    await query("COMMIT");
-
-    return { success: true };
-  } catch (error) {
-    await query("ROLLBACK");
-    throw error;
-  }
-};
-
-export const resetPassword = async (token, newPassword) => {
-  let payload;
-
-  try {
-    payload = jwt.verify(token, env.JWT_RESET_SECRET);
-  } catch (error) {
-    throw new ApiError(400, "Invalid or expired token");
-  }
-
-  try {
-    await query("BEGIN");
-
-    const result = await query(
-      `
-      SELECT id, password_reset_expires 
-      FROM users 
-      WHERE id = $1 AND password_reset_token = $2
-      FOR UPDATE
-      `,
-      [payload.sub, token],
-    );
-
-    const user = result.rows[0];
-
-    if (!user || new Date(user.password_reset_expires) < new Date()) {
-      await query("ROLLBACK");
-      throw new ApiError(400, "Invalid or expired token");
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_SALT_ROUNDS);
-
-    await query(
-      `
-      UPDATE users 
-      SET password_hash = $1, 
-          password_reset_token = NULL, 
-          password_reset_expires = NULL 
-      WHERE id = $2
-      `,
-      [passwordHash, user.id],
-    );
-
-    await query("COMMIT");
-  } catch (error) {
-    await query("ROLLBACK");
-    if (error instanceof ApiError) throw error;
-    throw new ApiError(500, "Internal server error during password reset");
-  }
-};
-
+/**
+ * Handle OAuth flow for GitHub
+ */
 export const handleGithubAuth = async (githubUser) => {
+  // FIXED: Added username to RETURNING and included it in the INSERT/UPDATE logic
   const result = await query(
-    `INSERT INTO users (github_id, github_username, email, avatar_url)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO users (github_id, github_username, email, avatar_url, username)
+     VALUES ($1, $2, $3, $4, $2)
      ON CONFLICT (github_id) DO UPDATE 
      SET github_username = EXCLUDED.github_username, avatar_url = EXCLUDED.avatar_url
-     RETURNING id, role, onboarding_completed`,
+     RETURNING id, role, username, onboarding_completed`,
     [githubUser.id, githubUser.login, githubUser.email, githubUser.avatar_url],
   );
 
@@ -195,18 +115,89 @@ export const handleGithubAuth = async (githubUser) => {
       fullName: githubUser.name || githubUser.login,
       githubUsername: githubUser.login,
     });
+    // Ensure the token contains the newly generated username
+    user.username = username;
   }
 
-  // BACKGROUND JOB REMOVED: GitHub stats will no longer be synced here.
-
   const token = generateAccessToken(user);
-
   return { user, token };
 };
 
+/**
+ * Request password reset
+ */
+export const forgotPassword = async (email) => {
+  const result = await query("SELECT id, name FROM users WHERE email=$1", [
+    email,
+  ]);
+  const user = result.rows[0];
+
+  if (!user) {
+    return {
+      success: true,
+      message: "If an account exists, a reset link has been sent.",
+    };
+  }
+
+  const resetToken = generateResetToken(user.id);
+  const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+  try {
+    await query("BEGIN");
+    await query(
+      "UPDATE users SET password_reset_token=$1, password_reset_expires=$2 WHERE id=$3",
+      [resetToken, expires, user.id],
+    );
+    await query("COMMIT");
+    return { success: true };
+  } catch (error) {
+    await query("ROLLBACK");
+    throw error;
+  }
+};
+
+/**
+ * Reset password with token
+ */
+export const resetPassword = async (token, newPassword) => {
+  let payload;
+  try {
+    payload = jwt.verify(token, env.JWT_RESET_SECRET);
+  } catch (error) {
+    throw new ApiError(400, "Invalid or expired token");
+  }
+
+  try {
+    await query("BEGIN");
+    const result = await query(
+      "SELECT id, password_reset_expires FROM users WHERE id = $1 AND password_reset_token = $2 FOR UPDATE",
+      [payload.sub, token],
+    );
+
+    const user = result.rows[0];
+    if (!user || new Date(user.password_reset_expires) < new Date()) {
+      await query("ROLLBACK");
+      throw new ApiError(400, "Invalid or expired token");
+    }
+
+    const passwordHash = await bcrypt.hash(
+      newPassword,
+      parseInt(env.BCRYPT_SALT_ROUNDS),
+    );
+    await query(
+      "UPDATE users SET password_hash = $1, password_reset_token = NULL, password_reset_expires = NULL WHERE id = $2",
+      [passwordHash, user.id],
+    );
+    await query("COMMIT");
+  } catch (error) {
+    await query("ROLLBACK");
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, "Internal server error during password reset");
+  }
+};
+
 export const fetchUser = async () => {
-  const result = await query("SELECT * FROM users");
-  return result;
+  return await query("SELECT id, email, name, role, username FROM users");
 };
 
 export const deleteUser = async (userId) => {

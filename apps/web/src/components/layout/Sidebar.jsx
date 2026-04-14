@@ -23,6 +23,8 @@ import {
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
+  console.log("=== DEBUG: Sidebar Render ===");
+  console.log("User:", user);
   const { data: reputation } = useReputation(user?.id);
 
   const MAX_REPUTATION = 100;
@@ -44,7 +46,8 @@ export default function Sidebar() {
     {
       icon: FileText,
       label: "My Projects",
-      path: user?.username ? `/app/profile/${user.username}` : "/auth/login",
+      // Fallback to dashboard instead of login if username is missing
+      path: user?.username ? `/app/profile/${user.username}` : "/app/dashboard",
       group: "career",
     },
   ];

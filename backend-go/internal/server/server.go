@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"skillbridge/backend/internal/config"
+	"skillbridge/backend/internal/handlers"
 	"skillbridge/backend/internal/httpx"
 	"skillbridge/backend/internal/middleware"
 
@@ -21,6 +22,8 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(requestLogger())
 	r.Use(middleware.CORS())
+	r.Use(middleware.LegacyJSONAliases())
+	r.Static("/uploads", "uploads")
 
 	r.GET("/health", func(c *gin.Context) {
 		sqlDB, err := db.DB()
@@ -40,10 +43,7 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 	})
 
 	api := r.Group("/api")
-	{
-		_ = api
-		// Auth, profiles, posts, projects, jobs, etc. land here next.
-	}
+	handlers.RegisterRoutes(api, cfg, db)
 
 	return r
 }

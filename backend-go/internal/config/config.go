@@ -33,10 +33,11 @@ func Load() (*Config, error) {
 
 	frontendURL := getenv("FRONTEND_URL", "http://localhost:5173")
 	frontendURL = strings.TrimRight(frontendURL, "/")
+	apiBaseURL := strings.TrimRight(getenv("API_BASE_URL", "http://localhost:6000"), "/")
 
 	callback := os.Getenv("GITHUB_CALLBACK_URL")
 	if callback == "" {
-		callback = frontendURL + "/api/github/auth/github/callback"
+		callback = apiBaseURL + "/api/github/auth/github/callback"
 	}
 	callback = strings.TrimRight(callback, "/")
 
@@ -55,7 +56,7 @@ func Load() (*Config, error) {
 		JWTResetExpiresIn:  getenv("JWT_RESET_EXPIRES_IN", "15m"),
 		BcryptSaltRounds:   salt,
 		FrontendURL:        frontendURL,
-		APIBaseURL:         getenv("API_BASE_URL", "http://localhost:6000"),
+		APIBaseURL:         apiBaseURL,
 		GitHubClientID:     os.Getenv("GITHUB_CLIENT_ID"),
 		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 		GitHubCallbackURL:  callback,

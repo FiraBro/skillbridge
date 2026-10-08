@@ -1,0 +1,115 @@
+package handlers
+
+import (
+	"skillbridge/backend/internal/config"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+)
+
+func RegisterRoutes(api *gin.RouterGroup, cfg *config.Config, db *gorm.DB) {
+	h := New(db, cfg)
+
+	authRoutes := api.Group("/auth")
+	authRoutes.POST("/register", h.Register)
+	authRoutes.POST("/login", h.Login)
+	authRoutes.POST("/forgot-password", h.ForgotPassword)
+	authRoutes.POST("/reset-password", h.ResetPassword)
+	authRoutes.GET("/", h.FetchUser)
+	authRoutes.DELETE("/delete/:id", h.RequireAuth(), h.DeleteUser)
+
+	profiles := api.Group("/profiles")
+	profiles.POST("/", h.RequireAuth(), h.CreateProfile)
+	profiles.PATCH("/sync", h.RequireAuth(), h.SyncProfile)
+	profiles.GET("/:username", h.GetProfile)
+
+	posts := api.Group("/posts")
+	posts.GET("/", h.OptionalAuth(), h.ListPosts)
+	posts.GET("/:id", h.OptionalAuth(), h.GetPost)
+	posts.POST("/:id/share", h.SharePost)
+	posts.POST("/:id/follow", h.RequireAuth(), h.ToggleFollowAuthor)
+	posts.POST("/", h.RequireAuth("developer"), h.CreatePost)
+	posts.PATCH("/:id", h.RequireAuth("developer"), h.UpdatePost)
+	posts.POST("/:id/like", h.RequireAuth(), h.LikePost)
+	posts.DELETE("/:id/like", h.RequireAuth(), h.UnlikePost)
+	posts.POST("/:id/comments", h.RequireAuth(), h.AddComment)
+	posts.GET("/:id/comments", h.GetComments)
+	posts.DELETE("/:id/comments/:commentId", h.RequireAuth(), h.DeleteComment)
+	posts.DELETE("/:id", h.RequireAuth(), h.DeletePost)
+
+	projects := api.Group("/projects")
+	projects.GET("/", h.ListProjects)
+	projects.GET("/:id", h.GetProject)
+	projects.POST("/", h.RequireAuth(), h.CreateProject)
+	projects.PATCH("/:id", h.RequireAuth(), h.UpdateProject)
+	projects.DELETE("/:id", h.RequireAuth(), h.DeleteProject)
+
+	reputation := api.Group("/reputation")
+	reputation.GET("/:userId/breakdown", h.ReputationBreakdown)
+	reputation.GET("/:userId/history", h.ReputationHistory)
+	reputation.POST("/:userId/recalculate", h.RecalculateReputation)
+
+	endorsements := api.Group("/endorsements")
+	endorsements.POST("/", h.RequireAuth(), h.CreateEndorsement)
+	endorsements.GET("/:userId", h.GetEndorsements)
+	endorsements.DELETE("/:id", h.RequireAuth(), h.DeleteEndorsement)
+
+	jobs := api.Group("/jobs")
+	jobs.GET("/", h.BrowseJobs)
+	jobs.GET("/recommended", h.RequireAuth("developer"), h.GetRecommendedJobs)
+	jobs.POST("/:id/apply", h.RequireAuth("developer"), h.ApplyToJob)
+	jobs.GET("/company", h.RequireAuth("company"), h.GetCompanyJobs)
+	jobs.POST("/", h.RequireAuth("company"), h.CreateJob)
+	jobs.GET("/:id/applicants", h.RequireAuth("company"), h.GetJobApplicants)
+	jobs.PATCH("/:id/publish", h.RequireAuth("company"), h.ToggleJobPublish)
+	jobs.PATCH("/applications/:applicationId", h.RequireAuth("company"), h.UpdateApplicationFeedback)
+	jobs.GET("/:id", h.GetJob)
+
+	notifications := api.Group("/notifications", h.RequireAuth())
+	notifications.GET("/", h.Notifications)
+	notifications.GET("/inbox", h.Inbox)
+	notifications.GET("/chat/:partnerId", h.ChatHistory)
+	notifications.POST("/message", h.SendMessage)
+	notifications.PATCH("/contact/:id", h.RespondToContact)
+
+	companies := api.Group("/companies")
+	companies.GET("/discovery", h.RequireAuth(), h.DiscoverDevelopers)
+	companyOnly := companies.Group("", h.RequireAuth("company"))
+	companyOnly.GET("/profile", h.GetCompanyProfile)
+	companyOnly.POST("/profile", h.UpdateCompanyProfile)
+	companyOnly.GET("/bookmarks", h.GetBookmarks)
+	companyOnly.POST("/bookmarks/:devId", h.BookmarkDeveloper)
+	companyOnly.DELETE("/bookmarks/:devId", h.RemoveBookmark)
+	companyOnly.PATCH("/applications/:appId/feedback", h.UpdateCompanyApplication)
+
+	search := api.Group("/search")
+	search.GET("/", h.Search)
+	search.GET("/trending-skills", h.TrendingSkills)
+
+	admin := api.Group("/admin", h.RequireAuth("admin"))
+	admin.GET("/dashboard/stats", h.AdminDashboard)
+	admin.GET("/activity", h.AdminActivity)
+	admin.GET("/users", h.AdminUsers)
+	admin.PATCH("/users/:id/suspend", h.ToggleSuspendUser)
+	admin.GET("/reports", h.AdminReports)
+	admin.PATCH("/reports/:id/resolve", h.ResolveReport)
+	admin.GET("/system-health", h.SystemHealth)
+	moderation := api.Group("/moderation", h.RequireAuth("admin"))
+	moderation.GET("/dashboard/stats", h.AdminDashboard)
+	moderation.GET("/activity", h.AdminActivity)
+	moderation.GET("/users", h.AdminUsers)
+	moderation.PATCH("/users/:id/suspend", h.ToggleSuspendUser)
+	moderation.GET("/reports", h.AdminReports)
+	moderation.PATCH("/reports/:id/resolve", h.ResolveReport)
+	moderation.GET("/system-health", h.SystemHealth)
+
+	github := api.Group("/github")
+	github.GET("/auth/github/callback", h.GitHubCallback)
+	github.GET("/auth/github", h.RequireAuth(), h.RedirectToGitHub)
+	github.GET("/profile/:username", h.GetGitHubProfile)
+	github.POST("/sync", h.RequireAuth(), h.SyncGitHub)
+	github.DELETE("/disconnect", h.RequireAuth(), h.DisconnectGitHub)
+	github.PATCH("/pinned-repos", h.RequireAuth(), h.UpdatePinnedRepos)
+	github.PATCH("/hidden-repos", h.RequireAuth(), h.UpdateHiddenRepos)
+	github.POST("/exchange-code", h.RequireAuth(), h.ExchangeGitHubCode)
+}

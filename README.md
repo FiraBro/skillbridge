@@ -6,7 +6,7 @@ SkillBridge is an innovative platform that combines the best of Upwork and Dev.t
 
 Traditional freelance platforms often lack transparency about a developer's actual skills. Clients struggle to evaluate talent based on portfolios alone, while developers find it difficult to showcase their real coding abilities. SkillBridge solves this by integrating GitHub profiles directly, allowing clients to see authentic contributions and project work.
 
-## Key Features
+## Key Feature
 
 ### GitHub Profile Integration
 

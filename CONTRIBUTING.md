@@ -42,15 +42,15 @@ cd skillbridge
 3. **Install dependencies**
 
 ```bash
-npm install
+cd apps/web && npm ci
 ```
 
 4. **Set up environment variables**
 
 ```bash
-# Configure the Go API
-cp .env.example backend-go/.env
-# Edit backend-go/.env with local database credentials and secrets.
+# Configure the Go API for direct local development
+cp infra/config/backend-go.env.example apps/backend-go/.env
+# Edit apps/backend-go/.env with local database credentials and secrets.
 ```
 
 5. **Configure GitHub OAuth** (follow instructions in [GITHUB_OAUTH_SETUP.md](GITHUB_OAUTH_SETUP.md))
@@ -59,7 +59,7 @@ cp .env.example backend-go/.env
 
 ```bash
 # Terminal 1: Start the Go API server
-cd backend-go && go run ./cmd/api
+cd apps/backend-go && go run ./cmd/api
 
 # Terminal 2: Start the web server
 cd apps/web && npm run dev
@@ -70,25 +70,26 @@ cd apps/web && npm run dev
 ```
 skillbridge/
 ├── apps/
-│   └── web/           # Frontend application (React/Vite)
-├── backend-go/        # Backend API and tools (Go)
+│   └── web/           # React source, config, package manifest, and lockfile
+├── apps/backend-go/   # Go API, commands, models, and repositories
 │   ├── cmd/api/       # API entry point
 │   ├── cmd/seed-jobs/ # Sample data seeding command
-│   └── migrations/    # PostgreSQL schema migrations
-├── packages/          # Shared packages/libraries
-├── infra/             # Infrastructure as code
-├── test-github-integration.js  # GitHub integration test script
+├── infra/              # Docker, database, config, scripts, and dormant configs
+│   ├── database/      # Schema, migrations, and backups
+│   ├── docker/        # Dockerfiles and Compose
+│   ├── nginx/         # Dormant reverse proxy config
+│   ├── scaling/       # Dormant Turbo config
+│   └── scripts/       # Infrastructure smoke checks
 ├── GITHUB_INTEGRATION.md      # GitHub integration documentation
 ├── GITHUB_OAUTH_SETUP.md      # GitHub OAuth setup guide
-├── turbo.json         # Turborepo configuration
-└── package.json       # Monorepo root configuration
+└── .github/workflows/ # CI pipeline
 ```
 
 ### Apps Directory
 
 - **web/**: Contains the frontend application built with React, Vite, and Tailwind CSS
 
-The Go API and sample-data command live in **backend-go/**.
+The Go API and sample-data command live in **apps/backend-go/**. Frontend Node configuration is isolated to **apps/web/**. Database and deployment configuration live in **infra/**. There is no root npm workspace manifest.
 
 ## Development Workflow
 
@@ -173,7 +174,7 @@ Fixes #123
 
 ```bash
 # Test the Go API
-cd backend-go && go test ./...
+cd apps/backend-go && go test ./...
 
 # Build the React/Vite frontend
 cd apps/web && npm run build

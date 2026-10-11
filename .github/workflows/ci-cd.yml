@@ -14,15 +14,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: backend-go/go.mod
-          cache-dependency-path: backend-go/go.sum
+          go-version-file: apps/backend-go/go.mod
+          cache-dependency-path: apps/backend-go/go.sum
 
       - name: Test Go backend
-        working-directory: backend-go
+        working-directory: apps/backend-go
         run: go test ./...
 
       - name: Build Go backend
-        working-directory: backend-go
+        working-directory: apps/backend-go
         run: go build -o /tmp/skillbridge-api ./cmd/api
 
       - name: Set up Node.js
@@ -30,18 +30,22 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: apps/web/package-lock.json
 
       - name: Install frontend dependencies
+        working-directory: apps/web
         run: npm ci
 
       - name: Build frontend
-        run: npm run build --workspace=web
+        working-directory: apps/web
+        run: npm run build
 
       - name: Lint frontend
-        run: npm run lint --workspace=web
+        working-directory: apps/web
+        run: npm run lint
 
       - name: Build Go backend Docker image
-        run: docker build -f backend-go/Dockerfile -t skillbridge-api:ci backend-go
+        run: docker build -f infra/docker/backend.Dockerfile -t skillbridge-api:ci apps/backend-go
 
       - name: Build frontend Docker image
-        run: docker build -f apps/web/Dockerfile -t skillbridge-web:ci apps/web
+        run: docker build -f infra/docker/frontend.Dockerfile -t skillbridge-web:ci apps/web

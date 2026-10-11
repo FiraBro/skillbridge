@@ -1,8 +1,8 @@
 services:
   api:
     build:
-      context: ../../backend-go
-      dockerfile: Dockerfile
+      context: ../../apps/backend-go
+      dockerfile: ../../infra/docker/backend.Dockerfile
     ports:
       - "4000:4000"
     environment:
@@ -22,7 +22,9 @@ services:
     volumes:
       - api_uploads:/app/uploads
   web:
-    build: ../../apps/web
+    build:
+      context: ../../apps/web
+      dockerfile: ../../infra/docker/frontend.Dockerfile
     ports:
       - "5173:5173"
     environment:

@@ -30,14 +30,15 @@ This document outlines the complete GitHub profile integration for SkillBridge, 
 
 ## 📁 File Structure
 
-### Backend (`backend-go`)
+### Backend (`apps/backend-go`)
 ```
 internal/
 ├── handlers/github.go               # HTTP endpoints
 ├── middleware/rate_limit.go         # Endpoint rate limiting
 └── models/profile.go                # GitHub persistence models
-migrations/                          # PostgreSQL schema migrations
 ```
+
+PostgreSQL schema and migrations live under `infra/database/`.
 
 ### Frontend (apps/web)
 ```

@@ -1,0 +1,7 @@
+.git
+**/.git
+.env
+**/.env
+.env.*
+**/.env.*
+!backend-go/.env.example

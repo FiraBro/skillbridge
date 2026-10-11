@@ -24,7 +24,11 @@ After creating the app, you'll receive:
 - **Client Secret**: Store as `GITHUB_CLIENT_SECRET` environment variable
 
 ### 3. Environment Configuration
-Create/update `backend-go/.env`:
+Create/update `apps/backend-go/.env`:
+
+```bash
+cp infra/config/backend-go.env.example apps/backend-go/.env
+```
 
 ```env
 GITHUB_CLIENT_ID=your_client_id_here
@@ -46,10 +50,10 @@ GITHUB_CALLBACK_URL=http://localhost:5173/api/github/auth/github/callback
 
 ```bash
 # Terminal 1 – Go backend (port 4000)
-cd backend-go && go run ./cmd/api
+cd apps/backend-go && go run ./cmd/api
 
 # Terminal 2 – frontend (port 5173)
-cd apps/web && npm run dev
+cd apps/web && npm ci && npm run dev
 ```
 
 On startup, the API logs the callback URL it expects. It must match the one in GitHub.

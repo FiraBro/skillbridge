@@ -10,6 +10,6 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=build /out/api /app/api
-COPY uploads/ /app/uploads/
+COPY --from=build /src/uploads/ /app/uploads/
 EXPOSE 4000
 ENTRYPOINT ["/app/api"]

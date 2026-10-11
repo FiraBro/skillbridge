@@ -34,7 +34,7 @@ Traditional freelance platforms often lack transparency about a developer's actu
 
 ## Tech Stack
 
-### Backend (`backend-go`)
+### Backend (`apps/backend-go`)
 
 - **Go** with **Gin**
 - **PostgreSQL** for data persistence
@@ -52,9 +52,9 @@ Traditional freelance platforms often lack transparency about a developer's actu
 
 ### Infrastructure
 
-- **Turborepo** for monorepo management
 - **Docker** for containerization
 - **Environment-based configurations**
+- Dormant Turbo and Nginx configurations are preserved under `infra/` for future scaling.
 
 ## Getting Started
 
@@ -74,18 +74,18 @@ git clone https://github.com/your-username/skillbridge.git
 cd skillbridge
 ```
 
-2. **Install dependencies**
+2. **Install frontend dependencies**
 
 ```bash
-npm install
+cd apps/web && npm ci
 ```
 
 3. **Set up environment variables**
 
 ```bash
-# Configure the Go API environment
-cp .env.example backend-go/.env
-# Edit backend-go/.env and set your local DATABASE_URL and secrets.
+# Configure the Go API for direct local development
+cp infra/config/backend-go.env.example apps/backend-go/.env
+# Edit apps/backend-go/.env and set your local DATABASE_URL and secrets.
 ```
 
 4. **Configure GitHub OAuth** (follow instructions in [GITHUB_OAUTH_SETUP.md](GITHUB_OAUTH_SETUP.md))
@@ -94,7 +94,7 @@ cp .env.example backend-go/.env
 
 ```bash
 # Terminal 1: Start the Go API server
-cd backend-go && go run ./cmd/api
+cd apps/backend-go && go run ./cmd/api
 
 # Terminal 2: Start the React/Vite frontend
 cd apps/web && npm run dev
@@ -102,7 +102,7 @@ cd apps/web && npm run dev
 
 ### Docker (Two Services)
 
-The Compose setup runs only the Go API and the React/Vite frontend. PostgreSQL must be available separately. Copy `.env.example` to `.env`, set both JWT secrets, and set `DATABASE_URL` to a PostgreSQL instance reachable by Docker (for a database on the host, use `host.docker.internal` as the hostname). Then run:
+The Compose setup runs only the Go API and the React/Vite frontend. PostgreSQL must be available separately. Copy `infra/config/.env.example` to the repository root as `.env`, set both JWT secrets, and set `DATABASE_URL` to a PostgreSQL instance reachable by Docker (for a database on the host, use `host.docker.internal` as the hostname). Then run:
 
 ```bash
 docker compose -f infra/docker/docker-compose.yml up --build
@@ -110,10 +110,18 @@ docker compose -f infra/docker/docker-compose.yml up --build
 
 The frontend is available at `http://localhost:5173`, and the Go API at `http://localhost:4000`. Vite proxies API and upload requests directly to the Go service; Nginx and Turbo remain inactive.
 
+Database schema, migration history, and backups are stored under `infra/database/`. Dockerfiles, Compose, environment templates, Nginx, and dormant Turbo configuration are stored under `infra/`.
+
+Run the GitHub API smoke check after configuring the root `.env` with GitHub OAuth values:
+
+```bash
+sh infra/scripts/test-github-integration.sh
+```
+
 6. **Seed sample data** (optional)
 
 ```bash
-cd backend-go && go run ./cmd/seed-jobs
+cd apps/backend-go && go run ./cmd/seed-jobs
 ```
 
 For production, update the `/api` rewrite in `apps/web/vercel.json` to point at the deployed Go API. The current rewrite still targets the previous Render API hostname.

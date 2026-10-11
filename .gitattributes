@@ -1,0 +1,10 @@
+# Hide the entire node_modules folder from language stats if it was committed
+node_modules/** linguist-vendored
+
+# Hide any build, distribution, or public assets folders 
+dist/** linguist-vendored
+build/** linguist-vendored
+public/** linguist-vendored
+
+# Force the analyzer to strictly register Go files
+*.go linguist-language=Go

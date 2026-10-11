@@ -1,23 +1,31 @@
-version: "3.8"
-
 services:
   api:
-    build: ./apps/api
+    build:
+      context: ../../backend-go
+      dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "4000:4000"
     environment:
-      - DATABASE_URL=postgres://user:password@db:5432/skillbridge
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to a PostgreSQL database reachable from Docker}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET in the root .env file}
+      JWT_RESET_SECRET: ${JWT_RESET_SECRET:?Set JWT_RESET_SECRET in the root .env file}
+      FRONTEND_URL: http://localhost:5173
+      API_BASE_URL: http://localhost:4000
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:5173/api/github/auth/github/callback}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - api_uploads:/app/uploads
   web:
-    build: ./apps/web
+    build: ../../apps/web
     ports:
       - "5173:5173"
-  db:
-    image: postgres:15
     environment:
-      POSTGRES_DB: skillbridge
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
+      VITE_API_PROXY_TARGET: http://api:4000
+volumes:
+  api_uploads:

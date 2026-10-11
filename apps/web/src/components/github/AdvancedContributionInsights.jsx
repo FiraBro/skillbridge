@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ScatterChart, Scatter } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ScatterChart, Scatter, Cell } from 'recharts';
 import { FaCalendarAlt, FaClock, FaUserCheck, FaFire, FaChartLine, FaRegLightbulb } from 'react-icons/fa';
 
 const AdvancedContributionInsights = ({ githubData }) => {

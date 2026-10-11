@@ -39,7 +39,7 @@ async function testGitHubIntegration() {
   // Test 2: Check if API endpoints are accessible
   console.log('📡 Testing API endpoints...');
   
-  const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:6000';
+  const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:4000';
   
   try {
     // Test the GitHub auth endpoint (this will return a redirect)

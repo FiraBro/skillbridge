@@ -1,13 +1,12 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"skillbridge/backend/internal/auth"
+	"skillbridge/backend/internal/domain/passwordreset"
 	"skillbridge/backend/internal/httpx"
 	"skillbridge/backend/internal/models"
 
@@ -145,16 +144,11 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	if !bindJSON(c, &input) {
 		return
 	}
-	var user models.User
-	if err := h.DB.Where("LOWER(email) = ?", strings.ToLower(strings.TrimSpace(input.Email))).First(&user).Error; err == nil {
-		raw := make([]byte, 32)
-		if _, err := rand.Read(raw); err == nil {
-			token := hex.EncodeToString(raw)
-			expires := time.Now().Add(15 * time.Minute)
-			_ = h.DB.Model(&user).Updates(map[string]interface{}{"password_reset_token": token, "password_reset_expires": expires}).Error
-		}
+	if err := h.PasswordReset.ForgotPassword(c.Request.Context(), input.Email); err != nil {
+		fail(c, http.StatusInternalServerError, "Unable to request password reset")
+		return
 	}
-	httpx.Success(c, http.StatusOK, nil, "If email exists, reset link sent")
+	httpx.Success(c, http.StatusOK, nil, "If reset link sent")
 }
 
 func (h *Handler) ResetPassword(c *gin.Context) {
@@ -165,22 +159,13 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	if !bindJSON(c, &input) {
 		return
 	}
-	if input.Token == "" || len(input.Password) < 8 {
+	err := h.PasswordReset.ResetPassword(c.Request.Context(), input.Token, input.Password)
+	if errors.Is(err, passwordreset.ErrInvalidOrExpired) {
 		fail(c, http.StatusBadRequest, "Invalid or expired token")
 		return
 	}
-	var user models.User
-	if err := h.DB.Where("password_reset_token = ? AND password_reset_expires > ?", input.Token, time.Now()).First(&user).Error; err != nil {
-		fail(c, http.StatusBadRequest, "Invalid or expired token")
-		return
-	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), h.Cfg.BcryptSaltRounds)
 	if err != nil {
-		fail(c, http.StatusInternalServerError, "Unable to reset password")
-		return
-	}
-	if err := h.DB.Model(&user).Updates(map[string]interface{}{"password_hash": string(hash), "password_reset_token": nil, "password_reset_expires": nil}).Error; err != nil {
-		fail(c, http.StatusInternalServerError, "Unable to reset password")
+		fail(c, http.StatusInternalServerError, "Internal server error during password reset")
 		return
 	}
 	httpx.Success(c, http.StatusOK, nil, "Password reset successful")

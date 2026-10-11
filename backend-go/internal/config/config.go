@@ -33,7 +33,7 @@ func Load() (*Config, error) {
 
 	frontendURL := getenv("FRONTEND_URL", "http://localhost:5173")
 	frontendURL = strings.TrimRight(frontendURL, "/")
-	apiBaseURL := strings.TrimRight(getenv("API_BASE_URL", "http://localhost:6000"), "/")
+	apiBaseURL := strings.TrimRight(getenv("API_BASE_URL", "http://localhost:4000"), "/")
 
 	callback := os.Getenv("GITHUB_CALLBACK_URL")
 	if callback == "" {
@@ -48,7 +48,7 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		Env:                getenv("NODE_ENV", "development"),
-		Port:               getenv("PORT", "6000"),
+		Port:               getenv("PORT", "4000"),
 		DatabaseURL:        os.Getenv("DATABASE_URL"),
 		JWTAccessSecret:    os.Getenv("JWT_ACCESS_SECRET"),
 		JWTResetSecret:     os.Getenv("JWT_RESET_SECRET"),

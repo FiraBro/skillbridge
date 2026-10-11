@@ -22,6 +22,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 ### Prerequisites
 
 - Node.js (v18 or higher)
+- Go 1.25 or higher
 - npm or yarn
 - PostgreSQL
 - Git
@@ -47,9 +48,9 @@ npm install
 4. **Set up environment variables**
 
 ```bash
-# Copy the example environment files
-cp .env.example apps/api/.env
-cp .env.example apps/web/.env
+# Configure the Go API
+cp .env.example backend-go/.env
+# Edit backend-go/.env with local database credentials and secrets.
 ```
 
 5. **Configure GitHub OAuth** (follow instructions in [GITHUB_OAUTH_SETUP.md](GITHUB_OAUTH_SETUP.md))
@@ -57,8 +58,8 @@ cp .env.example apps/web/.env
 6. **Start the development servers**
 
 ```bash
-# Terminal 1: Start the API server
-cd apps/api && npm run dev
+# Terminal 1: Start the Go API server
+cd backend-go && go run ./cmd/api
 
 # Terminal 2: Start the web server
 cd apps/web && npm run dev
@@ -69,11 +70,13 @@ cd apps/web && npm run dev
 ```
 skillbridge/
 ├── apps/
-│   ├── api/           # Backend API (Node.js/Express)
 │   └── web/           # Frontend application (React/Vite)
+├── backend-go/        # Backend API and tools (Go)
+│   ├── cmd/api/       # API entry point
+│   ├── cmd/seed-jobs/ # Sample data seeding command
+│   └── migrations/    # PostgreSQL schema migrations
 ├── packages/          # Shared packages/libraries
 ├── infra/             # Infrastructure as code
-├── seed_jobs.js       # Sample data seeding script
 ├── test-github-integration.js  # GitHub integration test script
 ├── GITHUB_INTEGRATION.md      # GitHub integration documentation
 ├── GITHUB_OAUTH_SETUP.md      # GitHub OAuth setup guide
@@ -83,8 +86,9 @@ skillbridge/
 
 ### Apps Directory
 
-- **api/**: Contains the backend API built with Node.js, Express, and PostgreSQL
 - **web/**: Contains the frontend application built with React, Vite, and Tailwind CSS
+
+The Go API and sample-data command live in **backend-go/**.
 
 ## Development Workflow
 
@@ -168,12 +172,11 @@ Fixes #123
 ### Running Tests
 
 ```bash
-# Run all tests in the monorepo
-npm run test
+# Test the Go API
+cd backend-go && go test ./...
 
-# Run tests for a specific app
-cd apps/api && npm run test
-cd apps/web && npm run test
+# Build the React/Vite frontend
+cd apps/web && npm run build
 ```
 
 ### Writing Tests

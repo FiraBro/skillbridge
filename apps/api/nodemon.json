@@ -1,5 +1,0 @@
-{
-  "watch": ["src"],
-  "ignore": ["node_modules", "*.log", "*.json", ".env", "uploads", "tmp"],
-  "delay": "200ms"
-}

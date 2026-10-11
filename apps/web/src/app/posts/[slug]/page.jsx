@@ -35,6 +35,7 @@ export default function PostDetailPage() {
   const [commentText, setCommentText] = useState("");
 
   const { data: post, isLoading, isError, error } = usePostDetail(slug);
+  console.log("Post Detail:", post, "Error:", error);
 
   const toggleLikeMutation = useToggleLikePost();
   const commentMutation = useAddComment();
@@ -116,15 +117,28 @@ export default function PostDetailPage() {
       <div className="group/post -mx-4 px-4 py-8 rounded-2xl transition-all duration-300 hover:bg-slate-50/60 dark:hover:bg-white/5">
         <header className="space-y-6 mb-10">
           <div className="flex flex-wrap gap-2">
-            {post.tags?.map((tag) => (
-              <Badge
-                key={tag}
-                variant="secondary"
-                className="rounded-full px-3 font-medium border-none bg-slate-100 text-slate-600"
-              >
-                {tag}
-              </Badge>
-            ))}
+            {Array.isArray(post.tags)
+              ? post.tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    className="rounded-full px-3 font-medium border-none bg-slate-100 text-slate-600"
+                  >
+                    {tag}
+                  </Badge>
+                ))
+              : typeof post.tags === "string" && post.tags.trim() !== ""
+                ? // Fallback if the new Go backend is sending tags as a comma-separated string
+                  post.tags.split(",").map((tag) => (
+                    <Badge
+                      key={tag.trim()}
+                      variant="secondary"
+                      className="rounded-full px-3 font-medium border-none bg-slate-100 text-slate-600"
+                    >
+                      {tag.trim()}
+                    </Badge>
+                  ))
+                : null}
           </div>
 
           <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tight leading-tight text-slate-900 dark:text-slate-50">

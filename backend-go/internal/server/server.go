@@ -20,6 +20,7 @@ func New(cfg *config.Config, db *gorm.DB) *gin.Engine {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(middleware.SecurityHeaders(cfg.IsProduction()))
 	r.Use(requestLogger())
 	r.Use(middleware.CORS())
 	r.Use(middleware.LegacyJSONAliases())

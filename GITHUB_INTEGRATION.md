@@ -5,7 +5,7 @@ This document outlines the complete GitHub profile integration for SkillBridge, 
 
 ## 🏗️ Architecture
 
-### Backend Services
+### Backend Services (Go)
 ```
 ┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   GitHub    │───▶│  SkillBridge    │───▶│  Developer's    │
@@ -26,25 +26,17 @@ This document outlines the complete GitHub profile integration for SkillBridge, 
 1. **OAuth Flow**: Secure GitHub OAuth 2.0 authentication
 2. **Data Sync**: Regular synchronization of GitHub data
 3. **Visualization**: Contribution insights and metrics
-4. **Security**: Rate limiting and token encryption
+4. **Security**: Rate limiting and server-side secret configuration
 
 ## 📁 File Structure
 
-### Backend (apps/api)
+### Backend (`backend-go`)
 ```
-src/
-├── modules/
-│   ├── github/
-│   │   ├── github.controller.js      # Request handlers
-│   │   ├── github.service.js         # Business logic
-│   │   ├── github.repository.js      # Database operations
-│   │   └── github.routes.js          # API endpoints
-│   ├── middlewares/
-│   │   └── githubRateLimit.js        # Rate limiting
-├── db/
-│   └── migrations/
-│       ├── 007_add_github_activity_fields.sql
-│       └── 015_add_github_enhanced_fields.sql
+internal/
+├── handlers/github.go               # HTTP endpoints
+├── middleware/rate_limit.go         # Endpoint rate limiting
+└── models/profile.go                # GitHub persistence models
+migrations/                          # PostgreSQL schema migrations
 ```
 
 ### Frontend (apps/web)
@@ -113,21 +105,15 @@ CREATE TABLE github_repositories (
 ## 🔐 Security Measures
 
 ### 1. OAuth Security
-- State parameter with base64 encoding for CSRF protection
+- OAuth state currently carries user context as base64-encoded JSON; it is not signed and must not be treated as CSRF protection.
 - Proper scope management (`read:user repo`)
-- Token validation before storage
+- GitHub API requests use the server-configured `GITHUB_TOKEN`; OAuth access tokens are not persisted.
 
 ### 2. Rate Limiting
-- OAuth endpoints: 3 requests per 15 minutes per IP
 - Sync operations: 5 requests per hour per user
-- General GitHub endpoints: 10 requests per 15 minutes per IP
+- GitHub profile and account-management endpoints: 10 requests per 15 minutes per IP
 
-### 3. Token Encryption
-- AES-256-CBC encryption for stored tokens
-- Environment-based encryption key
-- Secure token validation
-
-### 4. Input Validation
+### 3. Input Validation
 - All user inputs sanitized
 - SQL injection prevention with parameterized queries
 - Proper error handling without sensitive information exposure

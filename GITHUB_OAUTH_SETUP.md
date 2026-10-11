@@ -16,7 +16,7 @@
 **Homepage URL**: http://localhost:5173 (or your frontend URL)
 **Authorization callback URL** (local dev): `http://localhost:5173/api/github/auth/github/callback`
 
-⚠️ **Important**: For local dev we use the **frontend** URL so that when GitHub redirects, the request goes to port 5173 and the Vite proxy forwards it to the backend. The backend defaults `GITHUB_CALLBACK_URL` to `FRONTEND_URL + "/api/github/auth/github/callback"`. Set the same URL in GitHub OAuth App.
+For local development, GitHub redirects to the frontend URL and Vite proxies the callback to the Go API. Set `GITHUB_CALLBACK_URL` to this exact URL.
 
 ### 2. Get Client Credentials
 After creating the app, you'll receive:
@@ -24,13 +24,13 @@ After creating the app, you'll receive:
 - **Client Secret**: Store as `GITHUB_CLIENT_SECRET` environment variable
 
 ### 3. Environment Configuration
-Create/update your `.env` file in the `apps/api` directory:
+Create/update `backend-go/.env`:
 
 ```env
 GITHUB_CLIENT_ID=your_client_id_here
 GITHUB_CLIENT_SECRET=your_client_secret_here
 FRONTEND_URL=http://localhost:5173
-# GITHUB_CALLBACK_URL defaults to FRONTEND_URL + /api/github/auth/github/callback (http://localhost:5173/api/github/auth/github/callback)
+GITHUB_CALLBACK_URL=http://localhost:5173/api/github/auth/github/callback
 ```
 
 ### 4. Test the Full OAuth Flow Locally
@@ -45,8 +45,8 @@ FRONTEND_URL=http://localhost:5173
 **Step 2 – Start backend and frontend**
 
 ```bash
-# Terminal 1 – backend (port 6000)
-cd apps/api && npm run dev
+# Terminal 1 – Go backend (port 4000)
+cd backend-go && go run ./cmd/api
 
 # Terminal 2 – frontend (port 5173)
 cd apps/web && npm run dev
@@ -63,18 +63,18 @@ On startup, the API logs the callback URL it expects. It must match the one in G
 5. You are redirected to GitHub to authorize.
 6. After authorizing, GitHub redirects the browser to:
    - `http://localhost:5173/api/github/auth/github/callback?code=...&state=...`
-7. The request hits the frontend; Vite proxy forwards it to the backend. The **backend** handles the callback, exchanges the code, then redirects you to the frontend (e.g. `http://localhost:5173/profile?success=github_connected`).
+7. The request hits the frontend; Vite proxies it to the Go backend. The backend handles the callback, exchanges the code, then redirects to the frontend.
 
 **Step 4 – Verify the callback is hit**
 
-- When GitHub redirects to the callback, the backend must log an **INCOMING REQUEST** for `GET /api/github/auth/github/callback`. If you never see that line, the request is not reaching the backend (see debugging below).
+- When GitHub redirects to the callback, the Go backend logs `GET /api/github/auth/github/callback`. If you never see that line, the request is not reaching the backend (see debugging below).
 
 **Manual check that the callback route is reachable**
 
 - With both backend and frontend running, open in the browser:
   - `http://localhost:5173/api/github/auth/github/callback?code=test&state=eyJ1c2VySWQiOiJ0ZXN0In0=`
 - Or: `curl -v "http://localhost:5173/api/github/auth/github/callback?code=test&state=eyJ1c2VySWQiOiJ0ZXN0In0="`
-- You should see the backend log: `INCOMING REQUEST: GET /api/github/auth/github/callback`. You will then get a redirect to the frontend with an error (e.g. token exchange failure) because `code=test` is invalid. That is expected; the important part is that the **callback route ran**.
+- You should see the backend log `GET /api/github/auth/github/callback`. You will then get a redirect to the frontend with an error because `code=test` is invalid. That is expected; the important part is that the callback route ran.
 
 ### 5. Troubleshooting Common Issues
 
@@ -97,10 +97,10 @@ On startup, the API logs the callback URL it expects. It must match the one in G
   For local dev set it to: `http://localhost:5173/api/github/auth/github/callback`. GitHub redirects there; the Vite proxy forwards the request to the backend so the callback is hit.
 
 - **Ensure backend and frontend are both running**  
-  Backend on 6000, frontend (Vite) on 5173 with proxy for `/api` to 6000. On API startup you should see the logged `GitHub callback URL` (for local dev it should be `http://localhost:5173/api/github/auth/github/callback`).
+  Go backend on 4000, frontend (Vite) on 5173 with proxy for `/api` to 4000. On API startup, confirm the logged `GitHub callback URL` matches the OAuth App setting.
 
-- **Confirm the request reaches Express**  
-  Every request that hits the app is logged as: `INCOMING REQUEST: <method> <path>`. If you do not see `GET /api/github/auth/github/callback` when GitHub redirects (or when you open the callback URL manually), the request is not reaching the Node server (wrong host/port or something else handling the URL).
+- **Confirm the request reaches Go**
+The Go API logs each request as `[METHOD] /path`. If you do not see `GET /api/github/auth/github/callback`, check that Vite proxies `/api` to port 4000.
 
 ### 6. Production Configuration
 For production deployments, update the URLs accordingly:
@@ -125,5 +125,5 @@ These scopes are requested automatically during the OAuth flow.
 ### 8. Security Notes
 - Never commit client secrets to version control
 - Use environment variables for all credentials
-- The state parameter provides CSRF protection
-- Tokens are encrypted before storage in the database
+- The Go OAuth state currently carries user context but is not signed; do not treat it as CSRF protection.
+- GitHub API requests use the server-configured `GITHUB_TOKEN`; OAuth access tokens are not persisted.

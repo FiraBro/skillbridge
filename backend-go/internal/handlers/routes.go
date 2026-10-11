@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"time"
+
 	"skillbridge/backend/internal/config"
+	"skillbridge/backend/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -40,9 +43,10 @@ func RegisterRoutes(api *gin.RouterGroup, cfg *config.Config, db *gorm.DB) {
 	projects := api.Group("/projects")
 	projects.GET("/", h.ListProjects)
 	projects.GET("/:id", h.GetProject)
-	projects.POST("/", h.RequireAuth(), h.CreateProject)
-	projects.PATCH("/:id", h.RequireAuth(), h.UpdateProject)
-	projects.DELETE("/:id", h.RequireAuth(), h.DeleteProject)
+	projectWriteLimit := middleware.RateLimit(10, time.Minute, middleware.ClientIPKey, "Too many requests, please try again later.")
+	projects.POST("/", h.RequireAuth(), projectWriteLimit, h.CreateProject)
+	projects.PATCH("/:id", h.RequireAuth(), projectWriteLimit, h.UpdateProject)
+	projects.DELETE("/:id", h.RequireAuth(), projectWriteLimit, h.DeleteProject)
 
 	reputation := api.Group("/reputation")
 	reputation.GET("/:userId/breakdown", h.ReputationBreakdown)
@@ -106,10 +110,12 @@ func RegisterRoutes(api *gin.RouterGroup, cfg *config.Config, db *gorm.DB) {
 	github := api.Group("/github")
 	github.GET("/auth/github/callback", h.GitHubCallback)
 	github.GET("/auth/github", h.RequireAuth(), h.RedirectToGitHub)
-	github.GET("/profile/:username", h.GetGitHubProfile)
-	github.POST("/sync", h.RequireAuth(), h.SyncGitHub)
-	github.DELETE("/disconnect", h.RequireAuth(), h.DisconnectGitHub)
-	github.PATCH("/pinned-repos", h.RequireAuth(), h.UpdatePinnedRepos)
-	github.PATCH("/hidden-repos", h.RequireAuth(), h.UpdateHiddenRepos)
+	githubReadLimit := middleware.RateLimit(10, 15*time.Minute, middleware.ClientIPKey, "Too many GitHub requests from this IP, please try again later.")
+	githubSyncLimit := middleware.RateLimit(5, time.Hour, middleware.UserIDKey, "Too many GitHub sync requests, please try again later.")
+	github.GET("/profile/:username", githubReadLimit, h.GetGitHubProfile)
+	github.POST("/sync", h.RequireAuth(), githubSyncLimit, h.SyncGitHub)
+	github.DELETE("/disconnect", h.RequireAuth(), githubReadLimit, h.DisconnectGitHub)
+	github.PATCH("/pinned-repos", h.RequireAuth(), githubReadLimit, h.UpdatePinnedRepos)
+	github.PATCH("/hidden-repos", h.RequireAuth(), githubReadLimit, h.UpdateHiddenRepos)
 	github.POST("/exchange-code", h.RequireAuth(), h.ExchangeGitHubCode)
 }

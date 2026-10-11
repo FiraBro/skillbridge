@@ -11,6 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4 # Updated to v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
+      - name: Test Go API
+        working-directory: backend-go
+        run: go test ./...
       - name: Use Node.js
         uses: actions/setup-node@v4 # Updated to v4
         with:

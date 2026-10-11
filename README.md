@@ -34,12 +34,12 @@ Traditional freelance platforms often lack transparency about a developer's actu
 
 ## Tech Stack
 
-### Backend (apps/api)
+### Backend (`backend-go`)
 
-- **Node.js** with **Express.js**
+- **Go** with **Gin**
 - **PostgreSQL** for data persistence
 - **GitHub OAuth** for authentication and profile integration
-- **Redis** for caching and rate limiting
+- In-process rate limiting for protected write and GitHub endpoints
 - **JWT** for secure authentication
 
 ### Frontend (apps/web)
@@ -61,6 +61,7 @@ Traditional freelance platforms often lack transparency about a developer's actu
 ### Prerequisites
 
 - Node.js (v18 or higher)
+- Go 1.25 or higher
 - PostgreSQL
 - GitHub OAuth App credentials
 
@@ -82,9 +83,9 @@ npm install
 3. **Set up environment variables**
 
 ```bash
-# Copy the example environment files
-cp .env.example apps/api/.env
-cp .env.example apps/web/.env
+# Configure the Go API environment
+cp .env.example backend-go/.env
+# Edit backend-go/.env and set your local DATABASE_URL and secrets.
 ```
 
 4. **Configure GitHub OAuth** (follow instructions in [GITHUB_OAUTH_SETUP.md](GITHUB_OAUTH_SETUP.md))
@@ -92,18 +93,20 @@ cp .env.example apps/web/.env
 5. **Start the development servers**
 
 ```bash
-# Terminal 1: Start the API server
-cd apps/api && npm run dev
+# Terminal 1: Start the Go API server
+cd backend-go && go run ./cmd/api
 
-# Terminal 2: Start the web server
+# Terminal 2: Start the React/Vite frontend
 cd apps/web && npm run dev
 ```
 
 6. **Seed sample data** (optional)
 
 ```bash
-node seed_jobs.js
+cd backend-go && go run ./cmd/seed-jobs
 ```
+
+For production, update the `/api` rewrite in `apps/web/vercel.json` to point at the deployed Go API. The current rewrite still targets the previous Render API hostname.
 
 ## Contributing
 

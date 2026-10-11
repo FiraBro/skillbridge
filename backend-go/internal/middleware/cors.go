@@ -34,7 +34,7 @@ func originAllowed(origin string) bool {
 		return true
 	}
 	switch origin {
-	case "http://localhost:5173", "https://skillbridge1234.vercel.app":
+	case "http://localhost:5173", "http://localhost:5174", "https://skillbridge1234.vercel.app":
 		return true
 	}
 	return strings.HasSuffix(origin, ".vercel.app")

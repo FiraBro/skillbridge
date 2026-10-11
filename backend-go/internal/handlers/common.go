@@ -6,7 +6,9 @@ import (
 
 	"skillbridge/backend/internal/auth"
 	"skillbridge/backend/internal/config"
+	"skillbridge/backend/internal/domain/passwordreset"
 	"skillbridge/backend/internal/httpx"
+	"skillbridge/backend/internal/repository"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -14,12 +16,20 @@ import (
 )
 
 type Handler struct {
-	DB  *gorm.DB
-	Cfg *config.Config
+	DB            *gorm.DB
+	Cfg           *config.Config
+	PasswordReset *passwordreset.Service
 }
 
 func New(db *gorm.DB, cfg *config.Config) *Handler {
-	return &Handler{DB: db, Cfg: cfg}
+	resetRepository := repository.NewPasswordResetRepository(db)
+	resetTokens := auth.NewResetTokenManager(cfg.JWTResetSecret, cfg.JWTResetExpiresIn)
+	passwordHasher := auth.NewBcryptHasher(cfg.BcryptSaltRounds)
+	return &Handler{
+		DB:            db,
+		Cfg:           cfg,
+		PasswordReset: passwordreset.NewService(resetRepository, resetTokens, passwordHasher),
+	}
 }
 
 func (h *Handler) RequireAuth(roles ...string) gin.HandlerFunc {

@@ -100,6 +100,16 @@ cd backend-go && go run ./cmd/api
 cd apps/web && npm run dev
 ```
 
+### Docker (Two Services)
+
+The Compose setup runs only the Go API and the React/Vite frontend. PostgreSQL must be available separately. Copy `.env.example` to `.env`, set both JWT secrets, and set `DATABASE_URL` to a PostgreSQL instance reachable by Docker (for a database on the host, use `host.docker.internal` as the hostname). Then run:
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up --build
+```
+
+The frontend is available at `http://localhost:5173`, and the Go API at `http://localhost:4000`. Vite proxies API and upload requests directly to the Go service; Nginx and Turbo remain inactive.
+
 6. **Seed sample data** (optional)
 
 ```bash

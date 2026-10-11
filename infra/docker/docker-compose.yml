@@ -8,45 +8,24 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgres://user:password@db:5432/skillbridge?sslmode=disable
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-development-access-secret-change-me}
-      JWT_RESET_SECRET: ${JWT_RESET_SECRET:-local-development-reset-secret-change-me}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to a PostgreSQL database reachable from Docker}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET in the root .env file}
+      JWT_RESET_SECRET: ${JWT_RESET_SECRET:?Set JWT_RESET_SECRET in the root .env file}
       FRONTEND_URL: http://localhost:5173
       API_BASE_URL: http://localhost:4000
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-http://localhost:5173/api/github/auth/github/callback}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - api_uploads:/app/uploads
-    depends_on:
-      db:
-        condition: service_healthy
   web:
     build: ../../apps/web
     ports:
       - "5173:5173"
     environment:
       VITE_API_PROXY_TARGET: http://api:4000
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: skillbridge
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d skillbridge"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-  nginx:
-    image: nginx:1.27-alpine
-    ports:
-      - "8080:80"
-    volumes:
-      - ../nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - api
-      - web
 volumes:
   api_uploads:

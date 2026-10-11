@@ -1,0 +1,47 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Test Go backend
+        working-directory: backend-go
+        run: go test ./...
+
+      - name: Build Go backend
+        working-directory: backend-go
+        run: go build -o /tmp/skillbridge-api ./cmd/api
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build --workspace=web
+
+      - name: Lint frontend
+        run: npm run lint --workspace=web
+
+      - name: Build Go backend Docker image
+        run: docker build -f backend-go/Dockerfile -t skillbridge-api:ci backend-go
+
+      - name: Build frontend Docker image
+        run: docker build -f apps/web/Dockerfile -t skillbridge-web:ci apps/web

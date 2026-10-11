@@ -8,3 +8,5 @@ public/** linguist-vendored
 
 # Force the analyzer to strictly register Go files
 *.go linguist-language=Go
+*.js linguist-detectable=false
+
